@@ -226,8 +226,8 @@ class State(EventDispatcher):
             #sc.bind(self.ownerKey=self._statechartOwnerDidChange)
             #sc.bind(self.traceKey=self._statechartTraceDidChange)
 
-        for key in kw:
-            self.__dict__[key] = kw.pop(key)
+        for key in kwargs:
+            self.__dict__[key] = kwargs.pop(key)
 
         #for k,v in kwargs.items():
             #setattr(self, k, v)
