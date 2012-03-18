@@ -8,6 +8,8 @@ from kivy.event import EventDispatcher
 from kivy.properties import BooleanProperty, ListProperty, ObjectProperty, StringProperty
 from collections import deque
 
+import inspect
+
 """
   @class
 
@@ -316,6 +318,8 @@ class State(EventDispatcher):
     
         self.substates = substates
     
+        from kivy.statechart.system.history_state import HistoryState
+
         if isinstance(initialSubstate, HistoryState) and initialSubstate.isClass:
             historyState = self.createSubstate(initialSubstate)
       
@@ -328,9 +332,9 @@ class State(EventDispatcher):
     
         # Iterate through all this state's substates, if any, create them, and then initialize
         # them. This causes a recursive process.
-        for key in self:
-            value = self[key]
-            valueIsFunc = hasAttr(value, '__call__')
+        for key in self.__dict__:
+            value = self.__dict__[key]
+            valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
       
             if valueIsFunc and value.isEventHandler:
                 self._registerEventHandler(key, value)
@@ -343,7 +347,7 @@ class State(EventDispatcher):
             if valueIsFunc and value.statePlugin is not None:
                 value = value(self)
 
-            if issubclass(value, State) and value.isClass and self[key] is not self.__init__:
+            if inspect.isclass(value) and issubclass(value, State) and self.__dict__[key] is not self.__init__: # [PORT] using inspect
                 state = self._addSubstate(key, value)
                 if key is initialSubstate:
                     self.initialSubstate = state
@@ -355,10 +359,10 @@ class State(EventDispatcher):
             if initialSubstate and not matchedInitialSubstate:
                 self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(initialSubstate, self))
 
-            if substates.length is 0:
+            if len(self.substates) == 0:
                 if initialSubstate is None:
                     self.stateLogWarning("Unable to make {0} an initial substate since state {1} has no substates".format(initialSubstate, self))
-            elif substates.length > 0:
+            elif len(self.substates) > 0:
                   state = self._addEmptyInitialSubstateIfNeeded()
                   if not state and initialSubstate and substatesAreConcurrent:
                         self.initialSubstate = None
@@ -544,11 +548,11 @@ class State(EventDispatcher):
             self.stateLogError("Can not add substate '{0}'. this state is not yet initialized".format(name))
             return None
 
-        len = arguments.length
+        numberOfArguments = len(arguments)
 
-        if len is 1:
+        if numberOfArguments is 1:
             state = State
-        elif len is 2 and isinstance(state, dict):
+        elif numberOfArguments is 2 and isinstance(state, dict):
             attr = state
             state = State
 

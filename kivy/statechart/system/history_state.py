@@ -4,7 +4,7 @@
 # Python Port: Jeff Pittman, ported from SproutCore, SC.Statechart
 # ================================================================================
 
-from kivy.properties import AliasProperty
+from kivy.properties import AliasProperty, StringProperty
 from kivy.statechart.system.state import State
 
 """
