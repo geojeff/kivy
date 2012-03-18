@@ -641,7 +641,7 @@ class State(EventDispatcher):
     """ @private
       Will register a given state as a substate of this state
     """
-    def _registerSubstate(state):
+    def _registerSubstate(self, state):
         path = state.pathRelativeTo(self)
 
         if path is None:
@@ -665,7 +665,7 @@ class State(EventDispatcher):
       A > B > C, where A is this state and C is the given state, then the 
       relative path generated will be "B.C"
     """
-    def pathRelativeTo(state):
+    def pathRelativeTo(self, state):
         path = self.name
         parent = self.parentState
 
@@ -713,7 +713,7 @@ class State(EventDispatcher):
       @param [callback] {Function} the callback
       @param [target] {Object} the target
     """
-    def getSubstate(value, callback, target):
+    def getSubstate(self, value, callback, target):
         if value is None:
             return None
 
@@ -758,7 +758,7 @@ class State(EventDispatcher):
         self._notifySubstateNotFound(callback, target, value)
 
     """ @private """
-    def _notifySubstateNotFound(callback, target, value, keys):
+    def _notifySubstateNotFound(self, callback, target, value, keys):
         return callback(target or self, self, value, keys) if callback is not None else None
 
     """
@@ -778,7 +778,7 @@ class State(EventDispatcher):
       The value provided can either be a state object or a state path expression.
       For path expression syntax, refer to the {@link StatePathMatcher} class.
     """
-    def getState(value):
+    def getState(self, value):
         if value is self.name:
             return self
 
@@ -788,7 +788,7 @@ class State(EventDispatcher):
         self.getSubstate(value, self._handleSubstateNotFound)
 
     """ @private """
-    def _handleSubstateNotFound(state, value, keys):
+    def _handleSubstateNotFound(self, state, value, keys):
         parentState = self.parentState
 
         if parentState is not None:
@@ -812,7 +812,7 @@ class State(EventDispatcher):
              exited and entered during the state transition process. Context can not be an instance of 
              State.
     """
-    def gotoState(value, context):
+    def gotoState(self, value, context):
         state = self.getState(value)
 
         if state is not None:
@@ -875,7 +875,7 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsCurrentSubstate(state):
+    def _stateIsCurrentSubstate(self, state):
         if isinstance(state, String):
             state = self.statechart.getState(state)
 
@@ -889,7 +889,7 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsEnteredSubstate(state):
+    def _stateIsEnteredSubstate(self, state):
         if isinstance(state, String):
             state = self.statechart.getState(state)
 
@@ -1046,7 +1046,7 @@ class State(EventDispatcher):
         
           });
     """
-    def tryToHandleEvent(event, arg1, arg2):
+    def tryToHandleEvent(self, event, arg1, arg2):
         trace = self.trace
         sc = self.statechart
         ret = undefined
@@ -1142,7 +1142,7 @@ class State(EventDispatcher):
       
       @see #representRoute
     """
-    def enterState(context):
+    def enterState(self, context):
         pass
 
     """
@@ -1154,7 +1154,7 @@ class State(EventDispatcher):
       @param {Hash} [context] value if one was supplied to gotoState when invoked
       @see #enterState
     """
-    def stateWillBecomeEntered(context):
+    def stateWillBecomeEntered(self, context):
         self._isEnteringState = True
 
     """
@@ -1166,7 +1166,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #enterState
     """
-    def stateDidBecomeEntered(context):
+    def stateDidBecomeEntered(self, context):
         self._setupAllStateObserveHandlers()
         self._isEnteringState = False
 
@@ -1192,7 +1192,7 @@ class State(EventDispatcher):
       
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
     """
-    def exitState(context):
+    def exitState(self, context):
         pass
 
     """
@@ -1204,7 +1204,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #exitState
     """
-    def stateWillBecomeExited(context):
+    def stateWillBecomeExited(self, context):
         self._isExitingState = True
         self._teardownAllStateObserveHandlers()
 
@@ -1217,7 +1217,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #exitState
     """
-    def stateDidBecomeExited(context):
+    def stateDidBecomeExited(self, context):
         self._isExitingState = False
 
     """ @private 
@@ -1249,7 +1249,7 @@ class State(EventDispatcher):
       there is one common function that both the observerable mixin and the 
       statechart framework use.  
     """
-    def _configureAllStateObserveHandlers(action):
+    def _configureAllStateObserveHandlers(self, action):
         key = undefined
         values = undefined
         value = undefined
@@ -1293,7 +1293,7 @@ class State(EventDispatcher):
       @see enterState
       @see exitState
     """
-    def performAsync(func, arg1, arg2):
+    def performAsync(self, func, arg1, arg2):
         Async.perform(func, arg1, arg2)
 
     """ @override
@@ -1304,7 +1304,7 @@ class State(EventDispatcher):
       @param event {String} the value to check
       @returns {Boolean}
     """
-    def respondsToEvent(event):
+    def respondsToEvent(self, event):
         if self._registeredEventHandlers[event]:
             return false
         if hasattr(self[event], '__call__'):
@@ -1337,7 +1337,7 @@ class State(EventDispatcher):
     
       @property {String}
     """
-    def _fullPath(self, *l):
+    def _fullPath(self, *l): # [PORT] Added *l
         root = self.statechart.rootState
         if root is None:
             return self.name
@@ -1369,19 +1369,19 @@ class State(EventDispatcher):
     """ 
       Used to log a state trace message
     """
-    def stateLogTrace(msg):
+    def stateLogTrace(self, msg):
         self.statechart.statechartLogTrace("{0}: {1}".format(self, msg))
 
     """ 
       Used to log a state warning message
     """
-    def stateLogWarning(msg):
+    def stateLogWarning(self, msg):
         self.statechart.statechartLogWarning(msg)
 
     """ 
       Used to log a state error message
     """
-    def stateLogError(msg):
+    def stateLogError(self, msg):
         sc = self.statechart
         sc.statechartLogError(msg)
 

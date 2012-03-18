@@ -486,7 +486,7 @@ class StatechartManager(EventDispatcher):
       
       @returns {Array} the currently entered states
     """
-    def _enteredStates(self):
+    def _enteredStates(self, *l): # [PORT] added *l
         self.enteredStates = self.rootState.enteredSubstates
 
     """
