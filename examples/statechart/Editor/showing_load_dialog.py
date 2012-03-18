@@ -12,8 +12,9 @@ class LoadDialog(FloatLayout):
     cancel = ObjectProperty(None)
 
 class SHOWING_LOAD_DIALOG_State(State):
-    def __init__(self):
-        super(SHOWING_LOAD_DIALOG_State, self).__init__('SHOWING_LOAD_DIALOG')
+    def __init__(self, **kwargs):
+        kwargs['name'] = 'SHOWING_LOAD_DIALOG'
+        super(SHOWING_LOAD_DIALOG_State, self).__init__(**kwargs)
 
     loadfile = ObjectProperty(None)
     text_input = ObjectProperty(None)

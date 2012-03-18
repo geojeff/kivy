@@ -31,9 +31,9 @@ class AppStatechart(Statechart):
     
             initialSubstate = 'SHOWING_APP'
     
-            SHOWING_APP = SHOWING_APP_State()
-            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State()
-            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State()
+            SHOWING_APP = SHOWING_APP_State(statechart=self)
+            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State(statechart=self)
+            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State(statechart=self)
 
         return RootState
 

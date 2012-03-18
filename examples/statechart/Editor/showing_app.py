@@ -3,8 +3,9 @@ from kivy.factory import Factory
 from kivy.statechart.system.state import State
 
 class SHOWING_APP_State(State):
-    def __init__(self):
-        super(SHOWING_APP_State, self).__init__(name='SHOWING_APP')
+    def __init__(self, **kwargs):
+        kwargs['name'] = 'SHOWING_APP'
+        super(SHOWING_APP_State, self).__init__(**kwargs)
 
     def enterState(self):
         print 'SHOWING_APP/enterState'

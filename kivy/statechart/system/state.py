@@ -1337,7 +1337,7 @@ class State(EventDispatcher):
     
       @property {String}
     """
-    def _fullPath(self):
+    def _fullPath(self, *l):
         root = self.statechart.rootState
         if root is None:
             return self.name
