@@ -14,7 +14,7 @@ class SaveDialog(FloatLayout):
 
 class SHOWING_SAVE_DIALOG_State(State):
     def __init__(self):
-        super(SHOWING_SAVE_DIALOG_State, self).__init__()
+        super(SHOWING_SAVE_DIALOG_State, self).__init__(name='SHOWING_SAVE_DIALOG')
 
     savefile = ObjectProperty(None)
     text_input = ObjectProperty(None)

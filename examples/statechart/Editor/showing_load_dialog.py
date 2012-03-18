@@ -13,7 +13,7 @@ class LoadDialog(FloatLayout):
 
 class SHOWING_LOAD_DIALOG_State(State):
     def __init__(self):
-        super(SHOWING_LOAD_DIALOG_State, self).__init__()
+        super(SHOWING_LOAD_DIALOG_State, self).__init__('SHOWING_LOAD_DIALOG')
 
     loadfile = ObjectProperty(None)
     text_input = ObjectProperty(None)

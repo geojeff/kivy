@@ -26,8 +26,8 @@ class AppStatechart(Statechart):
 
     def _rootState(self):
         class RootState(State):
-            def __init__(self):
-                super(RootState, self).__init__()
+            def __init__(self, **kwargs):
+                super(RootState, self).__init__(**kwargs)
     
             initialSubstate = 'SHOWING_APP'
     
