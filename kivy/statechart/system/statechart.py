@@ -358,8 +358,8 @@ class StatechartManager(EventDispatcher):
         self.bind(delegate=self._statechartDelegate)
         self.bind(rootState=self._enteredStates) # [PORT] Added enteredStates property
 
-        for key in kw:
-            self.__dict__[key] = kw.pop(key)
+        for k,v in kwargs.items():
+            setattr(self, k, v)
 
         super(StatechartManager, self).__init__(**kw)
         
