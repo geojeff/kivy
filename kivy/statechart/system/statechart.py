@@ -418,7 +418,7 @@ class StatechartManager(EventDispatcher):
             self.statechartLogError(msg)
             raise Exception(msg)
           
-        rootState = self.createRootState(rootState, { statechart: self, name: ROOT_STATE_NAME })
+        rootState = self.createRootState(rootState, ROOT_STATE_NAME)
           
         self.rootState = rootState
         rootState.initState()
@@ -441,10 +441,10 @@ class StatechartManager(EventDispatcher):
     """
       Will create a root state for the statechart
     """
-    def createRootState(self, state, attrs):
-        if attrs is None:
-            attrs = {}
-        state = state(attrs)
+    def createRootState(self, state, name):
+        print state
+        print name
+        state = state(statechart=self, name=name)
         return state
         
     """

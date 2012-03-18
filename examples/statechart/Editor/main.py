@@ -37,7 +37,6 @@ class AppStatechart(Statechart):
 
         return RootState
 
-
 class Editor(App):
     def __init__(self):
         pass
