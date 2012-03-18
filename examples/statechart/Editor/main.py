@@ -35,7 +35,7 @@ class AppStatechart(Statechart):
             SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State()
             SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State()
 
-        return RootState()
+        return RootState
 
 
 class Editor(App):

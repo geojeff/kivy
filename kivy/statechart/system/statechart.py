@@ -406,7 +406,7 @@ class StatechartManager(EventDispatcher):
         # a root state class
         if not rootState:
             rootState = self._constructRootStateClass()
-        elif hasattr(rootState, '__call__') and rootState.statePlugin is not None:
+        elif hasattr(rootState, '__call__'): # and rootState.statePlugin is not None: # [PORT] leaving statePlugin system out for now
             rootState = rootState(self)
           
         if not issubclass(rootState, State) and rootState.isClass:
