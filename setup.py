@@ -294,6 +294,12 @@ setup(
         'kivy.lib.osc',
         'kivy.modules',
         'kivy.network',
+        'kivy.statechart',
+        'kivy.statechart.debug',
+        'kivy.statechart.ext',
+        'kivy.statechart.mixins',
+        'kivy.statechart.private',
+        'kivy.statechart.system',
         'kivy.tools',
         'kivy.tools.packaging',
         'kivy.tools.packaging.pyinstaller_hooks',
@@ -348,4 +354,3 @@ setup(
         'Topic :: Scientific/Engineering :: Visualization',
         'Topic :: Software Development :: Libraries :: Application Frameworks',
         'Topic :: Software Development :: User Interfaces'])
-
