@@ -408,6 +408,8 @@ class StatechartManager(EventDispatcher):
         # a root state class
         if not rootState:
             rootState = self._constructRootStateClass()
+        # [PORT] Added use of inspect.isclass to distinguish between a class and function, but this probably needs
+        #        a better, more explicit check for a function. isinstance(x, types.FunctionType)?
         elif hasattr(rootState, '__call__') and not inspect.isclass(rootState) and rootState.statePlugin is not None:
             rootState = rootState()
           
