@@ -12,6 +12,8 @@ from kivy.logger import Logger
 
 from collections import deque
 
+import inspect
+
 """
   @class
 
@@ -406,8 +408,8 @@ class StatechartManager(EventDispatcher):
         # a root state class
         if not rootState:
             rootState = self._constructRootStateClass()
-        elif hasattr(rootState, '__call__'): # and rootState.statePlugin is not None: # [PORT] leaving statePlugin system out for now
-            rootState = rootState(self)
+        elif hasattr(rootState, '__call__') and not inspect.isclass(rootState) and rootState.statePlugin is not None:
+            rootState = rootState()
           
         if not issubclass(rootState, State) and rootState.isClass:
             msg = "Unable to initialize statechart. Root state must be a state class"
