@@ -59,7 +59,7 @@ class StateRouteHandlerContext:
       was originally triggered on state. 
     """
     def retry(self):
-        if isinstance(self.handler, String):
+        if isinstance(self.handler, basestring):
             self.handler = self.state[self.handler]
   
         if hasattr(self.handler, '__call__'):

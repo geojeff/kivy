@@ -233,9 +233,15 @@ class State(EventDispatcher):
             #self.__dict__[key] = kwargs.pop(key)
 
         for k,v in kwargs.items():
-            setattr(self, k, v)
+            if k is 'initialSubstate':
+                if isinstance(v, basestring):
+                    self.initialSubstateName = v
+                else:
+                    self.initialSubstate = v
+            else:
+                setattr(self, k, v)
 
-        super(State, self).__init__(**kwargs)
+        super(State, self).__init__() # [PORT] initialize how? We have also initState()
 
     def _trace(self):
         self._trace = self.getPath("statechart.{0}".format(self.getPath("statechart.statechartTraceKey")))
@@ -279,6 +285,7 @@ class State(EventDispatcher):
         self.parentState = None
         self.historyState = None
         self.initialSubstate = None
+        self.initialSubstateName = None
         self.statechart = None
     
         #self.notifyPropertyChange("trace")
@@ -309,9 +316,9 @@ class State(EventDispatcher):
         substates = []
         matchedInitialSubstate = False
         initialSubstate = self.initialSubstate
+        initialSubstateName = self.initialSubstateName
         substatesAreConcurrent = self.substatesAreConcurrent
         statechart = self.statechart
-        i = 0
         valueIsFunc = False
         historyState = None
     
@@ -319,7 +326,7 @@ class State(EventDispatcher):
     
         from kivy.statechart.system.history_state import HistoryState
 
-        if isinstance(initialSubstate, HistoryState) and inspect.isclass(initialSubstate):
+        if inspect.isclass(initialSubstate) and isinstance(initialSubstate, HistoryState):
             historyState = self.createSubstate(initialSubstate)
       
             self.initialSubstate = historyState
@@ -348,7 +355,7 @@ class State(EventDispatcher):
 
             if inspect.isclass(value) and issubclass(value, State) and self.__dict__[key] is not self.__init__: # [PORT] using inspect
                 state = self._addSubstate(key, value)
-                if key is initialSubstate:
+                if key is initialSubstateName:
                     self.initialSubstate = state
                     matchedInitialSubstate = True
                 elif historyState and historyState.defaultState is key:
@@ -573,7 +580,9 @@ class State(EventDispatcher):
     """
     def createSubstate(state, attr):
         attr = attr or {}
-        return state.create({ parentState: self, statechart: self.statechart }, attr)
+        attr.parentState = self
+        attr.statechart = self.statechart
+        return state(attr)
 
     """ @private 
     
@@ -593,7 +602,7 @@ class State(EventDispatcher):
         while i < numberOfEvents:
             event = events[i]
 
-            if isinstance(event, String):
+            if isinstance(event, basestring): # [PORT] checking for string and unicode -- need unicode? otherwise just str?
                 self._registeredStringEventHandlers[event] = { name: name, handler: handler }
                 continue
 
@@ -620,7 +629,7 @@ class State(EventDispatcher):
 
         while i < numberOfArgs:
             arg = args[i]
-            if not isinstance(arg, String) or empty(arg):
+            if not isinstance(arg, basestring) or empty(arg):
                 self.stateLogError("Invalid argument {0} for state observe handler {1} in state {2}".format(arg, name, self))
                 handlersAreValid = False
             i += 1
@@ -725,7 +734,7 @@ class State(EventDispatcher):
 
         # If the value is an object then just check if the value is 
         # a registered substate of this state, and if so return it. 
-        if not isinstance(value, String):
+        if not isinstance(value, basestring):
             self.stateLogError("Can not find matching subtype. value must be an object or string: {0}".format(value))
             return None
 
@@ -879,7 +888,7 @@ class State(EventDispatcher):
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
     def _stateIsCurrentSubstate(self, state):
-        if isinstance(state, String):
+        if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
         current = self.currentSubstates
@@ -893,7 +902,7 @@ class State(EventDispatcher):
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
     def _stateIsEnteredSubstate(self, state):
-        if isinstance(state, String):
+        if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
         entered = self.enteredSubstates

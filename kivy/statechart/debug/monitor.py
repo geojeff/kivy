@@ -49,7 +49,7 @@ class StatechartMonitor(EventDispatcher):
             return False
     
         for item in expected:
-            if instanceof(item, String):
+            if instanceof(item, basestring):
                 item = statechart.getState(item)
             if item is None:
                 return

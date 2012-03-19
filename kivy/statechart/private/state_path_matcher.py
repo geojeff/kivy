@@ -160,7 +160,7 @@ class StatePathMatcher:
     """
     def match(self, path):
         self._stack = path.split('.')
-        if path is None or isinstance(path, String):
+        if path is None or isinstance(path, basestring):
             return False
         return self._chain.match()
   
