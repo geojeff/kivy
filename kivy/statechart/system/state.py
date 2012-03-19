@@ -128,7 +128,7 @@ class State(EventDispatcher):
       
       @property {String|State}
     """
-    initialSubstate = StringProperty(None)
+    initialSubstate = ObjectProperty(None)
 
     """
       Used to indicates if this state's immediate substates are to be
@@ -319,7 +319,7 @@ class State(EventDispatcher):
     
         from kivy.statechart.system.history_state import HistoryState
 
-        if isinstance(initialSubstate, HistoryState) and initialSubstate.isClass:
+        if isinstance(initialSubstate, HistoryState) and inspect.isclass(initialSubstate):
             historyState = self.createSubstate(initialSubstate)
       
             self.initialSubstate = historyState
@@ -555,7 +555,7 @@ class State(EventDispatcher):
             attr = state
             state = State
 
-        stateIsValid = issubclass(state, State) and state.isClass
+        stateIsValid = issubclass(state, State) and inspect.isclass(state)
 
         if not stateIsValid:
             self.stateLogError("Can not add substate '{0}'. must provide a state class".format(name))
@@ -1423,7 +1423,7 @@ class State(EventDispatcher):
             console.error("State.plugin: Unable to determine path {0}".format(self.value))
             return None
     
-        if not klass.isClass or not issubclass(klass, State):
+        if not inspect.isclass(klass) or not issubclass(klass, State):
             console.error("State.plugin: Unable to subclass. {0} must be a subclass of State".format(self.value))
             return None
     
