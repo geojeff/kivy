@@ -237,6 +237,7 @@ class State(EventDispatcher):
                 if isinstance(v, basestring):
                     self.initialSubstateName = v
                 else:
+                    self.initialSubstateName = k
                     self.initialSubstate = v
             else:
                 setattr(self, k, v)
@@ -316,7 +317,9 @@ class State(EventDispatcher):
         substates = []
         matchedInitialSubstate = False
         initialSubstate = self.initialSubstate
-        initialSubstateName = self.initialSubstateName
+        if initialSubstate and isinstance(initialSubstate, basestring):
+            initialSubstateName = self.initialSubstate
+            self.initialSubstateName = self.initialSubstate
         substatesAreConcurrent = self.substatesAreConcurrent
         statechart = self.statechart
         valueIsFunc = False
@@ -338,10 +341,13 @@ class State(EventDispatcher):
     
         # Iterate through all this state's substates, if any, create them, and then initialize
         # them. This causes a recursive process.
-        for key in self.__dict__:
-            value = self.__dict__[key]
+        #for key in self.__dict__:
+        for key in dir(self):
+            #value = self.__dict__[key]
+            value = getattr(self, key)
             valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
       
+            print key, value
             if valueIsFunc and value.isEventHandler:
                 self._registerEventHandler(key, value)
                 continue
@@ -362,7 +368,7 @@ class State(EventDispatcher):
                     historyState.defaultState = state
                     matchedInitialSubstate = True
 
-            if initialSubstate and not matchedInitialSubstate:
+            if initialSubstate is not None and not matchedInitialSubstate:
                 self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(initialSubstate, self))
 
             if len(substates) is 0:
