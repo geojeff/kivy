@@ -1243,8 +1243,6 @@ class StatechartManager(EventDispatcher):
         result = None
         calledStates = 0
               
-        len = currentStates.get('length');
-          
         for i in range(len(self.currentStates)):
             state = self.currentStates[i] # [PORT] was objectAt i
             while state is not None:

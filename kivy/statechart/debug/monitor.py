@@ -61,7 +61,6 @@ class StatechartMonitor(EventDispatcher):
     def toString(self):
         seq = ""
         i = 0
-        len = 0
         item = null
     
         seq += "["

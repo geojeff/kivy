@@ -312,7 +312,6 @@ class State(EventDispatcher):
         substatesAreConcurrent = self.substatesAreConcurrent
         statechart = self.statechart
         i = 0
-        len = 0
         valueIsFunc = False
         historyState = None
     
@@ -359,10 +358,10 @@ class State(EventDispatcher):
             if initialSubstate and not matchedInitialSubstate:
                 self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(initialSubstate, self))
 
-            if len(self.substates) == 0:
+            if len(substates) is 0:
                 if initialSubstate is None:
                     self.stateLogWarning("Unable to make {0} an initial substate since state {1} has no substates".format(initialSubstate, self))
-            elif len(self.substates) > 0:
+            elif len(substates) > 0:
                   state = self._addEmptyInitialSubstateIfNeeded()
                   if not state and initialSubstate and substatesAreConcurrent:
                         self.initialSubstate = None
@@ -585,13 +584,13 @@ class State(EventDispatcher):
     """
     def _registerEventHandler(name, handler):
         events = handler.events
+        numberOfEvents = len(events)
         event = None
-        len = events.length
         i = 0
 
         self._registeredEventHandlers[name] = handler
 
-        while i < len:
+        while i < numberOfEvents:
             event = events[i]
 
             if isinstance(event, String):
@@ -615,11 +614,11 @@ class State(EventDispatcher):
     def _registerStateObserveHandler(name, handler):
         i = 0
         args = handler.args
-        len = args.length
+        numberOfArgs = len(args)
         arg = undefined
         handlersAreValid = True
 
-        while i < len:
+        while i < numberOfArgs:
             arg = args[i]
             if not isinstance(arg, String) or empty(arg):
                 self.stateLogError("Invalid argument {0} for state observe handler {1} in state {2}".format(arg, name, self))
@@ -1087,9 +1086,9 @@ class State(EventDispatcher):
             return ret
 
         # Try an event handler that is associated with events matching a regular expression
-        len = self._registeredRegExpEventHandlers.length
+        numberOfHandlers = len(self._registeredRegExpEventHandlers)
         i = 0
-        while i < len:
+        while i < numberOfHandlers:
             handler = self._registeredRegExpEventHandlers[i]
             if event.match(handler.regexp):
                 if trace:
@@ -1318,10 +1317,10 @@ class State(EventDispatcher):
         if self._registeredStateObserveHandlers[event]:
             return false
 
-        len = self._registeredRegExpEventHandlers.length
+        numberOfHandlers = len(self._registeredRegExpEventHandlers)
         i = 0
         handler = None
-        while i < len:
+        while i < numberOfHandlers:
             handler = self._registeredRegExpEventHandlers[i]
             if event.match(handler.regexp):
                 return True
