@@ -589,7 +589,7 @@ class State(EventDispatcher):
         attr = attr or {}
         attr['parentState'] = self
         attr['statechart'] = self.statechart
-        return state(attr)
+        return state(**attr)
 
     """ @private 
     
