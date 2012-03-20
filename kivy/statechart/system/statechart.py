@@ -415,7 +415,7 @@ class StatechartManager(EventDispatcher):
         elif hasattr(rootState, '__call__') and not inspect.isclass(rootState) and rootState.statePlugin is not None:
             rootState = rootState()
           
-        if not issubclass(rootState, State) and rootState.isClass:
+        if inspect.isclass(rootState) and not issubclass(rootState, State):
             msg = "Unable to initialize statechart. Root state must be a state class"
             self.statechartLogError(msg)
             raise Exception(msg)
@@ -425,6 +425,7 @@ class StatechartManager(EventDispatcher):
         self.rootState = rootState
         rootState.initState()
           
+        print rootState.initialSubstate
         if issubclass(rootState.initialSubstate, EmptyState):
             msg = "Unable to initialize statechart. Root state must have an initial substate explicilty defined"
             self.statechartLogError(msg)

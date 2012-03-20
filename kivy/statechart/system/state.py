@@ -358,7 +358,8 @@ class State(EventDispatcher):
             if valueIsFunc and value.statePlugin is not None:
                 value = value(self)
 
-            if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
+            #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
+            if inspect.isclass(value) and issubclass(value, State) and key is not '__class__': # [PORT] using inspect
                 state = self._addSubstate(key, value, None)
                 if key is initialSubstateName:
                     self.initialSubstate = state

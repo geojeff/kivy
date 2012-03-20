@@ -21,7 +21,6 @@ class AppStatechart(Statechart):
     def __init__(self, app):
         self.app = app
         self.rootState = self._rootState()
-        print inspect.isclass(self.rootState), 'isclass'
         super(Statechart, self).__init__()
 
     def _rootState(self):
