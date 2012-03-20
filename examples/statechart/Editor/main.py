@@ -31,16 +31,16 @@ class AppStatechart(Statechart):
     
             initialSubstate = 'SHOWING_APP'
     
-            SHOWING_APP = SHOWING_APP_State
-            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State
-            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State
+            SHOWING_APP = SHOWING_APP_State(parentState=self, name='SHOWING_APP')
+            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State(parentState=self, name='SHOWING_LOAD_DIALOG')
+            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State(parentState=self, name='SHOWING_SAVE_DIALOG')
 
             @State.eventHandler(['print initial substate', 'print states'])
             def printInfo(infoType):
                 if infoType is 'print initial substate':
-                    print self.initialSubstate
+                    print 'INFO:', self.initialSubstate
                 elif infoType is 'print states':
-                    print (self[key].name for key in dir(self) if issubclass(self[key], State))
+                    print 'INFO:', (self[key].name for key in dir(self) if issubclass(self[key], State))
 
         return RootState
 

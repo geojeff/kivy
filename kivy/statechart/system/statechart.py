@@ -444,8 +444,6 @@ class StatechartManager(EventDispatcher):
       Will create a root state for the statechart
     """
     def createRootState(self, state, name):
-        print state
-        print name
         state = state(statechart=self, name=name)
         return state
         
@@ -471,7 +469,7 @@ class StatechartManager(EventDispatcher):
       @returns {Number} the count 
     """
     def _currentStateCount(self):
-        self.currentStateCount = self.currentStates.length
+        self.currentStateCount = len(self.currentStates)
 
     """
       Checks if a given state is a current state of this statechart. 

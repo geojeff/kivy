@@ -228,7 +228,6 @@ class State(EventDispatcher):
             #sc.bind(self.ownerKey=self._statechartOwnerDidChange)
             #sc.bind(self.traceKey=self._statechartTraceDidChange)
 
-        print 'kwargs', kwargs
         #for key in kwargs:
             #self.__dict__[key] = kwargs.pop(key)
 
@@ -242,7 +241,7 @@ class State(EventDispatcher):
             else:
                 setattr(self, k, v)
 
-        super(State, self).__init__() # [PORT] initialize how? We have also initState()
+        super(State, self).__init__(**kwargs) # [PORT] initialize how? We have also initState()
 
     def _trace(self):
         self._trace = self.getPath("statechart.{0}".format(self.getPath("statechart.statechartTraceKey")))
@@ -348,7 +347,6 @@ class State(EventDispatcher):
             #valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
             valueIsFunc = inspect.isfunction(value)
       
-            print key, value
             if valueIsFunc and value.isEventHandler:
                 self._registerEventHandler(key, value)
                 continue
@@ -513,7 +511,8 @@ class State(EventDispatcher):
 
         substates.append(state)
 
-        self[name] = state
+        print '_addSubstate', name, state
+        setattr(self, name, state)
 
         state.initState()
 
@@ -748,7 +747,7 @@ class State(EventDispatcher):
         matcher = StatePathMatcher.create({ state: self, expression: value })
         matches = []
         key = undefined
-        if matcher.get("tokens").length is 0:
+        if len(matcher.tokens) is 0:
             return None
 
         paths = self._registeredSubstatePaths[matcher.lastPart]
@@ -760,10 +759,10 @@ class State(EventDispatcher):
             if matcher.match(key):
                 matches.append(paths[key])
 
-        if matches.length is 1:
+        if len(matches) is 1:
             return matches[0]
 
-        if matches.length > 1:
+        if len(matches) > 1:
             keys = []
             for key in paths:
                 keys.append(key)
@@ -954,22 +953,22 @@ class State(EventDispatcher):
       
       @propety {Boolean}
     """
-    def _hasSubstates(self):
-        return self.substates.length > 0
+    def _hasSubstates(self, *l): # [PORT] Added *l when error said 3 args coming in here. What are args for bound callback in kivy?
+        return len(self.substates) > 0
 
     """
       Indicates if this state has any current substates
     """
     def _hasCurrentSubstates(self):
         current = self.currentSubstates
-        return current and current.get("length") > 0
+        return current and len(current) > 0
 
     """
       Indicates if this state has any currently entered substates
     """
     def _hasEnteredSubstates(self):
         entered = self.enteredSubstates
-        return entered and entered.get("length") > 0
+        return entered and len(entered) > 0
 
     """
       Will attempt to find a current state in the statechart that is relative to 
@@ -998,7 +997,7 @@ class State(EventDispatcher):
             return self
 
         currentSubstates = self.currentSubstates or []
-        numCurrent = currentSubstates.length
+        numCurrent = len(currentSubstates)
         parent = self.parentState
 
         if numCurrent is 0:
@@ -1282,7 +1281,7 @@ class State(EventDispatcher):
             values = self._registeredStateObserveHandlers[key]
 
         i = 0
-        while i < values.length:
+        while i < len(values):
             path = values[i]
             observer = key
             dotIndex = path.find(".")
@@ -1299,7 +1298,7 @@ class State(EventDispatcher):
                 elif dotIndex is 4 and path[0, 5] is "self.":
                     root = self
                     path = path[5]
-                elif dotIndex < 0 and path.length is 4 and path is "self":
+                elif dotIndex < 0 and len(path) is 4 and path is "self":
                     root = self
                     path = ""
                 Observers[action](path, self, observer, root)
@@ -1357,7 +1356,7 @@ class State(EventDispatcher):
       @property {String}
     """
     def _fullPath(self, *l): # [PORT] Added *l
-        root = self.statechart.rootState
+        root = self.statechart.rootState if self.statechart else None
         if root is None:
             return self.name
         self.pathRelativeTo(root)
