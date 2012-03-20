@@ -35,6 +35,13 @@ class AppStatechart(Statechart):
             SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State
             SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State
 
+            @State.eventHandler(['print initial substate', 'print states'])
+            def printInfo(infoType):
+                if infoType is 'print initial substate':
+                    print self.initialSubstate
+                elif infoType is 'print states':
+                    print (self[key].name for key in dir(self) if issubclass(self[key], State))
+
         return RootState
 
 class Editor(App):
@@ -48,5 +55,6 @@ if __name__ == '__main__':
     statechart = AppStatechart(app)
     app.statechart = statechart
     app.statechart.initStatechart()
+    app.statechart.rootState.printInfo('print states')
     app.run()
 

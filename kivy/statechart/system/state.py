@@ -345,7 +345,8 @@ class State(EventDispatcher):
         for key in dir(self):
             #value = self.__dict__[key]
             value = getattr(self, key)
-            valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
+            #valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
+            valueIsFunc = inspect.isfunction(value)
       
             print key, value
             if valueIsFunc and value.isEventHandler:
@@ -359,8 +360,8 @@ class State(EventDispatcher):
             if valueIsFunc and value.statePlugin is not None:
                 value = value(self)
 
-            if inspect.isclass(value) and issubclass(value, State) and self.__dict__[key] is not self.__init__: # [PORT] using inspect
-                state = self._addSubstate(key, value)
+            if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
+                state = self._addSubstate(key, value, None)
                 if key is initialSubstateName:
                     self.initialSubstate = state
                     matchedInitialSubstate = True
@@ -436,7 +437,7 @@ class State(EventDispatcher):
       @see #createStateRouteHandlerContext
       @see #handleTriggeredRoute
     """
-    def routeTriggered(params):
+    def routeTriggered(self, params):
         if self._isEnteringState:
             return
 
@@ -477,7 +478,7 @@ class State(EventDispatcher):
       
       By default the method invokes a state transition to this state.
     """
-    def handleTriggeredRoute(context):
+    def handleTriggeredRoute(self, context):
         self.gotoState(self, context)
 
     """ @private """
@@ -502,11 +503,11 @@ class State(EventDispatcher):
         return state
 
     """ @private """
-    def _addSubstate(name, state, attr):
+    def _addSubstate(self, name, state, attr):
         substates = self.substates
 
-        attr = copy(attr) or {}
-        attr.name = name
+        attr = copy(attr) if attr else {}
+        attr['name'] = name
 
         state = self.createSubstate(state, attr)
 
@@ -547,7 +548,7 @@ class State(EventDispatcher):
       @param {Hash} [attr] liternal to be applied to the substate
       @returns {State} an instance of the given state class
     """
-    def addSubstate(name, state, attr):
+    def addSubstate(self, name, state, attr):
         if empty(name):
             self.stateLogError("Can not add substate. name required")
             return None
@@ -584,10 +585,10 @@ class State(EventDispatcher):
     """
       creates a substate for this state
     """
-    def createSubstate(state, attr):
+    def createSubstate(self, state, attr):
         attr = attr or {}
-        attr.parentState = self
-        attr.statechart = self.statechart
+        attr['parentState'] = self
+        attr['statechart'] = self.statechart
         return state(attr)
 
     """ @private 
@@ -597,7 +598,7 @@ class State(EventDispatcher):
       compared to basic functions that only respond to a single event that reflects
       the name of the method.
     """
-    def _registerEventHandler(name, handler):
+    def _registerEventHandler(self, name, handler):
         events = handler.events
         numberOfEvents = len(events)
         event = None
@@ -626,7 +627,7 @@ class State(EventDispatcher):
       when you apply observes() on a method but will only be active when the state is currently 
       entered, otherwise the handlers are inactive until the next time the state is entered
     """
-    def _registerStateObserveHandler(name, handler):
+    def _registerStateObserveHandler(self, name, handler):
         i = 0
         args = handler.args
         numberOfArgs = len(args)
@@ -1445,4 +1446,19 @@ class State(EventDispatcher):
         klass = klass(self.arguments)
         klass.statePlugin = True
         return klass
+
+    @classmethod
+    def eventHandler(self, events):
+        def eventHandlerDecorator(fn):
+            fn.isEventHandler = True
+            fn.events = events
+            return fn
+        return eventHandlerDecorator
+
+    #def eventHandler(events):
+        #def eventHandlerDecorator(self, *args, **kwargs):
+            #fn.isEventHandler = True
+            #fn.events = events
+            #return fn
+        #return eventHandlerDecorator(self, *args, **kwargs)
 
