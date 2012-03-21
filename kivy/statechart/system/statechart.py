@@ -566,16 +566,18 @@ class StatechartManager(EventDispatcher):
             self.statechartLogError("can not go to state {0}. statechart has not yet been initialized".format(state))
             return
           
-        if self.isDestroyed:
-            self.statechartLogError("can not go to state {0}. statechart is destroyed".format(this))
-            return
+        # [PORT] Removed isDestroyed check -- but this is a punt for a later time...
+        #if self.isDestroyed:
+            #self.statechartLogError("can not go to state {0}. statechart is destroyed".format(this))
+            #return
           
-        args = self._processGotoStateArgs(arguments)
+        # [PORT] Assumming that in python argument handling will suffice.
+        #args = self._processGotoStateArgs(arguments)
       
-        state = args.state
-        fromCurrentState = args.fromCurrentState
-        useHistory = args.useHistory
-        context = args.context
+        #state = args.state
+        #fromCurrentState = args.fromCurrentState
+        #useHistory = args.useHistory
+        #context = args.context
           
         pivotState = None
         exitStates = deque()
@@ -881,12 +883,13 @@ class StatechartManager(EventDispatcher):
             self.statechartLogError("can not go to state {0}'s history state. Statechart has not yet been initialized".format(state))
             return
           
-        args = self._processGotoStateArgs(arguments)
+        # [PORT] Assumming that in python argument handling will suffice.
+        #args = self._processGotoStateArgs(arguments)
           
-        state = args.state
-        fromCurrentState = args.fromCurrentState
-        recursive = args.useHistory
-        context = args.context
+        #state = args.state
+        #fromCurrentState = args.fromCurrentState
+        #recursive = args.useHistory
+        #context = args.context
           
         state = self.getState(state)
         
@@ -923,9 +926,10 @@ class StatechartManager(EventDispatcher):
       @see #stateDidTryToHandleEvent
     """
     def sendEvent(self, event, arg1, arg2):
-        if self.isDestroyed:
-            self.statechartLogError("can send event {0}. statechart is destroyed".format(event))
-            return
+        # [PORT] Removed isDestroyed check -- but this is a punt for a later time...
+        #if self.isDestroyed:
+            #self.statechartLogError("can send event {0}. statechart is destroyed".format(event))
+            #return
           
         statechartHandledEvent = False
         eventHandled = False
