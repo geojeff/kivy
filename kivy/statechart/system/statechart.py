@@ -752,7 +752,7 @@ class StatechartManager(EventDispatcher):
     def _exitState(self, state, context):
         parentState = None
           
-        if (state.currentSubstates.find(state) >= 0):
+        if state in state.currentSubstates:
             parentState = state.parentState
             while parentState is not None:
                 parentState.currentSubstates.removeObject(state)
@@ -1034,7 +1034,7 @@ class StatechartManager(EventDispatcher):
             return None
           
         for state in stateChain1:
-            if stateChain2.find(state) >= 0:
+            if state in stateChain2:
                 return state
         
     """ @private
