@@ -352,12 +352,12 @@ class State(EventDispatcher):
                 self._registerStateObserveHandler(key, value)
                 continue
 
-            # [PORT] Don't have to use statePlugin system in python -- just use import.
+            # [PORT] Don't have to use statePlugin system in python -- just use import. But, we may still need to distinguish, and handle.
             #if valueIsFunc and value.statePlugin is not None:
                 #value = value(self)
 
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
-            if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect
+            if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect. Check the __class__ hack.
                 print 'initState, initialSubstateName, substate:', initialSubstateName, value
                 state = self._addSubstate(key, value, None)
                 if key == initialSubstateName:
@@ -1426,9 +1426,10 @@ class State(EventDispatcher):
       @param value {String} property path to a state class
       @param args {Hash,...} Optional. Hash objects to be added to the created state
     """
+    @classmethod
     def plugin(self, value, *arguments):
-        self.arguments = deque(arguments) # [TODO] deque was A() and rotate was shift
-        self.arguments.rotate()
+        arguments = deque(arguments) # [TODO] deque was A() and rotate was shift
+        arguments.rotate()
 
         import self.value as klass
     
@@ -1440,7 +1441,7 @@ class State(EventDispatcher):
             console.error("State.plugin: Unable to subclass. {0} must be a subclass of State".format(self.value))
             return None
     
-        klass = klass(self.arguments)
+        klass = klass(arguments)
         klass.statePlugin = True
         return klass
 

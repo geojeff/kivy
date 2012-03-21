@@ -8,12 +8,29 @@ from kivy.statechart.system.statechart import Statechart
 
 import os, inspect
 
-from showing_app import SHOWING_APP_State
+#from showing_app import SHOWING_APP_State
 from showing_load_dialog import SHOWING_LOAD_DIALOG_State
 from showing_save_dialog import SHOWING_SAVE_DIALOG_State
 
 class Root(FloatLayout):
     pass
+
+class SHOWING_APP_State(State):
+    def __init__(self, **kwargs):
+        kwargs['name'] = 'SHOWING_APP'
+        super(SHOWING_APP_State, self).__init__(**kwargs)
+
+    def enterState(self):
+        print 'SHOWING_APP/enterState'
+                
+    def exitState(self):
+        print 'SHOWING_APP/exitState'
+
+    def show_load(self):
+        self.gotoState('SHOWING_LOAD_DIALOG')
+
+    def show_save(self):
+        self.gotoState('SHOWING_SAVE_DIALOG')
 
 class AppStatechart(Statechart):
     rootState = ObjectProperty(None)
@@ -31,6 +48,7 @@ class AppStatechart(Statechart):
             initialSubstate = 'SHOWING_APP'
     
             SHOWING_APP = SHOWING_APP_State
+
             SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State
             SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State
 

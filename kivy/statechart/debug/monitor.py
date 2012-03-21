@@ -38,7 +38,7 @@ class StatechartMonitor(EventDispatcher):
     def matchSequence(self):
         return StatechartSequenceMatcher(self) # [PORT] call was ({ statechartMonitor: self }), but __init__ on SSM was changed to take monitor
   
-    # [PORT] Check now arguments is used in the call. 
+    # [PORT] Check how arguments is used in the call. 
     def matchEnteredStates(self, *arguments):
         expected = arguments[0] if len(arguments) == 1 else arguments # [PORT] arguments, in javascript. so *arguments was added here
         actual = self.statechart.enteredStates

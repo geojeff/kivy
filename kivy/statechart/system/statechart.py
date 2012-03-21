@@ -426,16 +426,18 @@ class StatechartManager(EventDispatcher):
         rootState.initState()
           
         print rootState.initialSubstate
-        if issubclass(rootState.initialSubstate, EmptyState):
+        if inspect.isclass(rootState.initialSubstate) and issubclass(rootState.initialSubstate, EmptyState):
             msg = "Unable to initialize statechart. Root state must have an initial substate explicilty defined"
             self.statechartLogError(msg)
             raise msg
           
-        if not empty(self.initialState):
+        if self.initialState is not None:
             key = 'initialState'
-            self.key = rootState[self.key]
+            setattr(self, key, getattr(rootState, self.key))
+            #self.key = rootState[self.key]
           
         self.statechartIsInitialized = True
+
         self.gotoState(rootState)
           
         if trace:
