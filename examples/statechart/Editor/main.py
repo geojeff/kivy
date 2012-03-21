@@ -13,7 +13,9 @@ from showing_load_dialog import SHOWING_LOAD_DIALOG
 from showing_save_dialog import SHOWING_SAVE_DIALOG
 
 class Root(FloatLayout):
-    pass
+    loadfile = ObjectProperty(None)
+    savefile = ObjectProperty(None)
+    text_input = ObjectProperty(None)
 
 class SHOWING_APP(State):
     def __init__(self, **kwargs):
@@ -22,6 +24,8 @@ class SHOWING_APP(State):
 
     def enterState(self, context=None):
         print 'SHOWING_APP/enterState'
+        self.statechart.app.root = Root
+        self.statechart.app.run()
                 
     def exitState(self, context=None):
         print 'SHOWING_APP/exitState'
@@ -62,8 +66,7 @@ class AppStatechart(Statechart):
         return RootState
 
 class Editor(App):
-    def __init__(self):
-        pass
+    pass
 
 Factory.register('Root', cls=Root)
 
@@ -73,5 +76,4 @@ if __name__ == '__main__':
     app.statechart = statechart
     app.statechart.initStatechart()
     app.statechart.rootState.printInfo('print states')
-    app.run()
 
