@@ -24,9 +24,10 @@ class SHOWING_APP(State):
 
     def enterState(self, context=None):
         print 'SHOWING_APP/enterState'
-        #self.statechart.app.load_config()
-        #self.statechart.app.load_kv()
+        self.statechart.app.load_config()
+        self.statechart.app.load_kv()
         self.statechart.app.root = Root()
+        self.statechart.app.built = True
         self.statechart.app.run()
                 
     def exitState(self, context=None):
@@ -67,13 +68,13 @@ class AppStatechart(Statechart):
 
         return RootState
 
-class EditorApp(App):
+class Editor(App):
     pass
 
 Factory.register('Root', cls=Root)
 
 if __name__ == '__main__':
-    app = EditorApp()
+    app = Editor()
     statechart = AppStatechart(app)
     app.statechart = statechart
     app.statechart.initStatechart()
