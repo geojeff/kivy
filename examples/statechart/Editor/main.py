@@ -8,17 +8,17 @@ from kivy.statechart.system.statechart import Statechart
 
 import os, inspect
 
-#from showing_app import SHOWING_APP_State
-from showing_load_dialog import SHOWING_LOAD_DIALOG_State
-from showing_save_dialog import SHOWING_SAVE_DIALOG_State
+#from showing_app import SHOWING_APP
+from showing_load_dialog import SHOWING_LOAD_DIALOG
+from showing_save_dialog import SHOWING_SAVE_DIALOG
 
 class Root(FloatLayout):
     pass
 
-class SHOWING_APP_State(State):
+class SHOWING_APP(State):
     def __init__(self, **kwargs):
         kwargs['name'] = 'SHOWING_APP'
-        super(SHOWING_APP_State, self).__init__(**kwargs)
+        super(SHOWING_APP, self).__init__(**kwargs)
 
     def enterState(self, context=None):
         print 'SHOWING_APP/enterState'
@@ -47,13 +47,13 @@ class AppStatechart(Statechart):
     
             initialSubstate = 'SHOWING_APP'
     
-            SHOWING_APP = SHOWING_APP_State
+            SHOWING_APP = SHOWING_APP
 
-            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State
-            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State
+            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG
+            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG
 
             @State.eventHandler(['print initial substate', 'print states'])
-            def printInfo(infoType):
+            def printInfo(self, infoType):
                 if infoType is 'print initial substate':
                     print 'INFO:', self.initialSubstate
                 elif infoType is 'print states':
