@@ -836,7 +836,7 @@ class StatechartManager(EventDispatcher):
       @param context {Hash} a context hash object to provide the enterState method
     """
     def enterState(self, state, context):
-        if state.enterStateByRoute and issubclass(context, StateRouteHandlerContext):
+        if hasattr(state, 'enterStateByRoute') and issubclass(context, StateRouteHandlerContext):
             return state.enterStateByRoute(context)
         else:
             return state.enterState(context)
