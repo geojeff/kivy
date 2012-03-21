@@ -232,7 +232,7 @@ class State(EventDispatcher):
             #self.__dict__[key] = kwargs.pop(key)
 
         for k,v in kwargs.items():
-            if k is 'initialSubstate':
+            if k == 'initialSubstate':
                 if isinstance(v, basestring):
                     self.initialSubstateName = v
                 else:
@@ -357,20 +357,20 @@ class State(EventDispatcher):
                 #value = value(self)
 
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
-            if inspect.isclass(value) and issubclass(value, State) and key is not '__class__': # [PORT] using inspect
+            if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect
                 print 'initState, initialSubstateName, substate:', initialSubstateName, value
                 state = self._addSubstate(key, value, None)
-                if key is initialSubstateName:
+                if key == initialSubstateName:
                     self.initialSubstate = state
                     matchedInitialSubstate = True
-                elif historyState and historyState.defaultState is key:
+                elif historyState and historyState.defaultState == key:
                     historyState.defaultState = state
                     matchedInitialSubstate = True
 
             if self.initialSubstate is not None and not matchedInitialSubstate:
                 self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(self.initialSubstate, self))
 
-            if len(self.substates) is 0:
+            if len(self.substates) == 0:
                 if self.initialSubstate is None:
                     self.stateLogWarning("Unable to make {0} an initial substate since state {1} has no substates".format(self.initialSubstate, self))
             elif len(self.substates) > 0:
@@ -560,9 +560,9 @@ class State(EventDispatcher):
 
         numberOfArguments = len(arguments)
 
-        if numberOfArguments is 1:
+        if numberOfArguments == 1:
             state = State
-        elif numberOfArguments is 2 and isinstance(state, dict):
+        elif numberOfArguments == 2 and isinstance(state, dict):
             attr = state
             state = State
 
@@ -745,7 +745,7 @@ class State(EventDispatcher):
         matcher = StatePathMatcher.create({ state: self, expression: value })
         matches = []
         key = undefined
-        if len(matcher.tokens) is 0:
+        if len(matcher.tokens) == 0:
             return None
 
         paths = self._registeredSubstatePaths[matcher.lastPart]
@@ -757,7 +757,7 @@ class State(EventDispatcher):
             if matcher.match(key):
                 matches.append(paths[key])
 
-        if len(matches) is 1:
+        if len(matches) == 1:
             return matches[0]
 
         if len(matches) > 1:
@@ -795,7 +795,7 @@ class State(EventDispatcher):
       For path expression syntax, refer to the {@link StatePathMatcher} class.
     """
     def getState(self, value):
-        if value is self.name:
+        if value == self.name:
             return self
 
         if issubclass(value, State):
@@ -998,7 +998,7 @@ class State(EventDispatcher):
         numCurrent = len(currentSubstates)
         parent = self.parentState
 
-        if numCurrent is 0:
+        if numCurrent == 0:
             return parent.findFirstRelativeCurrentState() if parent is not None else None
 
         if numCurrent > 1:
@@ -1083,7 +1083,7 @@ class State(EventDispatcher):
                 self.stateLogTrace("will handle event '{0}'".format(event))
 
             sc.stateWillTryToHandleEvent(self, event, event)
-            ret = self[event](arg1, arg2) is not False
+            ret = self[event](arg1, arg2) != False
             sc.stateDidTryToHandleEvent(self, event, event, ret)
             return ret
 
@@ -1094,7 +1094,7 @@ class State(EventDispatcher):
                 self.stateLogTrace("{0} will handle event '{1}'".format(handler.name, event))
 
             sc.stateWillTryToHandleEvent(self, event, handler.name)
-            ret = handler.handler(self, event, arg1, arg2) is not False
+            ret = handler.handler(self, event, arg1, arg2) != False
             sc.stateDidTryToHandleEvent(self, event, handler.name, ret)
             return ret
 
@@ -1108,7 +1108,7 @@ class State(EventDispatcher):
                     self.stateLogTrace("{0} will handle event '{1}'".format(handler.name, event))
 
                 sc.stateWillTryToHandleEvent(self, event, handler.name)
-                ret = handler.handler(self, event, arg1, arg2) is not False
+                ret = handler.handler(self, event, arg1, arg2) != False
                 sc.stateDidTryToHandleEvent(self, event, handler.name, ret)
                 return ret
             i += 1
@@ -1120,7 +1120,7 @@ class State(EventDispatcher):
                 self.stateLogTrace("unknownEvent will handle event '{0}'".format(event))
 
             sc.stateWillTryToHandleEvent(self, event, "unknownEvent")
-            ret = self.unknownEvent(event, arg1, arg2) is not False
+            ret = self.unknownEvent(event, arg1, arg2) != False
             sc.stateDidTryToHandleEvent(self, event, "unknownEvent", ret)
             return ret
 
@@ -1286,17 +1286,17 @@ class State(EventDispatcher):
 
             if dotIndex < 0:
                 self[action](path, self, observer)
-            elif path.find("*") is 0:
+            elif path.find("*") == 0:
                 self[action](path[1], self, observer)
             else:
                 root = None
-                if dotIndex is 0:
+                if dotIndex == 0:
                     root = this
                     path = path[1]
-                elif dotIndex is 4 and path[0, 5] is "self.":
+                elif dotIndex == 4 and path[0, 5] == "self.":
                     root = self
                     path = path[5]
-                elif dotIndex < 0 and len(path) is 4 and path is "self":
+                elif dotIndex < 0 and len(path) == 4 and path == "self":
                     root = self
                     path = ""
                 Observers[action](path, self, observer, root)

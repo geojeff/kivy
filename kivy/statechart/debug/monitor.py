@@ -40,12 +40,12 @@ class StatechartMonitor(EventDispatcher):
   
     # [PORT] Check now arguments is used in the call. 
     def matchEnteredStates(self, *arguments):
-        expected = arguments[0] if len(arguments) is 1 else arguments # [PORT] arguments, in javascript. so *arguments was added here
+        expected = arguments[0] if len(arguments) == 1 else arguments # [PORT] arguments, in javascript. so *arguments was added here
         actual = self.statechart.enteredStates
         matched = 0
         statechart = self.statechart
     
-        if len(expected) is not len(actual):
+        if len(expected) != len(actual):
             return False
     
         for item in expected:
@@ -56,7 +56,7 @@ class StatechartMonitor(EventDispatcher):
             if statechart.stateIsEntered(item) and item.isEnteredState:
                 matched += 1
     
-        return matched is len(actual)
+        return matched == len(actual)
   
     def toString(self):
         seq = ""

@@ -135,7 +135,7 @@ class StatePathMatcher:
         while True:
             chain.nextToken = stack.pop()
             chain = token
-            if len(stack) is 0:
+            if len(stack) == 0:
                 break
   
     """
@@ -220,7 +220,7 @@ class _BasicToken(_Token):
         part = self.owner._pop() # [TODO] pop
         token = self.nextToken
 
-        if self.value is not part:
+        if self.value != part:
             return False
     
         return token.match() if token else True
@@ -258,14 +258,14 @@ class _ExpandToken(_Token):
         token = self.nextToken
           
         part = self.owner._pop()
-        if part is not end:
+        if part != end:
             return False
       
         while True:
             part = self.owner._pop()
-            if part is start:
+            if part == start:
                 return token.match() if token else True
-            if len(self.owner) is 0:
+            if len(self.owner) == 0:
                 break
       
         return False
@@ -290,11 +290,11 @@ class _ThisToken(_Token):
         
         part = self.owner._lastPopped
 
-        if part is None or len(self.owner._stack) is not 0:
+        if part is None or len(self.owner._stack) != 0:
             return False
     
         for i in range(len(self.substates)):
-            if substates[i]['name'] is part:
+            if substates[i]['name'] == part:
                 return True
     
         return False

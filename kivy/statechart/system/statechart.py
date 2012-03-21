@@ -701,9 +701,9 @@ class StatechartManager(EventDispatcher):
         numberOfActions = len(actions)
         while marker < numberOfActions:
             self._currentGotoStateAction = action = actions[marker]
-            if action.action is EXIT_STATE:
+            if action.action == EXIT_STATE:
                 actionResult = self._exitState(action.state, context)
-            elif action.action is ENTER_STATE:
+            elif action.action == ENTER_STATE:
                 actionResult = self._enterState(action.state, action.currentState, context)
             
             # Check if the state wants to perform an asynchronous action during
@@ -1025,7 +1025,7 @@ class StatechartManager(EventDispatcher):
       returned is the fist matching state between the two given state chains. 
     """
     def _findPivotState(self, stateChain1, stateChain2):
-        if len(stateChain1) is 0 or len(stateChain2) is 0:
+        if len(stateChain1) == 0 or len(stateChain2) == 0:
             return None
           
         for state in stateChain1:
@@ -1056,7 +1056,7 @@ class StatechartManager(EventDispatcher):
             
             for i in range(len(currentSubstates)):
                 currentState = currentSubstates[i]
-                if currentState._traverseStatesToExit_skipState is True:
+                if currentState._traverseStatesToExit_skipState == True:
                     continue
                 chain = self._createStateChain(currentState)
                 self._traverseStatesToExit(chain.rotate(), chain, state, gotoStateActions) # [PORT] rotate was shift
@@ -1095,7 +1095,7 @@ class StatechartManager(EventDispatcher):
           
         # If no more explicit enter path instructions, then default to enter states based on 
         # other criteria
-        elif not enterStatePath or len(enterStatePath) is 0:
+        elif not enterStatePath or len(enterStatePath) == 0:
             gotoStateAction = { action: ENTER_STATE, state: state, currentState: False }
             gotoStateActions.append(gotoStateAction)
             
@@ -1171,10 +1171,10 @@ class StatechartManager(EventDispatcher):
       
         if hasattr(self[event], '__call__'):
             result = self[event](arg1, arg2)
-            if result is not False:
+            if result != False:
                 return True
           
-        return self.sendEvent(event, arg1, arg2) is True # [PORT] was !!
+        return self.sendEvent(event, arg1, arg2) == True # [PORT] was !!
         
     """
       Used to invoke a method on current states. If the method can not be executed
@@ -1228,7 +1228,7 @@ class StatechartManager(EventDispatcher):
                on a state.
     """
     def invokeStateMethod(self, methodName, args, func):
-        if methodName is 'unknownEvent':
+        if methodName == 'unknownEvent':
             self.statechartLogError("can not invoke method unkownEvent")
             return
           
@@ -1259,7 +1259,7 @@ class StatechartManager(EventDispatcher):
                     break
                 state = state.parentState
           
-        return result if calledStates is 1 else None
+        return result if calledStates == 1 else None
         
     """ @private
         
@@ -1323,7 +1323,7 @@ class StatechartManager(EventDispatcher):
           
         processedArgs.state = args[0]
           
-        if len(args) is 2:
+        if len(args) == 2:
             value = args[1]
             if isinstance(value, bool):
                 processedArgs.useHistory = value
@@ -1332,7 +1332,7 @@ class StatechartManager(EventDispatcher):
                     processedArgs.context = value
             else:
                 processedArgs.fromCurrentState = value
-        elif len(args) is 3:
+        elif len(args) == 3:
             value = args[1]
             if isinstance(value, bool):
                 processedArgs.useHistory = value
@@ -1389,7 +1389,7 @@ class StatechartManager(EventDispatcher):
             return None
           
         for key in self:
-            if key is rsExampleKey:
+            if key == rsExampleKey:
                 continue
             
             value = self[key]
@@ -1398,11 +1398,12 @@ class StatechartManager(EventDispatcher):
             if valueIsFunc and value.statePlugin:
                 value = value.apply(this)
             
-            if isinstance(value, State) and value.isClass and self[key] is not self.__init__:
+            #if isinstance(value, State) and inspect.isclass(value) and self[key] is not self.__init__:
+            if isinstance(value, State) and inspect.isclass(value) and key != '__class__': # [PORT] Compare to same usage in state.py. Same here?
                 attrs[key] = value
                 stateCount += 1
           
-        if stateCount is 0:
+        if stateCount == 0:
             self._logStatechartCreationError("Must define one or more states")
             return None
           
@@ -1490,11 +1491,11 @@ class StatechartManager(EventDispatcher):
             stateTransition['transition-sequence'] = []
                 
             for action in self.gotoStateActions:
-                actionName = "enter" if action.action is ENTER_STATE else "exit"
+                actionName = "enter" if action.action == ENTER_STATE else "exit"
                 actionName = "{0} {1}".format(actionName, action.state.fullPath)
                 stateTransition['transition-sequence'].append(actionName)
             
-            actionName = "enter" if self._currentGotoStateAction.action is ENTER_STATE else "exit"
+            actionName = "enter" if self._currentGotoStateAction.action == ENTER_STATE else "exit"
             actionName = "{0} {1}".format(actionName, self._currentGotoStateAction.state.fullPath)
             stateTransition['current-transition'] = actionName
           
@@ -1547,7 +1548,7 @@ class StatechartManager(EventDispatcher):
         
     """ @private """
     def _arrayToString(self, key, array, indent):
-        if len(array) is 0:
+        if len(array) == 0:
             return "{0}{1}: []".format(' ' * indent, key)
           
         arrayAsString = "{0}{1}: [\n".format(' ' * indent, key)

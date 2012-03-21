@@ -23,7 +23,7 @@ class StatechartSequenceMatcher:
             raise "can not match sequence. sequence matcher has been left in an invalid state"
     
         monitor = self.statechartMonitor
-        result = self._matchSequence(self._start, 0) is length(monitor.sequence)
+        result = self._matchSequence(self._start, 0) == length(monitor.sequence)
 
         self.match = result
     
@@ -64,7 +64,7 @@ class StatechartSequenceMatcher:
         return self
   
     def _peek(self):
-        return None if len(self._stack) is 0 else self._stack[len(self._stack)-1]
+        return None if len(self._stack) == 0 else self._stack[len(self._stack)-1]
   
     def _addStatesToCurrentGroup(self, action, states):
         group = self._peek()
@@ -78,7 +78,7 @@ class StatechartSequenceMatcher:
         val = ''
         monitor = self.statechartMonitor
         
-        if numberOfValues is 0:
+        if numberOfValues == 0:
             return marker
 
         if marker > len(monitor.sequence):
@@ -87,16 +87,16 @@ class StatechartSequenceMatcher:
         for i in range(numberOfValues):
             val = values[i]
       
-            if val.tokenType is 'sequence':
+            if val.tokenType == 'sequence':
                 marker = self._matchSequence(val, marker)
-            elif val.tokenType is 'concurrent':
+            elif val.tokenType == 'concurrent':
                 marker = self._matchConcurrent(val, marker)
             elif not self._matchItems(val, monitor.sequence[marker]):
                 return self.MISMATCH
             else:
                 marker += 1
       
-            if marker is self.MISMATCH:
+            if marker == self.MISMATCH:
                 return self.MISMATCH
     
         return marker
@@ -125,7 +125,7 @@ class StatechartSequenceMatcher:
         match = false
         monitor = self.statechartMonitor
         
-        if numberOfValues is 0:
+        if numberOfValues == 0:
             return marker
     
         if marker > len(monitor.sequence):
@@ -135,19 +135,19 @@ class StatechartSequenceMatcher:
             for i in range(numberOfValues):
                 val = values[i]
       
-                if val.tokenType is 'sequence':
+                if val.tokenType == 'sequence':
                     tempMarker = self._matchSequence(val, marker)
-                elif val.tokenType is 'concurrent':
+                elif val.tokenType == 'concurrent':
                     tempMarker = self._matchConcurrent(val, marker)
                 elif not self._matchItems(val, monitor.sequence[marker]):
                     tempMarker = self.MISMATCH
                 else:
                     tempMarker = marker + 1
       
-                if tempMarker is not self.MISMATCH:
+                if tempMarker != self.MISMATCH:
                     break
       
-                if tempMarker is self.MISMATCH:
+                if tempMarker == self.MISMATCH:
                     return self.MISMATCH
 
                 del values[i] # [PORT] was removeAt
@@ -166,7 +166,7 @@ class StatechartSequenceMatcher:
         if isintance(matcherItem.state, Object) and matcherItem.state is monitorItem.state:
             return True
     
-        if matcherItem.state is monitorItem.state.name:
+        if matcherItem.state == monitorItem.state.name: # [PORT] This compares state to a state.name -- ok?
             return True
   
         return False
