@@ -1066,7 +1066,7 @@ class StatechartManager(EventDispatcher):
                 chain = self._createStateChain(currentState)
                 self._traverseStatesToExit(chain.rotate(), chain, state, gotoStateActions) # [PORT] rotate was shift
           
-        gotoStateActions.append({ action: EXIT_STATE, state: state })
+        gotoStateActions.append({ 'action': EXIT_STATE, 'state': state })
         if state.isCurrentState:
             state._traverseStatesToExit_skipState = True
         self._traverseStatesToExit(exitStatePath.rotate(), exitStatePath, stopState, gotoStateActions) # [PORT] rotate was shift
@@ -1101,7 +1101,7 @@ class StatechartManager(EventDispatcher):
         # If no more explicit enter path instructions, then default to enter states based on 
         # other criteria
         elif not enterStatePath or len(enterStatePath) == 0:
-            gotoStateAction = { action: ENTER_STATE, state: state, currentState: False }
+            gotoStateAction = { 'action': ENTER_STATE, 'state': state, 'currentState': False }
             gotoStateActions.append(gotoStateAction)
             
             initialSubstate = state.initialSubstate
@@ -1131,7 +1131,7 @@ class StatechartManager(EventDispatcher):
           
         # Still have an explicit enter path to follow, so keep moving through the path.
         elif len(enterStatePath) > 0:
-            gotoStateActions.append({ action: ENTER_STATE, state: state })
+            gotoStateActions.append({ 'action': ENTER_STATE, 'state': state })
             nextState = enterStatePath.pop() # [PORT] pop, now on deque
             self._traverseStatesToEnter(nextState, enterStatePath, None, useHistory, gotoStateActions)
             

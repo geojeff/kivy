@@ -893,8 +893,7 @@ class State(EventDispatcher):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
-        current = self.currentSubstates
-        self.stateIsCurrentSubstate = current and current.find(state) >= 0 # [TODO] was !!current && ...
+        self.stateIsCurrentSubstate = state in self.currentSubstates # [PORT] was !!current && ... but here we assume list is ever-present.
 
     """
       Used to check if a given state is a current substate of this state. Mainly used in cases
@@ -907,8 +906,7 @@ class State(EventDispatcher):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
-        entered = self.enteredSubstates
-        self.stateIsEnteredSubstate = entered and entered.find(state) >= 0
+        self.stateIsEnteredSubstate = state in self.enteredSubstates
 
     """
       Indicates if this state is the root state of the statechart.
@@ -923,8 +921,8 @@ class State(EventDispatcher):
       
       @property {Boolean} 
     """
-    def _isCurrentState(self):
-        return self.stateIsCurrentSubstate(self)
+    def isCurrentState(self): # [PORT] Made this a simple method, because the updates seem to be handled by stateIsCurrentSubstate, etc.
+        return self.stateIsCurrentSubstate
 
     """
       Indicates if this state is a concurrent state
@@ -956,7 +954,7 @@ class State(EventDispatcher):
       Indicates if this state has any current substates
     """
     def _hasCurrentSubstates(self):
-        current = self.currentSubstates
+        current = self.currentSubstates # [PORT] Do we have to do this check in python?
         return current and len(current) > 0
 
     """
@@ -989,7 +987,7 @@ class State(EventDispatcher):
       @return {State} a current state
     """
     def findFirstRelativeCurrentState(self, anchor=None):
-        if self._isCurrentState:
+        if self.isCurrentState():
             return self
 
         currentSubstates = self.currentSubstates or []
