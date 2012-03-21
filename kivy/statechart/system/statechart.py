@@ -1105,8 +1105,8 @@ class StatechartManager(EventDispatcher):
             gotoStateAction = { 'action': ENTER_STATE, 'state': state, 'currentState': False }
             gotoStateActions.append(gotoStateAction)
             
-            initialSubstate = state.initialSubstate
-            historyState = state.historyState
+            initialSubstate = state.initialSubstate if hasattr(state, 'initialSubstate') else None
+            historySubstate = state.historySubstate if hasattr(state, 'historySubstate') else None
             
             # State has concurrent substates. Need to enter all of the substates
             if state.substatesAreConcurrent:
@@ -1118,7 +1118,7 @@ class StatechartManager(EventDispatcher):
                 self._traverseStatesToEnter(historyState, None, None, useHistory, gotoStateActions)
             
             # State has an initial substate to enter
-            elif initialSubstate:
+            elif initialSubstate is not None:
                 if inspect.isclass(initialSubstate) and issubclass(initialSubstate, HistoryState): # [PORT] OK if initialSubstate is str here? (class or object at this point?)
                     if not useHistory:
                         useHistory = initialSubstate.isRecursive

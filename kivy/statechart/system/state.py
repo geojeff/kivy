@@ -341,7 +341,13 @@ class State(EventDispatcher):
         # Iterate through all this state's substates, if any, create them, and then initialize
         # them. This causes a recursive process.
         for key in dir(self):
+            if key == '__class__':
+                continue
+
             value = getattr(self, key)
+            if not inspect.isfunction(value) and not inspect.isclass(value):
+                continue
+
             valueIsFunc = inspect.isfunction(value)
       
             if valueIsFunc and value.isEventHandler:
@@ -353,6 +359,8 @@ class State(EventDispatcher):
                 continue
 
             # [PORT] Removed statePlugin system in python.
+
+            print 'initState:', key, value
 
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
             if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect. Check the __class__ hack.

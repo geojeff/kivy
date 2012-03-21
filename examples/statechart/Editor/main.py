@@ -24,7 +24,7 @@ class SHOWING_APP(State):
 
     def enterState(self, context=None):
         print 'SHOWING_APP/enterState'
-        self.statechart.app.root = Root
+        self.statechart.app.root = Root()
         self.statechart.app.run()
                 
     def exitState(self, context=None):
