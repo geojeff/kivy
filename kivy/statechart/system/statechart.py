@@ -561,7 +561,7 @@ class StatechartManager(EventDispatcher):
       @param useHistory {Boolean} Optional. Indicates whether to include using history states in the transition process
       @param context {Hash} Optional. A context object that will be passed to all exited and entered states
     """
-    def gotoState(self, state, fromCurrentState, useHistory, context):
+    def gotoState(self, state, fromCurrentState=None, useHistory=None, context=None):
         if not self.statechartIsInitialized:
             self.statechartLogError("can not go to state {0}. statechart has not yet been initialized".format(state))
             return
