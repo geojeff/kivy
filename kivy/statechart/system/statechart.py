@@ -704,10 +704,10 @@ class StatechartManager(EventDispatcher):
         numberOfActions = len(actions)
         while marker < numberOfActions:
             self._currentGotoStateAction = action = actions[marker]
-            if action.action == EXIT_STATE:
-                actionResult = self._exitState(action.state, context)
-            elif action.action == ENTER_STATE:
-                actionResult = self._enterState(action.state, action.currentState, context)
+            if action['action'] == EXIT_STATE:
+                actionResult = self._exitState(action['state'], context)
+            elif action['action'] == ENTER_STATE:
+                actionResult = self._enterState(action['state'], action['currentState'], context)
             
             # Check if the state wants to perform an asynchronous action during
             # the state transition process. If so, then we need to first
@@ -724,7 +724,7 @@ class StatechartManager(EventDispatcher):
                     context: context
                 }
               
-                actionResult.tryToPerform(action.state)
+                actionResult.tryToPerform(action['state'])
                 return
 
             marker += 1
@@ -1118,7 +1118,7 @@ class StatechartManager(EventDispatcher):
             
             # State has an initial substate to enter
             elif initialSubstate:
-                if issubclass(initialSubstate, HistoryState):
+                if inspect.isclass(initialSubstate) and issubclass(initialSubstate, HistoryState): # [PORT] OK if initialSubstate is str here? (class or object at this point?)
                     if not useHistory:
                         useHistory = initialSubstate.isRecursive
                     initialSubstate = initialSubstate.state
@@ -1127,7 +1127,7 @@ class StatechartManager(EventDispatcher):
             # Looks like we hit the end of the road. Therefore the state has now become
             # a current state of the statechart.
             else:
-                gotoStateAction.currentState = True
+                gotoStateAction['currentState'] = True
           
         # Still have an explicit enter path to follow, so keep moving through the path.
         elif len(enterStatePath) > 0:
@@ -1488,18 +1488,18 @@ class StatechartManager(EventDispatcher):
         for state in self.currentStates:
             details['current-states'].append(state.fullPath)
           
-        stateTransition = { active: self.gotoStateActive, suspended: self.gotoStateSuspended }
+        stateTransition = { 'active': self.gotoStateActive, 'suspended': self.gotoStateSuspended }
       
         if self._gotoStateActions:
             stateTransition['transition-sequence'] = []
                 
             for action in self.gotoStateActions:
-                actionName = "enter" if action.action == ENTER_STATE else "exit"
-                actionName = "{0} {1}".format(actionName, action.state.fullPath)
+                actionName = "enter" if action['action'] == ENTER_STATE else "exit"
+                actionName = "{0} {1}".format(actionName, action['state'].fullPath)
                 stateTransition['transition-sequence'].append(actionName)
             
-            actionName = "enter" if self._currentGotoStateAction.action == ENTER_STATE else "exit"
-            actionName = "{0} {1}".format(actionName, self._currentGotoStateAction.state.fullPath)
+            actionName = "enter" if self._currentGotoStateAction['action'] == ENTER_STATE else "exit"
+            actionName = "{0} {1}".format(actionName, self._currentGotoStateAction['state'].fullPath)
             stateTransition['current-transition'] = actionName
           
         details['state-transition'] = stateTransition
