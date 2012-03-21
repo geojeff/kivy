@@ -889,7 +889,7 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsCurrentSubstate(self, state):
+    def _stateIsCurrentSubstate(self, state=None, *l):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
@@ -902,7 +902,7 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsEnteredSubstate(self, state):
+    def _stateIsEnteredSubstate(self, state=None, *l):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
@@ -913,7 +913,7 @@ class State(EventDispatcher):
       
       @property {Boolean}
     """
-    def _isRootState(self):
+    def _isRootState(self, *l):
         return self.statechart.rootState is self
 
     """
@@ -921,7 +921,7 @@ class State(EventDispatcher):
       
       @property {Boolean} 
     """
-    def isCurrentState(self): # [PORT] Made this a simple method, because the updates seem to be handled by stateIsCurrentSubstate, etc.
+    def isCurrentState(self, *l): # [PORT] Made this a simple method, because the updates seem to be handled by stateIsCurrentSubstate, etc.
         return self.stateIsCurrentSubstate
 
     """
@@ -929,7 +929,7 @@ class State(EventDispatcher):
       
       @property {Boolean}
     """
-    def _isConcurrentState(self):
+    def _isConcurrentState(self, *l):
         return self.parentState.substatesAreConcurrent
 
     """
@@ -939,7 +939,7 @@ class State(EventDispatcher):
       state's enterState method was invoked, but only after its exitState method 
       was called, if at all.
     """
-    def _isEnteredState(self):
+    def _isEnteredState(self, *l):
         return self.stateIsEnteredSubstate(self)
 
     """
@@ -953,14 +953,14 @@ class State(EventDispatcher):
     """
       Indicates if this state has any current substates
     """
-    def _hasCurrentSubstates(self):
+    def _hasCurrentSubstates(self, *l):
         current = self.currentSubstates # [PORT] Do we have to do this check in python?
         return current and len(current) > 0
 
     """
       Indicates if this state has any currently entered substates
     """
-    def _hasEnteredSubstates(self):
+    def _hasEnteredSubstates(self, *l):
         entered = self.enteredSubstates
         return entered and len(entered) > 0
 
@@ -1351,22 +1351,22 @@ class State(EventDispatcher):
         return self.fullPath
 
     """ @private """
-    def _enteredSubstatesDidChange(self):
+    def _enteredSubstatesDidChange(self, *l):
         #self.notifyPropertyChange("enteredSubstates")
         pass
 
     """ @private """
-    def _currentSubstatesDidChange(self):
+    def _currentSubstatesDidChange(self, *l):
         #self.notifyPropertyChange("currentSubstates")
         pass
 
     """ @private """
-    def _statechartTraceDidChange(self):
+    def _statechartTraceDidChange(self, *l):
         #self.notifyPropertyChange("trace")
         pass
 
     """ @private """
-    def _statechartOwnerDidChange(self):
+    def _statechartOwnerDidChange(self, *l):
         #self.notifyPropertyChange("owner")
         pass
 
