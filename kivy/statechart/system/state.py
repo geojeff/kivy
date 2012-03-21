@@ -988,7 +988,7 @@ class State(EventDispatcher):
         finding a current state
       @return {State} a current state
     """
-    def findFirstRelativeCurrentState(self, anchor):
+    def findFirstRelativeCurrentState(self, anchor=None):
         if self.isCurrentState:
             return self
 
