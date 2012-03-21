@@ -340,11 +340,8 @@ class State(EventDispatcher):
     
         # Iterate through all this state's substates, if any, create them, and then initialize
         # them. This causes a recursive process.
-        #for key in self.__dict__:
         for key in dir(self):
-            #value = self.__dict__[key]
             value = getattr(self, key)
-            #valueIsFunc = hasattr(value, '__call__') # [PORT] Will this also catch classes?
             valueIsFunc = inspect.isfunction(value)
       
             if valueIsFunc and value.isEventHandler:
@@ -355,11 +352,13 @@ class State(EventDispatcher):
                 self._registerStateObserveHandler(key, value)
                 continue
 
-            if valueIsFunc and value.statePlugin is not None:
-                value = value(self)
+            # [PORT] Don't have to use statePlugin system in python -- just use import.
+            #if valueIsFunc and value.statePlugin is not None:
+                #value = value(self)
 
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
             if inspect.isclass(value) and issubclass(value, State) and key is not '__class__': # [PORT] using inspect
+                print 'initState, initialSubstateName, substate:', initialSubstateName, value
                 state = self._addSubstate(key, value, None)
                 if key is initialSubstateName:
                     self.initialSubstate = state
@@ -368,15 +367,15 @@ class State(EventDispatcher):
                     historyState.defaultState = state
                     matchedInitialSubstate = True
 
-            if initialSubstate is not None and not matchedInitialSubstate:
-                self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(initialSubstate, self))
+            if self.initialSubstate is not None and not matchedInitialSubstate:
+                self.stateLogError("Unable to set initial substate {0} since it did not match any of state's {1} substates".format(self.initialSubstate, self))
 
-            if len(substates) is 0:
-                if initialSubstate is None:
-                    self.stateLogWarning("Unable to make {0} an initial substate since state {1} has no substates".format(initialSubstate, self))
-            elif len(substates) > 0:
+            if len(self.substates) is 0:
+                if self.initialSubstate is None:
+                    self.stateLogWarning("Unable to make {0} an initial substate since state {1} has no substates".format(self.initialSubstate, self))
+            elif len(self.substates) > 0:
                   state = self._addEmptyInitialSubstateIfNeeded()
-                  if not state and initialSubstate and substatesAreConcurrent:
+                  if state is None and initialSubstate is not None and substatesAreConcurrent:
                         self.initialSubstate = None
                         self.stateLogWarning("Can not use {0} as initial substate since substates are all concurrent for state {1}".format(initialSubstate, self))
 
@@ -503,14 +502,12 @@ class State(EventDispatcher):
 
     """ @private """
     def _addSubstate(self, name, state, attr):
-        substates = self.substates
-
-        attr = copy(attr) if attr else {}
+        attr = dict.copy(attr) if attr else {}
         attr['name'] = name
 
         state = self.createSubstate(state, attr)
 
-        substates.append(state)
+        self.substates.append(state)
 
         print '_addSubstate', name, state
         setattr(self, name, state)
@@ -586,7 +583,7 @@ class State(EventDispatcher):
       creates a substate for this state
     """
     def createSubstate(self, state, attr):
-        attr = attr or {}
+        attr = dict.copy(attr) if attr else {}
         attr['parentState'] = self
         attr['statechart'] = self.statechart
         return state(**attr)

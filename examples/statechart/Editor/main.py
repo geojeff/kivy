@@ -30,9 +30,9 @@ class AppStatechart(Statechart):
     
             initialSubstate = 'SHOWING_APP'
     
-            SHOWING_APP = SHOWING_APP_State(parentState=self, name='SHOWING_APP')
-            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State(parentState=self, name='SHOWING_LOAD_DIALOG')
-            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State(parentState=self, name='SHOWING_SAVE_DIALOG')
+            SHOWING_APP = SHOWING_APP_State
+            SHOWING_LOAD_DIALOG  = SHOWING_LOAD_DIALOG_State
+            SHOWING_SAVE_DIALOG  = SHOWING_SAVE_DIALOG_State
 
             @State.eventHandler(['print initial substate', 'print states'])
             def printInfo(infoType):
