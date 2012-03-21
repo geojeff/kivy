@@ -1262,15 +1262,7 @@ class State(EventDispatcher):
       statechart framework use.  
     """
     def _configureAllStateObserveHandlers(self, action):
-        key = undefined
-        values = undefined
-        value = undefined
-        dotIndex = undefined
-        path = undefined
-        observer = undefined
-        i = undefined
-        root = undefined
-
+        values = []
         for key in self._registeredStateObserveHandlers:
             values = self._registeredStateObserveHandlers[key]
 
