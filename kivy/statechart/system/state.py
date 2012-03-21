@@ -352,9 +352,7 @@ class State(EventDispatcher):
                 self._registerStateObserveHandler(key, value)
                 continue
 
-            # [PORT] Don't have to use statePlugin system in python -- just use import. But, we may still need to distinguish, and handle.
-            #if valueIsFunc and value.statePlugin is not None:
-                #value = value(self)
+            # [PORT] Removed statePlugin system in python.
 
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
             if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect. Check the __class__ hack.
@@ -1401,49 +1399,7 @@ class State(EventDispatcher):
         sc = self.statechart
         sc.statechartLogError(msg)
 
-    """
-      Use this when you want to plug-in a state into a statechart. This is beneficial
-      in cases where you split your statechart's states up into multiple files and
-      don't want to fuss with the sc_require construct.
-      
-      Example:
-      
-          MyApp.statechart = Statechart.create({
-            rootState: State.design({
-              initialSubstate: 'a',
-              a: State.plugin('path.to.a.state.class'),
-              b: State.plugin('path.to.another.state.class')
-            })
-          });
-        
-      You can also supply hashes the plugin feature in order to enhance a state or
-      implement required functionality:
-    
-          SomeMixin = { ... };
-    
-          stateA: State.plugin('path.to.state', SomeMixin, { ... })
-    
-      @param value {String} property path to a state class
-      @param args {Hash,...} Optional. Hash objects to be added to the created state
-    """
-    @classmethod
-    def plugin(self, value, *arguments):
-        arguments = deque(arguments) # [TODO] deque was A() and rotate was shift
-        arguments.rotate()
-
-        import self.value as klass
-    
-        if klass is None:
-            console.error("State.plugin: Unable to determine path {0}".format(self.value))
-            return None
-    
-        if not inspect.isclass(klass) or not issubclass(klass, State):
-            console.error("State.plugin: Unable to subclass. {0} must be a subclass of State".format(self.value))
-            return None
-    
-        klass = klass(arguments)
-        klass.statePlugin = True
-        return klass
+    # [PORT] plugin() method removed in python version.
 
     @classmethod
     def eventHandler(self, events):

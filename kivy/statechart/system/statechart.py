@@ -410,11 +410,10 @@ class StatechartManager(EventDispatcher):
         # a root state class
         if not rootState:
             rootState = self._constructRootStateClass()
-        # [PORT] Added use of inspect.isclass to distinguish between a class and function, but this probably needs
-        #        a better, more explicit check for a function. isinstance(x, types.FunctionType)?
-        elif hasattr(rootState, '__call__') and not inspect.isclass(rootState) and rootState.statePlugin is not None:
-            rootState = rootState()
           
+        # [PORT] plugin system in javascript version removed in python version. States are classes, declared
+        #        either in the source file with the statechart, or imported from individual files.
+
         if inspect.isclass(rootState) and not issubclass(rootState, State):
             msg = "Unable to initialize statechart. Root state must be a state class"
             self.statechartLogError(msg)
@@ -1373,9 +1372,8 @@ class StatechartManager(EventDispatcher):
         stateCount = 0
         attrs = {}
           
-        if hasattr(rsExample, '__call__') and rsExample.statePlugin:
-            rsExample = rsExample(this)
-      
+        # [PORT] Check for rsExample.plugin removed here.
+
         if not isinstance(rsExample, State) and rsExample.isClass:
             self._logStatechartCreationError("Invalid root state example")
             return None
@@ -1397,8 +1395,7 @@ class StatechartManager(EventDispatcher):
             value = self[key]
             valueIsFunc = hasattr(value, '__call__')
             
-            if valueIsFunc and value.statePlugin:
-                value = value.apply(this)
+            # [PORT] Check for value.plugin removed here.
             
             #if isinstance(value, State) and inspect.isclass(value) and self[key] is not self.__init__:
             if isinstance(value, State) and inspect.isclass(value) and key != '__class__': # [PORT] Compare to same usage in state.py. Same here?
