@@ -1349,11 +1349,11 @@ class StatechartManager(EventDispatcher):
                 if isinstance(value, bool):
                     processedArgs['useHistory'] = value
                 else:
-                    processedArgs.['context'] = value
+                    processedArgs['context'] = value
         else:
-            processedArgs.['fromCurrentState'] = args[1]
-            processedArgs.['useHistory'] = args[2]
-            processedArgs.['context'] = args[3]
+            processedArgs['fromCurrentState'] = args[1]
+            processedArgs['useHistory'] = args[2]
+            processedArgs['context'] = args[3]
           
         return processedArgs
         
