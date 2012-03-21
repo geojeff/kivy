@@ -1076,7 +1076,7 @@ class State(EventDispatcher):
             return False
 
         # Now begin by trying a basic method on the state to respond to the event
-        if hasAttr(self[event], '__call__'): # if self[event] is a function
+        if inspect.isfunction(self[event]):
             if trace:
                 self.stateLogTrace("will handle event '{0}'".format(event))
 
@@ -1113,7 +1113,7 @@ class State(EventDispatcher):
 
         # Final attempt. If the state has an unknownEvent function then invoke it to 
         # handle the event
-        if hasAttr(self['unknownEvent'], '__call__'):
+        if inspect.isfunction(self['unknownEvent']):
             if trace:
                 self.stateLogTrace("unknownEvent will handle event '{0}'".format(event))
 
@@ -1321,7 +1321,7 @@ class State(EventDispatcher):
     def respondsToEvent(self, event):
         if self._registeredEventHandlers[event]:
             return false
-        if hasattr(self[event], '__call__'):
+        if inspect.isfunction(self[event]):
             return true
         if self._registeredStringEventHandlers[event]:
             return true
@@ -1337,7 +1337,7 @@ class State(EventDispatcher):
                 return True
             i += 1
 
-        return hasAttr(self['unknownEvent'], '__call__')
+        return inspect.isfunction(self['unknownEvent'])
 
     """
       Returns the path for this state relative to the statechart's

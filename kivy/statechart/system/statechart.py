@@ -1153,7 +1153,7 @@ class StatechartManager(EventDispatcher):
                 state = state.parentState
           
         # None of the current states can respond. Now check the statechart itself
-        return hasattr(self[event], '__call__')
+        return inspect.isfunction(self[event])
         
     """ @override
         
@@ -1170,7 +1170,7 @@ class StatechartManager(EventDispatcher):
         if not self.respondsTo(event):
             return False
       
-        if hasattr(self[event], '__call__'):
+        if inspect.isfunction(self[event]):
             result = self[event](arg1, arg2)
             if result != False:
                 return True
@@ -1237,7 +1237,7 @@ class StatechartManager(EventDispatcher):
         args.rotate()
           
         arg = args[len(args)-1] if len(args) > 0 else None
-        callback = args.pop() if hasattr(arg, '__call__') else None # [PORT] pop, now on deque
+        callback = args.pop() if inspect.isfunction(arg) else None # [PORT] pop, now on deque
         i = 0
         state = None
         checkedStates = {}
@@ -1252,7 +1252,7 @@ class StatechartManager(EventDispatcher):
                     break
                 checkedStates[state.fullPath] = True
                 method = state[methodName]
-                if hasattr(method, '__call__') and not method.isEventHandler:
+                if inspect.isfunction(method) and not method.isEventHandler:
                     result = method(state, args)
                     if callback is not None:
                         callback(self, state, result)
@@ -1374,7 +1374,7 @@ class StatechartManager(EventDispatcher):
           
         # [PORT] Check for rsExample.plugin removed here.
 
-        if not isinstance(rsExample, State) and rsExample.isClass:
+        if inspect.isclass(rsExample) and not isinstance(rsExample, State): # [PORT] or issubclass?
             self._logStatechartCreationError("Invalid root state example")
             return None
           
@@ -1382,7 +1382,7 @@ class StatechartManager(EventDispatcher):
             self._logStatechartCreationError("Can not assign an initial state when states are concurrent")
         elif statesAreConcurrent:
             attrs.substatesAreConcurrent = True
-        elif isinstance(initialState, T_STRING):
+        elif isinstance(initialState, basestring):
             attrs.initialSubstate = initialState
         else:
             self._logStatechartCreationError("Must either define initial state or assign states as concurrent")
@@ -1393,7 +1393,7 @@ class StatechartManager(EventDispatcher):
                 continue
             
             value = self[key]
-            valueIsFunc = hasattr(value, '__call__')
+            valueIsFunc = inspect.isfunction(value)
             
             # [PORT] Check for value.plugin removed here.
             

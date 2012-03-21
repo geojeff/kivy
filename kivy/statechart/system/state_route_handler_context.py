@@ -4,6 +4,8 @@
 # Python Port: Jeff Pittman, ported from SproutCore, SC.Statechart
 # ================================================================================
 
+import inspect
+
 """
   @class
 
@@ -62,5 +64,5 @@ class StateRouteHandlerContext:
         if isinstance(self.handler, basestring):
             self.handler = self.state[self.handler]
   
-        if hasattr(self.handler, '__call__'):
+        if inspect.isfunction(self.handler):
             self.handler(self.state, [self.params])
