@@ -1154,7 +1154,7 @@ class State(EventDispatcher):
       
       @see #representRoute
     """
-    def enterState(self, context):
+    def enterState(self, context=None):
         pass
 
     """
@@ -1166,7 +1166,7 @@ class State(EventDispatcher):
       @param {Hash} [context] value if one was supplied to gotoState when invoked
       @see #enterState
     """
-    def stateWillBecomeEntered(self, context):
+    def stateWillBecomeEntered(self, context=None):
         self._isEnteringState = True
 
     """
@@ -1178,7 +1178,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #enterState
     """
-    def stateDidBecomeEntered(self, context):
+    def stateDidBecomeEntered(self, context=None):
         self._setupAllStateObserveHandlers()
         self._isEnteringState = False
 
@@ -1204,7 +1204,7 @@ class State(EventDispatcher):
       
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
     """
-    def exitState(self, context):
+    def exitState(self, context=None):
         pass
 
     """
@@ -1216,7 +1216,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #exitState
     """
-    def stateWillBecomeExited(self, context):
+    def stateWillBecomeExited(self, context=None):
         self._isExitingState = True
         self._teardownAllStateObserveHandlers()
 
@@ -1229,7 +1229,7 @@ class State(EventDispatcher):
       @param context {Hash} Optional value if one was supplied to gotoState when invoked
       @see #exitState
     """
-    def stateDidBecomeExited(self, context):
+    def stateDidBecomeExited(self, context=None):
         self._isExitingState = False
 
     """ @private 

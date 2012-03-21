@@ -19,13 +19,13 @@ class SHOWING_LOAD_DIALOG_State(State):
     loadfile = ObjectProperty(None)
     text_input = ObjectProperty(None)
 
-    def enterState(self):
+    def enterState(self, context=None):
         print 'SHOWING_LOAD_DIALOG/enterState'
         content = LoadDialog(load=self.load, cancel=self.dismiss_popup)
         self._popup = Popup(title="load file", content=content, size_hint=(0.9, 0.9))
         self._popup.open()
         
-    def exitState(self):
+    def exitState(self, context=None):
         print 'SHOWING_LOAD_DIALOG/exitState'
         self._popup.dismiss()
          

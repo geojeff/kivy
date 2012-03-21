@@ -20,13 +20,13 @@ class SHOWING_SAVE_DIALOG_State(State):
     savefile = ObjectProperty(None)
     text_input = ObjectProperty(None)
 
-    def enterState(self):
+    def enterState(self, context=None):
         print 'SHOWING_SAVE_DIALOG/enterState'
         content = SaveDialog(save=self.save, cancel=self.dismiss_popup)
         self._popup = Popup(title="save file", content=content, size_hint=(0.9, 0.9))
         self._popup.open()
 
-    def exitState(self):
+    def exitState(self, context=None):
         print 'SHOWING_SAVE_DIALOG/exitState'
         self._popup.dismiss()
          

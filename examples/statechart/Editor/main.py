@@ -20,10 +20,10 @@ class SHOWING_APP_State(State):
         kwargs['name'] = 'SHOWING_APP'
         super(SHOWING_APP_State, self).__init__(**kwargs)
 
-    def enterState(self):
+    def enterState(self, context=None):
         print 'SHOWING_APP/enterState'
                 
-    def exitState(self):
+    def exitState(self, context=None):
         print 'SHOWING_APP/exitState'
 
     def show_load(self):
