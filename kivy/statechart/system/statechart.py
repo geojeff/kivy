@@ -5,6 +5,7 @@
 # ================================================================================
 
 from kivy.event import EventDispatcher
+from kivy.statechart.system.async import Async
 from kivy.statechart.system.state import State
 from kivy.statechart.system.history_state import HistoryState
 from kivy.statechart.system.empty_state import EmptyState
@@ -716,12 +717,12 @@ class StatechartManager(EventDispatcher):
             # else to resume this statechart's state transition process by calling the
             # statechart's resumeGotoState method.
             #
-            if issubclass(actionResult, Async):
+            if inspect.isclass(actionResult) and issubclass(actionResult, Async):
                 self._gotoStateSuspendedPoint = {
-                    gotoState: gotoState,
-                    actions: actions,
-                    marker: marker + 1,
-                    context: context
+                    'gotoState': gotoState,
+                    'actions': actions,
+                    'marker': marker + 1,
+                    'context': context
                 }
               
                 actionResult.tryToPerform(action['state'])
@@ -992,9 +993,9 @@ class StatechartManager(EventDispatcher):
     """
     def stateWillTryToHandleEvent(self, state, event, handler):
         self._stateHandleEventInfo = {
-            state: state,
-            event: event,
-            handler: handler
+            'state': state,
+            'event': event,
+            'handler': handler
         }
         
     """
@@ -1314,10 +1315,10 @@ class StatechartManager(EventDispatcher):
     """
     def _processGotoStateArgs(self, arguments):
         processedArgs = { 
-            state: None, 
-            fromCurrentState: None, 
-            useHistory: false, 
-            context: None 
+            'state': None, 
+            'fromCurrentState': None, 
+            'useHistory': false, 
+            'context': None 
         }
               
         args = collection.deque(arguments) # [PORT] was .A and shift, now is collection.deque
@@ -1331,28 +1332,28 @@ class StatechartManager(EventDispatcher):
         if len(args) == 2:
             value = args[1]
             if isinstance(value, bool):
-                processedArgs.useHistory = value
+                processedArgs['useHistory'] = value
             elif isinstance(value, dict) or isinstance(value, dict):
                 if not isinstance(value, State):
-                    processedArgs.context = value
+                    processedArgs['context'] = value
             else:
-                processedArgs.fromCurrentState = value
+                processedArgs['fromCurrentState'] = value
         elif len(args) == 3:
             value = args[1]
             if isinstance(value, bool):
-                processedArgs.useHistory = value
-                processedArgs.context = args[2]
+                processedArgs['useHistory'] = value
+                processedArgs['context'] = args[2]
             else:
-                processedArgs.fromCurrentState = value
+                processedArgs['fromCurrentState'] = value
                 value = args[2]
                 if isinstance(value, bool):
-                    processedArgs.useHistory = value
+                    processedArgs['useHistory'] = value
                 else:
-                    processedArgs.context = value
+                    processedArgs.['context'] = value
         else:
-            processedArgs.fromCurrentState = args[1]
-            processedArgs.useHistory = args[2]
-            processedArgs.context = args[3]
+            processedArgs.['fromCurrentState'] = args[1]
+            processedArgs.['useHistory'] = args[2]
+            processedArgs.['context'] = args[3]
           
         return processedArgs
         
@@ -1507,9 +1508,9 @@ class StatechartManager(EventDispatcher):
         if self._stateHandleEventInfo:
             info = self._stateHandleEventInfo
             details['handling-event'] = {
-              state: info.state.fullPath,
-              event: info.event,
-              handler: info.handler
+              'state': info.state.fullPath,
+              'event': info.event,
+              'handler': info.handler
             }
         else:
             details['handling-event'] = False
