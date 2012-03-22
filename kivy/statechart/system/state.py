@@ -552,7 +552,7 @@ class State(EventDispatcher):
       @returns {State} an instance of the given state class
     """
     def addSubstate(self, name, state, attr):
-        if empty(name):
+        if not name: # [PORT] this used the empty(name) function.
             self.stateLogError("Can not add substate. name required")
             return None
 
@@ -639,7 +639,7 @@ class State(EventDispatcher):
 
         while i < numberOfArgs:
             arg = args[i]
-            if not isinstance(arg, basestring) or empty(arg):
+            if not isinstance(arg, basestring) or not arg: # [PORT] this used the empty(name) function.
                 self.stateLogError("Invalid argument {0} for state observe handler {1} in state {2}".format(arg, name, self))
                 handlersAreValid = False
             i += 1
