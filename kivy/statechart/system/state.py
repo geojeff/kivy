@@ -670,14 +670,14 @@ class State(EventDispatcher):
             return
 
         self._registeredSubstates.append(state)
-        regPaths = self._registeredSubstatePaths
 
         # Keep track of states based on their relative path
         # to this state. 
-        if regPaths[state.name] is None:
+        regPaths = self._registeredSubstatePaths
+        if not state.name in regPaths:
             regPaths[state.name] = {}
         
-        regPaths[statename][path] = state
+        regPaths[state.name][path] = state
 
     """
       Will generate path for a given state that is relative to this state. It is
