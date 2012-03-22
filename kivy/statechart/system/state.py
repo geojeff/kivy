@@ -450,10 +450,10 @@ class State(EventDispatcher):
         loc = self.location
     
         attr = {
-            state: self,
-            location: loc,
-            params: params,
-            handler: self.routeTriggered
+            'state': self,
+            'location': loc,
+            'params': params,
+            'handler': self.routeTriggered
         }
 
         context = self.createStateRouteHandlerContext(attr)
@@ -613,11 +613,11 @@ class State(EventDispatcher):
             event = events[i]
 
             if isinstance(event, basestring): # [PORT] checking for string and unicode -- need unicode? otherwise just str?
-                self._registeredStringEventHandlers[event] = { name: name, handler: handler }
+                self._registeredStringEventHandlers[event] = { 'name': name, 'handler': handler }
                 continue
 
             if isinstance(event, RegExp):
-                self._registeredRegExpEventHandlers.append({ name: name, handler: handler, regexp: event })
+                self._registeredRegExpEventHandlers.append({ 'name': name, 'handler': handler, 'regexp': event })
                 continue
 
             self.stateLogError("Invalid event {0} for event handler {1} in state {1}".format(event, name, self))
@@ -748,7 +748,7 @@ class State(EventDispatcher):
             self.stateLogError("Can not find matching subtype. value must be an object or string: {0}".format(value))
             return None
 
-        matcher = StatePathMatcher.create({ state: self, expression: value })
+        matcher = StatePathMatcher.create({ 'state': self, 'expression': value })
         matches = []
         key = undefined
         if len(matcher.tokens) == 0:
