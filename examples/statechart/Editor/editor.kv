@@ -10,10 +10,10 @@ Root:
             height: 30
             Button:
                 text: 'load'
-                on_release: root.statechart.sendEvent('show_load')
+                on_release: root.statechart.tryToPerform('show_load')
             Button:
                 text: 'save'
-                on_release: root.statechart.sendEvent('show_save')
+                on_release: root.statechart.tryToPerform('show_save')
 
         BoxLayout:
             TextInput:
@@ -37,11 +37,11 @@ Root:
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.statechart.sendEvent('cancel')
+                on_release: root.statechart.tryToPerform('cancel')
 
             Button:
                 text: "load"
-                on_release: root.statechart.sendEvent('load')
+                on_release: root.statechart.tryToPerform('load')
 
 <SaveDialog>:
     text_input: text_input
@@ -64,9 +64,9 @@ Root:
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.statechart.sendEvent('cancel')
+                on_release: root.statechart.tryToPerform('cancel')
 
             Button:
                 text: "save"
-                on_release: root.statechart.sendEvent('save')
+                on_release: root.statechart.tryToPerform('save')
 

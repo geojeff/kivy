@@ -734,7 +734,7 @@ class StatechartManager(EventDispatcher):
                 }
               
                 print 'tryToPerform'
-                actionResult.tryToPerform(action['state'])
+                actionResult.tryToPerform(action['state']) # [PORT] Note: This is not the same as self.tryToPerform. See Async.
                 return
 
             print 'marker', marker
@@ -1171,10 +1171,13 @@ class StatechartManager(EventDispatcher):
             state = currentStates[i] # [PORT] was objectAt i
             while state is not None:
                 if (state.respondsToEvent(event)):
-                    return true
+                    return True
                 state = state.parentState
           
         # None of the current states can respond. Now check the statechart itself
+        if not hasattr(self, event):
+            return False
+
         return inspect.isfunction(getattr(self, event))
         
     """ @override
@@ -1188,7 +1191,7 @@ class StatechartManager(EventDispatcher):
       @param arg2 {Object} Optional
       @returns {Boolean} True if handled, False if not handled
     """
-    def tryToPerform(self, event, arg1, arg2):
+    def tryToPerform(self, event, arg1=None, arg2=None):
         if not self.respondsTo(event):
             return False
       
