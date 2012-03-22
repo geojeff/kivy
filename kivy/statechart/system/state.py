@@ -241,7 +241,7 @@ class State(EventDispatcher):
             else:
                 setattr(self, k, v)
 
-        super(State, self).__init__(**kwargs) # [PORT] initialize how? We have also initState()
+        super(State, self).__init__() # [PORT] initialize how? We have also initState()
 
     def _trace(self):
         self._trace = self.getPath("statechart.{0}".format(self.getPath("statechart.statechartTraceKey")))
@@ -656,6 +656,11 @@ class State(EventDispatcher):
     def _registerWithParentStates(self):
         parent = self.parentState
 
+        if parent:
+            print '_registerWithParentStates', self.name, parent.name
+        else:
+            print '_registerWithParentStates', self.name, 'parent is None'
+
         while parent is not None:
             parent._registerSubstate(self)
             parent = parent.parentState
@@ -673,11 +678,10 @@ class State(EventDispatcher):
 
         # Keep track of states based on their relative path
         # to this state. 
-        regPaths = self._registeredSubstatePaths
-        if not state.name in regPaths:
-            regPaths[state.name] = {}
+        if not state.name in self._registeredSubstatePaths:
+            self._registeredSubstatePaths[state.name] = {}
         
-        regPaths[state.name][path] = state
+        self._registeredSubstatePaths[state.name][path] = state
 
     """
       Will generate path for a given state that is relative to this state. It is
