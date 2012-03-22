@@ -656,11 +656,6 @@ class State(EventDispatcher):
     def _registerWithParentStates(self):
         parent = self.parentState
 
-        if parent:
-            print '_registerWithParentStates', self.name, parent.name
-        else:
-            print '_registerWithParentStates', self.name, 'parent is None'
-
         while parent is not None:
             parent._registerSubstate(self)
             parent = parent.parentState
@@ -743,13 +738,13 @@ class State(EventDispatcher):
         if value is None:
             return None
 
-        if isinstance(value, Object):
+        if inspect.isclass(value) and issubclass(value, State): # [PORT] Changed from check for object. OK that states must be State subclasses?
             return value if value in self._registeredSubstates else None
 
         # If the value is an object then just check if the value is 
         # a registered substate of this state, and if so return it. 
         if not isinstance(value, basestring):
-            self.stateLogError("Can not find matching subtype. value must be an object or string: {0}".format(value))
+            self.stateLogError("Can not find matching subtype. value must be a State class or string: {0}".format(value))
             return None
 
         matcher = StatePathMatcher.create({ 'state': self, 'expression': value })
