@@ -699,7 +699,7 @@ class State(EventDispatcher):
             self.stateLogError("Can not generate relative path from {0} since it not a parent state of {1}".format(state, self))
             return None
 
-        path
+        return path
 
     """
       Used to get a substate of this state that matches a given value. 
