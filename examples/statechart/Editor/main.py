@@ -26,7 +26,8 @@ class SHOWING_APP(State):
         print 'SHOWING_APP/enterState'
         self.statechart.app.load_config()
         self.statechart.app.load_kv()
-        self.statechart.app.root = Root()
+        #self.statechart.app.root = Root()
+        setattr(self.statechart.app.root, 'statechart', self.statechart)
         self.statechart.app.built = True
         self.statechart.app.run()
                 
@@ -42,10 +43,10 @@ class SHOWING_APP(State):
 class AppStatechart(Statechart):
     rootState = ObjectProperty(None)
 
-    def __init__(self, app):
+    def __init__(self, app, **kw):
         self.app = app
         self.rootState = self._rootState()
-        super(Statechart, self).__init__()
+        super(AppStatechart, self).__init__(**kw)
 
     def _rootState(self):
         class RootState(State):
@@ -75,7 +76,7 @@ Factory.register('Root', cls=Root)
 
 if __name__ == '__main__':
     app = Editor()
-    statechart = AppStatechart(app)
+    statechart = AppStatechart(app, allowStatechartTracing=True)
     app.statechart = statechart
     app.statechart.initStatechart()
     app.statechart.rootState.printInfo('print states')

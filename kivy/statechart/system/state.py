@@ -81,10 +81,9 @@ class State(EventDispatcher):
     location = StringProperty(None) # [TODO] marked as idempotent in js
 
     isRootState = BooleanProperty(False)
+    isCurrentState = BooleanProperty(False)
     isConcurrentState = BooleanProperty(False)
-
-    stateIsCurrentSubstate = BooleanProperty(False)
-    stateIsEnteredSubstate = BooleanProperty(False)
+    isEnteredState = BooleanProperty(False)
     hasSubstates = BooleanProperty(False)
     hasCurrentSubstates = BooleanProperty(False)
     hasEnteredSubstates = BooleanProperty(False)
@@ -195,13 +194,14 @@ class State(EventDispatcher):
     representRoute = StringProperty(None)
 
     def __init__(self, **kwargs):
-        self.bind(currentSubstates=self._stateIsCurrentSubstate)
-        self.bind(enteredSubstates=self._stateIsEnteredSubstate)
+        self.bind(currentSubstates=self._isCurrentState)
+        self.bind(enteredSubstates=self._isEnteredState)
         self.bind(substates=self._hasSubstates)
         self.bind(currentSubstates=self._hasCurrentSubstates)
         self.bind(enteredSubstates=self._hasEnteredSubstates)
         self.bind(name=self._fullPath)
         self.bind(parentState=self._fullPath)
+        self.bind(parentState=self._isConcurrentState)
         self.bind(enteredSubstates=self._enteredSubstatesDidChange) # [PORT] .observes("*enteredSubstates.[]")
         self.bind(currentSubstates=self._currentSubstatesDidChange) # [PORT] .observes("*currentSubstates.[]")
 
@@ -897,11 +897,11 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsCurrentSubstate(self, state=None, *l):
+    def stateIsCurrentSubstate(self, state=None, *l):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
-        self.stateIsCurrentSubstate = state in self.currentSubstates # [PORT] was !!current && ... but here we assume list is ever-present.
+        return state in self.currentSubstates # [PORT] was !!current && ... but here we assume list is ever-present.
 
     """
       Used to check if a given state is a current substate of this state. Mainly used in cases
@@ -910,11 +910,11 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def _stateIsEnteredSubstate(self, state=None, *l):
+    def stateIsEnteredSubstate(self, state=None):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
-        self.stateIsEnteredSubstate = state in self.enteredSubstates
+        return state in self.enteredSubstates
 
     """
       Indicates if this state is the root state of the statechart.
@@ -929,8 +929,8 @@ class State(EventDispatcher):
       
       @property {Boolean} 
     """
-    def isCurrentState(self, *l): # [PORT] Made this a simple method, because the updates seem to be handled by stateIsCurrentSubstate, etc.
-        return self.stateIsCurrentSubstate
+    def _isCurrentState(self, *l):
+        self.isCurrentState = self.stateIsCurrentSubstate(self)
 
     """
       Indicates if this state is a concurrent state
@@ -938,7 +938,7 @@ class State(EventDispatcher):
       @property {Boolean}
     """
     def _isConcurrentState(self, *l):
-        return self.parentState.substatesAreConcurrent
+        self.isConcurrentState = self.parentState.substatesAreConcurrent
 
     """
       Indicates if this state is a currently entered state. 
@@ -948,7 +948,7 @@ class State(EventDispatcher):
       was called, if at all.
     """
     def _isEnteredState(self, *l):
-        return self.stateIsEnteredSubstate(self)
+        self.isEnteredState = self.stateIsEnteredSubstate(self)
 
     """
       Indicate if this state has any substates
@@ -995,7 +995,7 @@ class State(EventDispatcher):
       @return {State} a current state
     """
     def findFirstRelativeCurrentState(self, anchor=None):
-        if self.isCurrentState():
+        if self.isCurrentState:
             return self
 
         currentSubstates = self.currentSubstates or []

@@ -362,6 +362,8 @@ class StatechartManager(EventDispatcher):
         self.bind(rootState=self._enteredStates) # [PORT] Added enteredStates property
 
         for k,v in kw.items():
+            if k == 'allowStatechartTracing': # [PORT] hack to set self.trace -- why is there also allowStatechartTracing? limit to one or other.
+                setattr(self, 'trace', v)
             setattr(self, k, v)
 
         super(StatechartManager, self).__init__(**kw)
@@ -425,7 +427,6 @@ class StatechartManager(EventDispatcher):
         self.rootState = rootState
         rootState.initState()
           
-        print rootState.initialSubstate
         if inspect.isclass(rootState.initialSubstate) and issubclass(rootState.initialSubstate, EmptyState):
             msg = "Unable to initialize statechart. Root state must have an initial substate explicilty defined"
             self.statechartLogError(msg)
@@ -464,7 +465,8 @@ class StatechartManager(EventDispatcher):
       @return {State}
     """
     def _firstCurrentState(self):
-        self.firstCurrentState = self.currentStates[0] if self.currentStates else None # [PORT] was objectAt 0
+        self.firstCurrentState = self.currentStates[0] if self.currentStates else None
+        print 'just set firstCurrentState:', self.firstCurrentState
 
     """
       Returns the count of the current states for this statechart
@@ -567,6 +569,7 @@ class StatechartManager(EventDispatcher):
             self.statechartLogError("can not go to state {0}. statechart has not yet been initialized".format(state))
             return
           
+        print 'gotoState', state
         # [PORT] Removed isDestroyed check -- but this is a punt for a later time...
         #if self.isDestroyed:
             #self.statechartLogError("can not go to state {0}. statechart is destroyed".format(this))
@@ -600,10 +603,10 @@ class StatechartManager(EventDispatcher):
             # transition to the queue of pending state transitions. The request will
             # be invoked after the current state transition is finished.
             self._pendingStateTransitions.append({
-              state: state,
-              fromCurrentState: fromCurrentState,
-              useHistory: useHistory,
-              context: context
+              'state': state,
+              'fromCurrentState': fromCurrentState,
+              'useHistory': useHistory,
+              'context': context
             })
             return
           
@@ -632,7 +635,7 @@ class StatechartManager(EventDispatcher):
                 msg = msg.format(fromCurrentState if fromCurrentState else '---')
                 self.statechartLogTrace(msg)
                 msg = "current states before: {0}"
-                msg = msg.format(self.currentStates if len(self.currentStates) > 0 else '---')
+                msg = msg.format(self.currentStates if self.currentStates else '---')
                 self.statechartLogTrace(msg)
       
             # If there is a current state to start the transition process from, then determine what
@@ -669,6 +672,7 @@ class StatechartManager(EventDispatcher):
           
             # Collected all the state transition actions to be performed. Now execute them.
             self._gotoStateActions = gotoStateActions
+            print 'gotoStateActions', gotoStateActions
             self._executeGotoStateActions(state, gotoStateActions, None, context)
         
     """
@@ -703,8 +707,11 @@ class StatechartManager(EventDispatcher):
         marker = 0 if marker is None else marker
           
         numberOfActions = len(actions)
+        print 'before while', numberOfActions
         while marker < numberOfActions:
-            self._currentGotoStateAction = action = actions[marker]
+            action = actions[marker]
+            print 'action', action, action['action']
+            self._currentGotoStateAction = action
             if action['action'] == EXIT_STATE:
                 actionResult = self._exitState(action['state'], context)
             elif action['action'] == ENTER_STATE:
@@ -717,7 +724,8 @@ class StatechartManager(EventDispatcher):
             # else to resume this statechart's state transition process by calling the
             # statechart's resumeGotoState method.
             #
-            if inspect.isclass(actionResult) and issubclass(actionResult, Async):
+            print 'actionResult', actionResult
+            if actionResult and inspect.isclass(actionResult) and issubclass(actionResult, Async):
                 self._gotoStateSuspendedPoint = {
                     'gotoState': gotoState,
                     'actions': actions,
@@ -725,17 +733,22 @@ class StatechartManager(EventDispatcher):
                     'context': context
                 }
               
+                print 'tryToPerform'
                 actionResult.tryToPerform(action['state'])
                 return
 
+            print 'marker', marker
             marker += 1
           
+        print 'after while'
         #self.beginPropertyChanges()
         #self.notifyPropertyChange('currentStates') # [PORT] notify needed here in kivy?
         #self.notifyPropertyChange('enteredStates') # [PORT] notify needed here in kivy?
         #self.endPropertyChanges()
           
         if self.allowStatechartTracing:
+            print "current states after: {0}".format(self.currentStates)
+            print "END gotoState: {0}".format(gotoState)
             self.statechartLogTrace("current states after: {0}".format(self.currentStates))
             self.statechartLogTrace("END gotoState: {0}".format(gotoState))
           
@@ -743,6 +756,7 @@ class StatechartManager(EventDispatcher):
         
     """ @private """
     def _cleanupStateTransition(self):
+        print 'cleaning up'
         self._currentGotoStateAction = None
         self._gotoStateSuspendedPoint = None
         self._gotoStateActions = None
@@ -926,11 +940,13 @@ class StatechartManager(EventDispatcher):
       @see #stateWillTryToHandleEvent
       @see #stateDidTryToHandleEvent
     """
-    def sendEvent(self, event, arg1, arg2):
+    def sendEvent(self, event, arg1=None, arg2=None):
         # [PORT] Removed isDestroyed check -- but this is a punt for a later time...
         #if self.isDestroyed:
             #self.statechartLogError("can send event {0}. statechart is destroyed".format(event))
             #return
+
+        print 'sendEvent', event, self._sendEventLocked, self._gotoStateLocked
           
         statechartHandledEvent = False
         eventHandled = False
@@ -939,14 +955,14 @@ class StatechartManager(EventDispatcher):
         state = None
         trace = self.allowStatechartTracing
           
-        if self._sendEventLocked or self._goStateLocked:
+        if self._sendEventLocked or self._gotoStateLocked:
             # Want to prevent any actions from being processed by the states until 
             # they have had a chance to handle the most immediate action or completed 
             # a state transition
             self._pendingSentEvents.append({
-                event: event,
-                arg1: arg1,
-                arg2: arg2
+                'event': event,
+                'arg1': arg1,
+                'arg2': arg2
             })
       
             return
@@ -956,6 +972,7 @@ class StatechartManager(EventDispatcher):
         if trace:
             self.statechartLogTrace("BEGIN sendEvent: '{0}'".format(event))
           
+        print 'sendEvent', currentStates
         for i in range(len(currentStates)):
             eventHandled = False
             state = currentStates[i]
@@ -1369,7 +1386,6 @@ class StatechartManager(EventDispatcher):
             
     """
     def _constructRootStateClass(self):
-        #rsExampleKey = 'rootStateExample'
         #rsExample = self[rsExampleKey]
         rsExample = self.rootStateExample # [PORT] in kivy will try direct ref
         initialState = self.initialState
@@ -1383,27 +1399,32 @@ class StatechartManager(EventDispatcher):
             self._logStatechartCreationError("Invalid root state example")
             return None
           
-        if statesAreConcurrent and initialState is not None: # [PORT] initialState was checked with SC.empty, which checks for null, undefined, and empty string, so ok prolly
+        if statesAreConcurrent and initialState: # [PORT] initialState was checked with SC.empty, which checks for null, undefined, and empty string
             self._logStatechartCreationError("Can not assign an initial state when states are concurrent")
         elif statesAreConcurrent:
-            attrs.substatesAreConcurrent = True
+            attrs['substatesAreConcurrent'] = True
         elif isinstance(initialState, basestring):
-            attrs.initialSubstate = initialState
+            attrs['initialSubstate'] = initialState
         else:
             self._logStatechartCreationError("Must either define initial state or assign states as concurrent")
             return None
           
-        for key in self:
-            if key == rsExampleKey:
+        for key in dir(self):
+            if key == '__class__':
+                continue
+
+            if key == 'rootStateExample':
                 continue
             
-            value = self[key]
-            valueIsFunc = inspect.isfunction(value)
+            getattr(self, key, value)
+
+            if inspect.isfunction(value): # [PORT] We don't care about functions here?
+                continue
             
-            # [PORT] Check for value.plugin removed here.
+            # [PORT] Check for value.plugin removed here. Substates are classes, either defined in-file or imported.
             
             #if isinstance(value, State) and inspect.isclass(value) and self[key] is not self.__init__:
-            if isinstance(value, State) and inspect.isclass(value) and key != '__class__': # [PORT] Compare to same usage in state.py. Same here?
+            if inspect.isclass(value) and issubclass(value, State): # [PORT] Compare to same usage in state.py. Same here?
                 attrs[key] = value
                 stateCount += 1
           
@@ -1411,7 +1432,10 @@ class StatechartManager(EventDispatcher):
             self._logStatechartCreationError("Must define one or more states")
             return None
           
-        return rsExample.extend(attrs)
+        # [PORT] Trying to replace javascript use of .extend() with python setattr...
+        for k,v in attrs:
+            setattr(rsExample, k, v)
+        return rsExample
         
     """ @private """
     def _logStatechartCreationError(self, msg):
@@ -1582,6 +1606,7 @@ ENTER_STATE = 1
   A Startchart class. 
 """
 class Statechart(StatechartManager):
-    def __init__(self):
-        autoInitStatechart = False
-        StatechartManager.__init__(self)
+    def __init__(self, **kw):
+        kw['autoInitStatechart'] = False
+        super(Statechart, self).__init__(**kw)
+        #StatechartManager.__init__(self)
