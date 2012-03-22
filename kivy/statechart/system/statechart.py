@@ -1175,7 +1175,7 @@ class StatechartManager(EventDispatcher):
                 state = state.parentState
           
         # None of the current states can respond. Now check the statechart itself
-        return inspect.isfunction(self[event])
+        return inspect.isfunction(getattr(self, event))
         
     """ @override
         
@@ -1192,8 +1192,8 @@ class StatechartManager(EventDispatcher):
         if not self.respondsTo(event):
             return False
       
-        if inspect.isfunction(self[event]):
-            result = self[event](arg1, arg2)
+        if inspect.isfunction(getattr(self, event)):
+            result = getattr(self, event)(arg1, arg2)
             if result != False:
                 return True
           
@@ -1504,7 +1504,7 @@ class StatechartManager(EventDispatcher):
         details = { 'initialized': self.statechartIsInitialized }
           
         if self.name:
-            details['name'] = self['name']
+            details['name'] = getattr(self, 'name')
           
         if not self.statechartIsInitialized:
             return details

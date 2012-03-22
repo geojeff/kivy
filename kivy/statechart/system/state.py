@@ -498,7 +498,7 @@ class State(EventDispatcher):
         self.initialSubstate = state
         self.substates.append(state)
 
-        self[state.name] = state
+        setattr(self, state.name, state)
 
         state.initState()
 
@@ -556,7 +556,7 @@ class State(EventDispatcher):
             self.stateLogError("Can not add substate. name required")
             return None
 
-        if self[name] is not None:
+        if hasattr(self, name):
             self.stateLogError("Can not add substate '{0}'. Already a defined property".format(name))
             return None
 
@@ -1082,12 +1082,12 @@ class State(EventDispatcher):
             return False
 
         # Now begin by trying a basic method on the state to respond to the event
-        if inspect.isfunction(self[event]):
+        if inspect.isfunction(getattr(self, event)):
             if trace:
                 self.stateLogTrace("will handle event '{0}'".format(event))
 
             sc.stateWillTryToHandleEvent(self, event, event)
-            ret = self[event](arg1, arg2) != False
+            ret = getattr(self, event)(arg1, arg2) != False
             sc.stateDidTryToHandleEvent(self, event, event, ret)
             return ret
 
@@ -1119,7 +1119,7 @@ class State(EventDispatcher):
 
         # Final attempt. If the state has an unknownEvent function then invoke it to 
         # handle the event
-        if inspect.isfunction(self['unknownEvent']):
+        if inspect.isfunction(getattr(self, 'unknownEvent')):
             if trace:
                 self.stateLogTrace("unknownEvent will handle event '{0}'".format(event))
 
@@ -1281,9 +1281,9 @@ class State(EventDispatcher):
             dotIndex = path.find(".")
 
             if dotIndex < 0:
-                self[action](path, self, observer)
+                getattr(self, action)(path, self, observer)
             elif path.find("*") == 0:
-                self[action](path[1], self, observer)
+                getattr(self, action)(path[1], self, observer)
             else:
                 root = None
                 if dotIndex == 0:
@@ -1319,7 +1319,7 @@ class State(EventDispatcher):
     def respondsToEvent(self, event):
         if self._registeredEventHandlers[event]:
             return false
-        if inspect.isfunction(self[event]):
+        if inspect.isfunction(getattr(self, event)):
             return true
         if self._registeredStringEventHandlers[event]:
             return true
@@ -1335,7 +1335,7 @@ class State(EventDispatcher):
                 return True
             i += 1
 
-        return inspect.isfunction(self['unknownEvent'])
+        return inspect.isfunction(getattr(self, 'unknownEvent'))
 
     """
       Returns the path for this state relative to the statechart's
