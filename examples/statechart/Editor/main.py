@@ -41,16 +41,18 @@ class SHOWING_APP(State):
         self.gotoState('SHOWING_SAVE_DIALOG')
 
 class AppStatechart(Statechart):
-    rootState = ObjectProperty(None)
+    #rootState = ObjectProperty(None)
 
     def __init__(self, app, **kw):
         self.app = app
+        #self.rootState = self._rootState()
         self.rootState = self._rootState()
         super(AppStatechart, self).__init__(**kw)
 
     def _rootState(self):
         class RootState(State):
             def __init__(self, **kwargs):
+                #self.isCurrentState = True
                 super(RootState, self).__init__(**kwargs)
     
             initialSubstate = 'SHOWING_APP'

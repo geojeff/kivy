@@ -5,6 +5,7 @@
 # ================================================================================
 
 from kivy.event import EventDispatcher
+from kivy.statechart.private.state_path_matcher import StatePathMatcher
 from kivy.properties import BooleanProperty, ListProperty, ObjectProperty, StringProperty
 from collections import deque
 
@@ -634,7 +635,7 @@ class State(EventDispatcher):
         i = 0
         args = handler.args
         numberOfArgs = len(args)
-        arg = undefined
+        arg = None
         handlersAreValid = True
 
         while i < numberOfArgs:
@@ -734,22 +735,21 @@ class State(EventDispatcher):
       @param [callback] {Function} the callback
       @param [target] {Object} the target
     """
-    def getSubstate(self, value, callback, target):
+    def getSubstate(self, value, callback=None, target=None):
         if value is None:
             return None
 
+        # If the value is an object then just check if the value is 
+        # a registered substate of this state, and if so return it. 
         if inspect.isclass(value) and issubclass(value, State): # [PORT] Changed from check for object. OK that states must be State subclasses?
             return value if value in self._registeredSubstates else None
 
-        # If the value is an object then just check if the value is 
-        # a registered substate of this state, and if so return it. 
         if not isinstance(value, basestring):
             self.stateLogError("Can not find matching subtype. value must be a State class or string: {0}".format(value))
             return None
 
-        matcher = StatePathMatcher.create({ 'state': self, 'expression': value })
+        matcher = StatePathMatcher(state=self, expression=value)
         matches = []
-        key = undefined
         if len(matcher.tokens) == 0:
             return None
 
@@ -765,8 +765,8 @@ class State(EventDispatcher):
         if len(matches) == 1:
             return matches[0]
 
+        keys = []
         if len(matches) > 1:
-            keys = []
             for key in paths:
                 keys.append(key)
 
@@ -774,12 +774,12 @@ class State(EventDispatcher):
             return self._notifySubstateNotFound(callback, target, value, keys)
 
         msg = "Can not find substate matching '{0}' in state {1}. Ambiguous with the following: {2}"
-        self.stateLogError(msg.format(value, self.fullPath, keys.join(", ")))
+        self.stateLogError(msg.format(value, self.fullPath, ', '.join(keys)))
 
         self._notifySubstateNotFound(callback, target, value)
 
     """ @private """
-    def _notifySubstateNotFound(self, callback, target, value, keys):
+    def _notifySubstateNotFound(self, callback=None, target=None, value=None, keys=None):
         return callback(target or self, self, value, keys) if callback is not None else None
 
     """
@@ -803,7 +803,7 @@ class State(EventDispatcher):
         if value == self.name:
             return self
 
-        if issubclass(value, State):
+        if inspect.isclass(value) and issubclass(value, State):
             return value
 
         self.getSubstate(value, self._handleSubstateNotFound)
@@ -896,7 +896,7 @@ class State(EventDispatcher):
       @param state {State|String} either a state object or the name of a state
       @returns {Boolean} true is the given state is a current substate, otherwise false is returned
     """
-    def stateIsCurrentSubstate(self, state=None, *l):
+    def stateIsCurrentSubstate(self, state=None):
         if isinstance(state, basestring):
             state = self.statechart.getState(state)
 
@@ -1068,7 +1068,7 @@ class State(EventDispatcher):
     def tryToHandleEvent(self, event, arg1, arg2):
         trace = self.trace
         sc = self.statechart
-        ret = undefined
+        ret = None
 
         # First check if the name of the event is the same as a registered event handler. If so,
         # then do not handle the event.

@@ -359,6 +359,7 @@ class StatechartManager(EventDispatcher):
         self.bind(monitorIsActive=self._monitorIsActiveDidChange)
         self.bind(statechartTraceKey=self._statechartTraceDidChange)
         self.bind(delegate=self._statechartDelegate)
+        self.bind(rootState=self._currentStates) # [PORT] Added enteredStates property
         self.bind(rootState=self._enteredStates) # [PORT] Added enteredStates property
 
         for k,v in kw.items():
@@ -398,7 +399,7 @@ class StatechartManager(EventDispatcher):
         self.sendAction = self.sendEvent
           
         if self.monitorIsActive:
-            self.monitor = StatechartMonitor(this)
+            self.monitor = StatechartMonitor(self)
       
         self._statechartTraceDidChange() # [PORT] this call needed for kivy?
       
@@ -425,6 +426,7 @@ class StatechartManager(EventDispatcher):
         rootState = self.createRootState(rootState, ROOT_STATE_NAME)
           
         self.rootState = rootState
+
         rootState.initState()
           
         if inspect.isclass(rootState.initialSubstate) and issubclass(rootState.initialSubstate, EmptyState):
@@ -434,7 +436,7 @@ class StatechartManager(EventDispatcher):
           
         if self.initialState is not None:
             key = 'initialState'
-            setattr(self, key, getattr(rootState, self.key))
+            setattr(self, key, getattr(rootState, 'initialState'))
             #self.key = rootState[self.key]
           
         self.statechartIsInitialized = True
@@ -448,23 +450,23 @@ class StatechartManager(EventDispatcher):
       Will create a root state for the statechart
     """
     def createRootState(self, state, name):
-        state = state(statechart=self, name=name)
-        return state
+        return state(statechart=self, name=name)
         
     """
       Returns an array of all the current states for this statechart
       
       @returns {Array} the current states
     """
-    def _currentStates(self):
+    def _currentStates(self, *l):
         self.currentStates = self.rootState.currentSubstates
+        print 'just set currentStates:', self.currentStates
 
     """
       Returns the first current state for this statechart. 
       
       @return {State}
     """
-    def _firstCurrentState(self):
+    def _firstCurrentState(self, *l):
         self.firstCurrentState = self.currentStates[0] if self.currentStates else None
         print 'just set firstCurrentState:', self.firstCurrentState
 
@@ -473,7 +475,7 @@ class StatechartManager(EventDispatcher):
       
       @returns {Number} the count 
     """
-    def _currentStateCount(self):
+    def _currentStateCount(self, *l):
         self.currentStateCount = len(self.currentStates)
 
     """
@@ -547,14 +549,14 @@ class StatechartManager(EventDispatcher):
           # With one argument. 
           gotoState(<state>)
             
-          # With two argument.
+          # With two arguments.
           gotoState(<state>, <state | boolean | hash>)
         
-          # With three argument.
+          # With three arguments.
           gotoState(<state>, <state>, <boolean | hash>)
           gotoState(<state>, <boolean>, <hash>)
         
-          # With four argument.
+          # With four arguments.
           gotoState(<state>, <state>, <boolean>, <hash>)
       
       where <state> is either a State object or a string and <hash> is a regular JS hash object.
@@ -569,19 +571,10 @@ class StatechartManager(EventDispatcher):
             self.statechartLogError("can not go to state {0}. statechart has not yet been initialized".format(state))
             return
           
-        print 'gotoState', state
         # [PORT] Removed isDestroyed check -- but this is a punt for a later time...
         #if self.isDestroyed:
             #self.statechartLogError("can not go to state {0}. statechart is destroyed".format(this))
             #return
-          
-        # [PORT] Assumming that in python argument handling will suffice.
-        #args = self._processGotoStateArgs(arguments)
-      
-        #state = args.state
-        #fromCurrentState = args.fromCurrentState
-        #useHistory = args.useHistory
-        #context = args.context
           
         pivotState = None
         exitStates = deque()
@@ -659,11 +652,11 @@ class StatechartManager(EventDispatcher):
           
             # Collect what actions to perform for the state transition process
             gotoStateActions = []
-          
+
             # Go ahead and find states that are to be exited
-            self._traverseStatesToExit(exitStates.rotate(), exitStates, pivotState, gotoStateActions) # [PORT] rotate was shift
+            self._traverseStatesToExit(exitStates.popleft() if exitStates else None, exitStates, pivotState, gotoStateActions)
           
-            # Now go find states that are to entered
+            # Now go find states that are to be entered
             if pivotState is not state:
                 self._traverseStatesToEnter(enterStates.pop(), enterStates, pivotState, useHistory, gotoStateActions)
             else:
@@ -745,6 +738,8 @@ class StatechartManager(EventDispatcher):
         #self.notifyPropertyChange('currentStates') # [PORT] notify needed here in kivy?
         #self.notifyPropertyChange('enteredStates') # [PORT] notify needed here in kivy?
         #self.endPropertyChanges()
+        self._currentStates()
+        self._enteredStates()
           
         if self.allowStatechartTracing:
             print "current states after: {0}".format(self.currentStates)
@@ -770,12 +765,12 @@ class StatechartManager(EventDispatcher):
         if state in state.currentSubstates:
             parentState = state.parentState
             while parentState is not None:
-                parentState.currentSubstates.removeObject(state)
+                parentState.currentSubstates.remove(state)
                 parentState = parentState.parentState
           
         parentState = state;
         while parentState is not None:
-            parentState.enteredSubstates.removeObject(state)
+            parentState.enteredSubstates.remove(state)
             parentState = parentState.parentState
             
         if self.allowStatechartTracing:
@@ -972,7 +967,7 @@ class StatechartManager(EventDispatcher):
         if trace:
             self.statechartLogTrace("BEGIN sendEvent: '{0}'".format(event))
           
-        print 'sendEvent', currentStates
+        print 'sendEvent, currentStates', currentStates
         for i in range(len(currentStates)):
             eventHandled = False
             state = currentStates[i]
@@ -1082,12 +1077,12 @@ class StatechartManager(EventDispatcher):
                 if currentState._traverseStatesToExit_skipState == True:
                     continue
                 chain = self._createStateChain(currentState)
-                self._traverseStatesToExit(chain.rotate(), chain, state, gotoStateActions) # [PORT] rotate was shift
+                self._traverseStatesToExit(chain.popleft() if chain else None, chain, state, gotoStateActions)
           
         gotoStateActions.append({ 'action': EXIT_STATE, 'state': state })
         if state.isCurrentState:
             state._traverseStatesToExit_skipState = True
-        self._traverseStatesToExit(exitStatePath.rotate(), exitStatePath, stopState, gotoStateActions) # [PORT] rotate was shift
+        self._traverseStatesToExit(exitStatePath.popleft() if exitStatePath else None, exitStatePath, stopState, gotoStateActions)
         
     """ @private
         
@@ -1253,16 +1248,17 @@ class StatechartManager(EventDispatcher):
                is returned. The value is the result of the method that got invoked
                on a state.
     """
-    def invokeStateMethod(self, methodName, args, func):
+    def invokeStateMethod(self, methodName, args=[], func=None):
         if methodName == 'unknownEvent':
             self.statechartLogError("can not invoke method unkownEvent")
             return
           
-        args = collection.deque(arguments) # [PORT] was .A and shift, now is collection.deque and rotate
-        args.rotate()
+        args = collection.deque(args) # [PORT] was .A and shift, now is collection.deque and popleft
+        if args:
+            args.popleft()
           
         arg = args[len(args)-1] if len(args) > 0 else None
-        callback = args.pop() if inspect.isfunction(arg) else None # [PORT] pop, now on deque
+        callback = args.pop() if arg and inspect.isfunction(arg) else None # [PORT] pop, now on deque
         i = 0
         state = None
         checkedStates = {}
@@ -1306,7 +1302,7 @@ class StatechartManager(EventDispatcher):
         if not self._pendingStateTransitions:
             self.statechartLogError("Unable to flush pending state transition. _pendingStateTransitions is invalid")
             return
-        pending = self._pendingStateTransitions.rotate() # [PORT] shift was rotate
+        pending = self._pendingStateTransitions.popleft() if self._pendingStateTransitions else None
         if not pending:
             return
         self.gotoState(pending.state, pending.fromCurrentState, pending.useHistory, pending.context)
@@ -1317,7 +1313,7 @@ class StatechartManager(EventDispatcher):
       queue
     """
     def _flushPendingSentEvents(self):
-        pending = self._pendingSentEvents.rotate() # [PORT] shift was rotate
+        pending = self._pendingSentEvents.popleft() if self._pendingSentEvents else None
         if not pending:
             return None
         return self.sendEvent(pending.event, pending.arg1, pending.arg2)
@@ -1326,56 +1322,6 @@ class StatechartManager(EventDispatcher):
     def _monitorIsActiveDidChange(self):
         if self.monitorIsActive and self.monitor is None:
             self.monitor = StatechartMonitor()
-        
-    """ @private 
-      Will process the arguments supplied to the gotoState method.
-          
-      TODO: Come back to this and refactor the code. It works, but it
-            could certainly be improved
-    """
-    def _processGotoStateArgs(self, arguments):
-        processedArgs = { 
-            'state': None, 
-            'fromCurrentState': None, 
-            'useHistory': false, 
-            'context': None 
-        }
-              
-        args = collection.deque(arguments) # [PORT] was .A and shift, now is collection.deque
-        args = (item for item in args if item is not None)
-          
-        if len(args) < 1:
-            return processedArgs
-          
-        processedArgs.state = args[0]
-          
-        if len(args) == 2:
-            value = args[1]
-            if isinstance(value, bool):
-                processedArgs['useHistory'] = value
-            elif isinstance(value, dict) or isinstance(value, dict):
-                if not isinstance(value, State):
-                    processedArgs['context'] = value
-            else:
-                processedArgs['fromCurrentState'] = value
-        elif len(args) == 3:
-            value = args[1]
-            if isinstance(value, bool):
-                processedArgs['useHistory'] = value
-                processedArgs['context'] = args[2]
-            else:
-                processedArgs['fromCurrentState'] = value
-                value = args[2]
-                if isinstance(value, bool):
-                    processedArgs['useHistory'] = value
-                else:
-                    processedArgs['context'] = value
-        else:
-            processedArgs['fromCurrentState'] = args[1]
-            processedArgs['useHistory'] = args[2]
-            processedArgs['context'] = args[3]
-          
-        return processedArgs
         
     """ @private 
         
@@ -1419,7 +1365,7 @@ class StatechartManager(EventDispatcher):
             if key == 'rootStateExample':
                 continue
             
-            getattr(self, key, value)
+            value = getattr(self, key)
 
             if inspect.isfunction(value): # [PORT] We don't care about functions here?
                 continue
@@ -1436,9 +1382,9 @@ class StatechartManager(EventDispatcher):
             return None
           
         # [PORT] Trying to replace javascript use of .extend() with python setattr...
-        for k,v in attrs:
-            setattr(rsExample, k, v)
-        return rsExample
+        #for k,v in attrs:
+            #setattr(rsExample, k, v)
+        return rsExample(**attrs)
         
     """ @private """
     def _logStatechartCreationError(self, msg):
@@ -1466,7 +1412,7 @@ class StatechartManager(EventDispatcher):
         
     """ @property """
     def _statechartLogPrefix(self):
-        className = _object_className(self.constructor)
+        className = self.__name__
         name = self.name, prefix;
               
         if self.name is None:
