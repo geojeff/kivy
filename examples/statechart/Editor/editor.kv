@@ -37,11 +37,11 @@
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.app.statechart.sendEvent('cancel')
+                on_release: root.statechart.sendEvent('cancel')
 
             Button:
                 text: "load"
-                on_release: root.app.statechart.sendEvent('load')
+                on_release: root.statechart.sendEvent('load')
 
 <SaveDialog>:
     text_input: text_input
@@ -65,9 +65,9 @@
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.app.statechart.sendEvent('cancel')
+                on_release: root.statechart.sendEvent('cancel')
 
             Button:
                 text: "save"
-                on_release: root.app.statechart.sendEvent('save')
+                on_release: root.statechart.sendEvent('save')
 
