@@ -322,10 +322,7 @@ class State(EventDispatcher):
         state = None
         substates = []
         matchedInitialSubstate = False
-        initialSubstate = self.initialSubstate
-        if initialSubstate and isinstance(initialSubstate, basestring):
-            initialSubstateName = self.initialSubstate
-            self.initialSubstateName = self.initialSubstate
+        initialSubstate = self.initialSubstate # [PORT] Can come in as str or class.
         substatesAreConcurrent = self.substatesAreConcurrent
         statechart = self.statechart
         valueIsFunc = False
@@ -370,7 +367,7 @@ class State(EventDispatcher):
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
             if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect. Check the __class__ hack.
                 state = self._addSubstate(key, value, None)
-                if key == initialSubstateName:
+                if key == self.initialSubstate:
                     self.initialSubstate = state
                     matchedInitialSubstate = True
                 elif historyState and historyState.defaultState == key:

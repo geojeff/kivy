@@ -428,15 +428,15 @@ class StatechartManager(EventDispatcher):
 
         rootState.initState()
           
-        if inspect.isclass(rootState.initialSubstate) and issubclass(rootState.initialSubstate, EmptyState):
+        if not hasattr(rootState, 'initialSubstate') or (inspect.isclass(rootState.initialSubstate) and issubclass(rootState.initialSubstate, EmptyState)):
             msg = "Unable to initialize statechart. Root state must have an initial substate explicilty defined"
             self.statechartLogError(msg)
-            raise msg
+            raise Exception(msg)
           
-        if self.initialState is not None:
-            key = 'initialState'
-            setattr(self, key, getattr(rootState, 'initialState'))
-            #self.key = rootState[self.key]
+        # [PORT] This makes no sense in original, which checks if not empty self.intialState. Plus, why would 
+        #        rootState have intialState anyway (it should have initalSubstate).
+        #if hasattr(rootState, 'initialState'): 
+            #self.initialState = rootState.initialState
           
         self.statechartIsInitialized = True
 
@@ -1318,8 +1318,7 @@ class StatechartManager(EventDispatcher):
             
     """
     def _constructRootStateClass(self):
-        #rsExample = self[rsExampleKey]
-        rsExample = self.rootStateExample # [PORT] in kivy will try direct ref
+        rsExample = self.rootStateExample
         initialState = self.initialState
         statesAreConcurrent = self.statesAreConcurrent
         stateCount = 0
@@ -1341,6 +1340,7 @@ class StatechartManager(EventDispatcher):
             self._logStatechartCreationError("Must either define initial state or assign states as concurrent")
             return None
           
+        # Find the states:
         for key in dir(self):
             if key == '__class__':
                 continue
@@ -1350,7 +1350,10 @@ class StatechartManager(EventDispatcher):
             
             value = getattr(self, key)
 
-            if inspect.isfunction(value): # [PORT] We don't care about functions here?
+            if inspect.isfunction(value): # [PORT] We don't care about functions here -- States must be classes.
+                continue
+
+            if inspect.ismethod(value): # [PORT] And same goes for methods.
                 continue
             
             # [PORT] Check for value.plugin removed here. Substates are classes, either defined in-file or imported.
@@ -1364,11 +1367,13 @@ class StatechartManager(EventDispatcher):
             self._logStatechartCreationError("Must define one or more states")
             return None
           
-        # [PORT] Trying to replace javascript use of .extend() with python setattr...
-        #for k,v in attrs:
-            #setattr(rsExample, k, v)
-        return rsExample(**attrs)
-        
+        # [PORT] Using python type to make a new class...
+
+        if rsExample is None:
+            return type("RootState", (State,), attrs)
+        else:
+            return type("RootState", (State, rsExample,), attrs)
+
     """ @private """
     def _logStatechartCreationError(self, msg):
         Logger.debug("Unable to create statechart for {0}: {1}.".format(self, msg))
