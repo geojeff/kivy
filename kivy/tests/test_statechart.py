@@ -44,22 +44,28 @@ class Statechart1(StatechartManager):
     def __init__(self, app, **kw):
         self.app = app
         self.trace = True
-
         self.rootState = RootState
-
         super(Statechart1, self).__init__(**kw)
+
+class Statechart2(StatechartManager):
+    def __init__(self, **kw):
+        self.trace = True
+        self.autoInitStatechart = False
+        self.rootState = State
+        super(Statechart2, self).__init__(**kw)
 
 class TestApp(App):
     pass
 
 class StatechartTestCase(unittest.TestCase):
-
     def setUp(self):
         global app
         global s1
+        global s2
         app = TestApp()
         s1 = Statechart1(app)
         app.statechart = s1
+        s2 = Statechart2()
 
     def test_initStatechart(self):
         self.assertTrue(app.statechart.isStatechart)
@@ -81,4 +87,9 @@ class StatechartTestCase(unittest.TestCase):
         self.assertFalse(app.statechart.getState('A').isCurrentState)
         self.assertTrue(app.statechart.getState('B').isCurrentState)
 
+        self.assertTrue(s2.isStatechart)
+        self.assertFalse(s2.statechartIsInitialized)
 
+        s2.initStatechart()
+
+        self.assertTrue(s2.statechartIsInitialized)
