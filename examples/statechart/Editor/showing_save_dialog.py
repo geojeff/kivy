@@ -13,16 +13,15 @@ class SaveDialog(FloatLayout):
     cancel = ObjectProperty(None)
 
 class SHOWING_SAVE_DIALOG(State):
+    text_input = ObjectProperty(None)
+
     def __init__(self, **kwargs):
         kwargs['name'] = 'SHOWING_SAVE_DIALOG'
         super(SHOWING_SAVE_DIALOG, self).__init__(**kwargs)
 
-    savefile = ObjectProperty(None)
-    text_input = ObjectProperty(None)
-
     def enterState(self, context=None):
         print 'SHOWING_SAVE_DIALOG/enterState'
-        content = SaveDialog(save=self.save, cancel=self.dismiss_popup)
+        content = SaveDialog(save=self.save, cancel=self.cancel)
         self._popup = Popup(title="save file", content=content, size_hint=(0.9, 0.9))
         self._popup.open()
 
@@ -30,14 +29,14 @@ class SHOWING_SAVE_DIALOG(State):
         print 'SHOWING_SAVE_DIALOG/exitState'
         self._popup.dismiss()
          
-    def save(self):
+    def save(self, *l):
         path = filechooser.path
         filename = text_input.text
         with open(os.path.join(path, filename), 'w') as stream:
             stream.write(self.text_input.text)
-        self.gotoState('SHOWING_APP')
+        self.statechart.gotoState('SHOWING_MAIN')
 
-    def cancel(self):
-        self.gotoState('SHOWING_APP')
+    def cancel(self, *l):
+        self.statechart.gotoState('SHOWING_MAIN')
 
 Factory.register('SaveDialog', cls=SaveDialog)

@@ -1,6 +1,6 @@
 #:kivy 1.1.0
 
-Root:
+<MainView>:
     text_input: text_input
 
     BoxLayout:
@@ -10,10 +10,10 @@ Root:
             height: 30
             Button:
                 text: 'load'
-                on_release: root.statechart.tryToPerform('show_load')
+                on_release: root.app.statechart.sendEvent('show_load')
             Button:
                 text: 'save'
-                on_release: root.statechart.tryToPerform('show_save')
+                on_release: root.app.statechart.sendEvent('show_save')
 
         BoxLayout:
             TextInput:
@@ -37,14 +37,15 @@ Root:
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.statechart.tryToPerform('cancel')
+                on_release: root.app.statechart.sendEvent('cancel')
 
             Button:
                 text: "load"
-                on_release: root.statechart.tryToPerform('load')
+                on_release: root.app.statechart.sendEvent('load')
 
 <SaveDialog>:
     text_input: text_input
+
     BoxLayout:
         size: root.size
         pos: root.pos
@@ -64,9 +65,9 @@ Root:
             height: 30
             Button:
                 text: "cancel"
-                on_release: root.statechart.tryToPerform('cancel')
+                on_release: root.app.statechart.sendEvent('cancel')
 
             Button:
                 text: "save"
-                on_release: root.statechart.tryToPerform('save')
+                on_release: root.app.statechart.sendEvent('save')
 

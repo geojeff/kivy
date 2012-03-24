@@ -8,20 +8,20 @@ from kivy.statechart.system.state import State
 import os
 
 class LoadDialog(FloatLayout):
+    app = ObjectProperty(None)
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
 
 class SHOWING_LOAD_DIALOG(State):
+    text_input = ObjectProperty(None)
+
     def __init__(self, **kwargs):
         kwargs['name'] = 'SHOWING_LOAD_DIALOG'
         super(SHOWING_LOAD_DIALOG, self).__init__(**kwargs)
 
-    loadfile = ObjectProperty(None)
-    text_input = ObjectProperty(None)
-
     def enterState(self, context=None):
         print 'SHOWING_LOAD_DIALOG/enterState'
-        content = LoadDialog(load=self.load, cancel=self.dismiss_popup)
+        content = LoadDialog(load=self.load, cancel=self.cancel)
         self._popup = Popup(title="load file", content=content, size_hint=(0.9, 0.9))
         self._popup.open()
         
@@ -29,14 +29,14 @@ class SHOWING_LOAD_DIALOG(State):
         print 'SHOWING_LOAD_DIALOG/exitState'
         self._popup.dismiss()
          
-    def load(self):
+    def load(self, *l):
         path = filechooser.path
         filename = filechooser.selection
         with open(os.path.join(path, filename[0])) as stream:
             self.text_input.text = stream.read()
-        self.gotoState('SHOWING_APP')
+        self.statechart.gotoState('SHOWING_MAIN')
 
-    def cancel(self):
-        self.gotoState('SHOWING_APP')
+    def cancel(self, *l):
+        self.statechart.gotoState('SHOWING_MAIN')
 
 Factory.register('LoadDialog', cls=LoadDialog)

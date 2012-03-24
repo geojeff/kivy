@@ -218,7 +218,7 @@ class StatechartManager(EventDispatcher):
       The root state of this statechart. All statecharts must have a root state.
       
       If this property is left unassigned then when the statechart is initialized
-      it will used the rootStateExample, initialState, and statesAreConcurrent
+      it will use the rootStateExample, initialState, and statesAreConcurrent
       properties to construct a root state.
       
       @see #rootStateExample
@@ -368,13 +368,12 @@ class StatechartManager(EventDispatcher):
             setattr(self, k, v)
 
         super(StatechartManager, self).__init__(**kw)
+
+        if self.autoInitStatechart == True:
+            self.initStatechart()
         
     def _statechartDelegate(self):
         self.statechartDelegate = self.delegateFor('isStatechartDelegate', self.delegate);
-        
-    def initMixin(self):
-        if self.autoInitStatechart:
-            self.initStatechart()
         
     def destroyMixin(self):
         # self.removeObserver(self.statechartTraceKey, self, '_statechartTraceDidChange'); 
@@ -404,7 +403,7 @@ class StatechartManager(EventDispatcher):
         self._statechartTraceDidChange() # [PORT] this call needed for kivy?
       
         trace = self.allowStatechartTracing
-        rootState = self.rootState
+        rootState = self.rootState # [PORT] Clarify in docs that rootState is None or is a func that returns class def RootState(State).
         msg = ''
           
         if trace:
@@ -459,7 +458,6 @@ class StatechartManager(EventDispatcher):
     """
     def _currentStates(self, *l):
         self.currentStates = self.rootState.currentSubstates
-        print 'just set currentStates:', self.currentStates
 
     """
       Returns the first current state for this statechart. 
@@ -468,7 +466,6 @@ class StatechartManager(EventDispatcher):
     """
     def _firstCurrentState(self, *l):
         self.firstCurrentState = self.currentStates[0] if self.currentStates else None
-        print 'just set firstCurrentState:', self.firstCurrentState
 
     """
       Returns the count of the current states for this statechart
@@ -665,7 +662,6 @@ class StatechartManager(EventDispatcher):
           
             # Collected all the state transition actions to be performed. Now execute them.
             self._gotoStateActions = gotoStateActions
-            print 'gotoStateActions', gotoStateActions
             self._executeGotoStateActions(state, gotoStateActions, None, context)
         
     """
@@ -700,10 +696,8 @@ class StatechartManager(EventDispatcher):
         marker = 0 if marker is None else marker
           
         numberOfActions = len(actions)
-        print 'before while', numberOfActions
         while marker < numberOfActions:
             action = actions[marker]
-            print 'action', action, action['action']
             self._currentGotoStateAction = action
             if action['action'] == EXIT_STATE:
                 actionResult = self._exitState(action['state'], context)
@@ -717,7 +711,6 @@ class StatechartManager(EventDispatcher):
             # else to resume this statechart's state transition process by calling the
             # statechart's resumeGotoState method.
             #
-            print 'actionResult', actionResult
             if actionResult and inspect.isclass(actionResult) and issubclass(actionResult, Async):
                 self._gotoStateSuspendedPoint = {
                     'gotoState': gotoState,
@@ -726,14 +719,11 @@ class StatechartManager(EventDispatcher):
                     'context': context
                 }
               
-                print 'tryToPerform'
                 actionResult.tryToPerform(action['state']) # [PORT] Note: This is not the same as self.tryToPerform. See Async.
                 return
 
-            print 'marker', marker
             marker += 1
           
-        print 'after while'
         #self.beginPropertyChanges()
         #self.notifyPropertyChange('currentStates') # [PORT] notify needed here in kivy?
         #self.notifyPropertyChange('enteredStates') # [PORT] notify needed here in kivy?
@@ -742,8 +732,6 @@ class StatechartManager(EventDispatcher):
         self._enteredStates()
           
         if self.allowStatechartTracing:
-            print "current states after: {0}".format(self.currentStates)
-            print "END gotoState: {0}".format(gotoState)
             self.statechartLogTrace("current states after: {0}".format(self.currentStates))
             self.statechartLogTrace("END gotoState: {0}".format(gotoState))
           
@@ -751,7 +739,6 @@ class StatechartManager(EventDispatcher):
         
     """ @private """
     def _cleanupStateTransition(self):
-        print 'cleaning up'
         self._currentGotoStateAction = None
         self._gotoStateSuspendedPoint = None
         self._gotoStateActions = None
@@ -941,8 +928,6 @@ class StatechartManager(EventDispatcher):
             #self.statechartLogError("can send event {0}. statechart is destroyed".format(event))
             #return
 
-        print 'sendEvent', event, self._sendEventLocked, self._gotoStateLocked
-          
         statechartHandledEvent = False
         eventHandled = False
         currentStates = self.currentStates[:]
@@ -967,14 +952,12 @@ class StatechartManager(EventDispatcher):
         if trace:
             self.statechartLogTrace("BEGIN sendEvent: '{0}'".format(event))
           
-        print 'sendEvent, currentStates', currentStates
-        for i in range(len(currentStates)):
+        for state in currentStates:
             eventHandled = False
-            state = currentStates[i]
             if not state.isCurrentState:
                 continue
             while not eventHandled and state is not None:
-                if not checkedStates[state.fullPath]:
+                if not state.fullPath in checkedStates:
                     eventHandled = state.tryToHandleEvent(event, arg1, arg2)
                     checkedStates[state.fullPath] = True
                 if not eventHandled:

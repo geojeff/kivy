@@ -9,7 +9,7 @@ counter = 0
 
 from kivy.app import App
 from kivy.statechart.system.state import State
-from kivy.statechart.system.statechart import Statechart
+from kivy.statechart.system.statechart import StatechartManager
 
 import os, inspect
 
@@ -18,34 +18,36 @@ class A(State):
         kwargs['name'] = 'A'
         super(A, self).__init__(**kwargs)
 
-    def foo(self):
-        self.gotoState('B')
+    def foo(self, *l):
+        print 'foo called, trying to goto B'
+        self.statechart.gotoState('B') # [PORT] self.gotoState should work...
 
 class B(State):
     def __init__(self, **kwargs):
         kwargs['name'] = 'B'
         super(B, self).__init__(**kwargs)
 
-    def bar(self):
-        self.gotoState('A')
+    def bar(self, *l):
+        print 'bar called, trying to goto A'
+        self.statechart.gotoState('A')
 
-class Statechart1(Statechart):
+class RootState(State):
+    def __init__(self, **kwargs):
+        super(RootState, self).__init__(**kwargs)
+    
+    initialSubstate = 'A'
+    
+    A = A
+    B = B
+
+class Statechart1(StatechartManager):
     def __init__(self, app, **kw):
         self.app = app
-        self.rootState = self._rootState()
+        self.trace = True
+
+        self.rootState = RootState
+
         super(Statechart1, self).__init__(**kw)
-
-    def _rootState(self):
-        class RootState(State):
-            def __init__(self, **kwargs):
-                super(RootState, self).__init__(**kwargs)
-    
-            initialSubstate = 'A'
-    
-            A = A
-            B = B
-
-        return RootState
 
 class TestApp(App):
     pass
@@ -60,11 +62,23 @@ class StatechartTestCase(unittest.TestCase):
         app.statechart = s1
 
     def test_initStatechart(self):
-        app.statechart.initStatechart()
         self.assertTrue(app.statechart.isStatechart)
         self.assertTrue(app.statechart.statechartIsInitialized)
         self.assertEqual(app.statechart.rootState.name, '__ROOT_STATE__')
+        self.assertTrue(isinstance(app.statechart.rootState, State))
         self.assertEqual(app.statechart.initialState, None)
+
         self.assertTrue(app.statechart.getState('A').isCurrentState)
         self.assertFalse(app.statechart.getState('B').isCurrentState)
+
+        # [PORT] Except for the cross-object observing bit (commented out), owner is not set. Even with it, it seems.
+        #self.assertEqual(app.statechart.rootState.owner, app.statechart)
+        #self.assertEqual(app.statechart.getState('A').owner, app.statechart)
+        #self.assertEqual(app.statechart.getState('B').owner, app.statechart)
+
+        app.statechart.sendEvent('foo')
+
+        self.assertFalse(app.statechart.getState('A').isCurrentState)
+        self.assertTrue(app.statechart.getState('B').isCurrentState)
+
 

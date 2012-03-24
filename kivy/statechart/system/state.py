@@ -206,6 +206,11 @@ class State(EventDispatcher):
         self.bind(enteredSubstates=self._enteredSubstatesDidChange) # [PORT] .observes("*enteredSubstates.[]")
         self.bind(currentSubstates=self._currentSubstatesDidChange) # [PORT] .observes("*currentSubstates.[]")
 
+        self.bind(statechart=self._trace)
+        self.bind(statechart=self._owner)
+        self.bind(statechart=self._statechartDelegate)
+        self.bind(statechartDelegate=self._location)
+
         self._registeredEventHandlers = {}
         self._registeredStringEventHandlers = {}
         self._registeredRegExpEventHandlers = []
@@ -230,7 +235,7 @@ class State(EventDispatcher):
             #sc.bind(self.traceKey=self._statechartTraceDidChange)
 
         #for key in kwargs:
-            #self.__dict__[key] = kwargs.pop(key)
+            #self.__dict__[key] = kwargs.pop(key) # [PORT] Should the kes be popped off?
 
         for k,v in kwargs.items():
             if k == 'initialSubstate':
@@ -244,23 +249,24 @@ class State(EventDispatcher):
 
         super(State, self).__init__() # [PORT] initialize how? We have also initState()
 
-    def _trace(self):
-        self._trace = self.getPath("statechart.{0}".format(self.getPath("statechart.statechartTraceKey")))
+    def _trace(self, *l):
+        key = self.statechart.statechartTraceKey
+        self.trace = getattr(self.statechart, key) if hasattr(self.statechart, key) else None
 
-    def _owner(self, instance, value):
+    def _owner(self, instance, value, *l):
         sc = self.statechart
         key = sc.statechartOwnerKey if sc else None
         owner = key if sc else None
-        return owner if sc else sc
+        self.owner = owner if sc else sc
 
-    def _statechartDelegate(self):
-        return self.getPath('statechart.statechart.Delegate')
+    def _statechartDelegate(self, *l):
+        self.statechartDelegate = self.statechart.statechartDelegate
 
-    def _location(self, instance, value):
+    def _location(self, instance, value, *l):
         sc = self.statechart
         delegate = self.statechartDelegate
         delegate.statechartUpdateLocationForState(sc, value, self if value else None)
-        return delegate.statechartAcquireLocationForState(sc, self)
+        self.location = delegate.statechartAcquireLocationForState(sc, self)
         
     def destroy(self):
         #sc = self.statechart
@@ -361,11 +367,8 @@ class State(EventDispatcher):
 
             # [PORT] Removed statePlugin system in python.
 
-            print 'initState:', key, value
-
             #if inspect.isclass(value) and issubclass(value, State) and getattr(self, key) is not self.__init__: # [PORT] using inspect
             if inspect.isclass(value) and issubclass(value, State) and key != '__class__': # [PORT] using inspect. Check the __class__ hack.
-                print 'initState, initialSubstateName, substate:', initialSubstateName, value
                 state = self._addSubstate(key, value, None)
                 if key == initialSubstateName:
                     self.initialSubstate = state
@@ -516,7 +519,6 @@ class State(EventDispatcher):
 
         self.substates.append(state)
 
-        print '_addSubstate', name, state
         setattr(self, name, state)
 
         state.initState()
@@ -753,7 +755,7 @@ class State(EventDispatcher):
         if len(matcher.tokens) == 0:
             return None
 
-        paths = self._registeredSubstatePaths[matcher.lastPart]
+        paths = self._registeredSubstatePaths[matcher.lastPart] if matcher.lastPart in self._registeredSubstatePaths else None
 
         if paths is None:
             return self._notifySubstateNotFound(callback, target, value)
@@ -780,7 +782,7 @@ class State(EventDispatcher):
 
     """ @private """
     def _notifySubstateNotFound(self, callback=None, target=None, value=None, keys=None):
-        return callback(target or self, self, value, keys) if callback is not None else None
+        return callback(target or self, value, keys) if callback is not None else None
 
     """
       Will attempt to get a state relative to this state. 
@@ -809,7 +811,7 @@ class State(EventDispatcher):
         self.getSubstate(value, self._handleSubstateNotFound)
 
     """ @private """
-    def _handleSubstateNotFound(self, state, value, keys):
+    def _handleSubstateNotFound(self, state, value, keys=None):
         parentState = self.parentState
 
         if parentState is not None:
@@ -833,17 +835,17 @@ class State(EventDispatcher):
              exited and entered during the state transition process. Context can not be an instance of 
              State.
     """
-    def gotoState(self, value, context):
+    def gotoState(self, value, context=None):
         state = self.getState(value)
 
-        if state is not None:
+        if state is None:
            msg = "can not go to state {0} from state {1}. Invalid value."
            self.stateLogError(msg.format(value, self))
            return
 
         fromState = self.findFirstRelativeCurrentState(state)
 
-        self.statechart.gotoState(state, fromState, false, context)
+        self.statechart.gotoState(state, fromState, False, context)
 
     """
       Used to go to a given state's history state in the statechart either directly from this state if it
@@ -894,7 +896,7 @@ class State(EventDispatcher):
       when this state is a concurrent state.
       
       @param state {State|String} either a state object or the name of a state
-      @returns {Boolean} true is the given state is a current substate, otherwise false is returned
+      @returns {Boolean} true is the given state is a current substate, otherwise False is returned
     """
     def stateIsCurrentSubstate(self, state=None):
         if isinstance(state, basestring):
@@ -907,7 +909,7 @@ class State(EventDispatcher):
       when this state is a concurrent state.
       
       @param state {State|String} either a state object or the name of a state
-      @returns {Boolean} true is the given state is a current substate, otherwise false is returned
+      @returns {Boolean} true is the given state is a current substate, otherwise False is returned
     """
     def stateIsEnteredSubstate(self, state=None):
         if isinstance(state, basestring):
@@ -1072,16 +1074,16 @@ class State(EventDispatcher):
 
         # First check if the name of the event is the same as a registered event handler. If so,
         # then do not handle the event.
-        if self._registeredEventHandlers[event]:
+        if event in self._registeredEventHandlers:
             self.stateLogWarning("state {0} can not handle event '{1}' since it is a registered event handler".format(self, event))
             return False
 
-        if self._registeredStateObserveHandlers[event]:
+        if event in self._registeredStateObserveHandlers:
             self.stateLogWarning("state {0} can not handle event '{1}' since it is a registered state observe handler".format(self, event))
             return False
 
         # Now begin by trying a basic method on the state to respond to the event
-        if inspect.isfunction(getattr(self, event)):
+        if inspect.ismethod(getattr(self, event)):
             if trace:
                 self.stateLogTrace("will handle event '{0}'".format(event))
 
@@ -1091,7 +1093,7 @@ class State(EventDispatcher):
             return ret
 
         # Try an event handler that is associated with an event represented as a string
-        handler = self._registeredStringEventHandlers[event]
+        handler = self._registeredStringEventHandlers[event] if event in self._registeredStringEventHandlers else None
         if handler is not None:
             if trace:
                 self.stateLogTrace("{0} will handle event '{1}'".format(handler.name, event))
@@ -1118,7 +1120,7 @@ class State(EventDispatcher):
 
         # Final attempt. If the state has an unknownEvent function then invoke it to 
         # handle the event
-        if inspect.isfunction(getattr(self, 'unknownEvent')):
+        if hasattr(self, 'unknownEvent') and inspect.isfunction(getattr(self, 'unknownEvent')):
             if trace:
                 self.stateLogTrace("unknownEvent will handle event '{0}'".format(event))
 
@@ -1317,13 +1319,13 @@ class State(EventDispatcher):
     """
     def respondsToEvent(self, event):
         if self._registeredEventHandlers[event]:
-            return false
+            return False
         if inspect.isfunction(getattr(self, event)):
-            return true
+            return True
         if self._registeredStringEventHandlers[event]:
-            return true
+            return True
         if self._registeredStateObserveHandlers[event]:
-            return false
+            return False
 
         numberOfHandlers = len(self._registeredRegExpEventHandlers)
         i = 0
@@ -1352,7 +1354,7 @@ class State(EventDispatcher):
         root = self.statechart.rootState if self.statechart else None
         if root is None:
             return self.name
-        self.pathRelativeTo(root)
+        self.fullPath = self.pathRelativeTo(root)
 
     def toString(self):
         return self.fullPath
