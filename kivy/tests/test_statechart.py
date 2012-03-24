@@ -67,7 +67,7 @@ class StatechartTestCase(unittest.TestCase):
         app.statechart = s1
         s2 = Statechart2()
 
-    def test_initStatechart(self):
+    def test_init_with_assigned_root_state(self):
         self.assertTrue(app.statechart.isStatechart)
         self.assertTrue(app.statechart.statechartIsInitialized)
         self.assertEqual(app.statechart.rootState.name, '__ROOT_STATE__')
