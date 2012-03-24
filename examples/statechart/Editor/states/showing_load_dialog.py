@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-from kivy.factory import Factory
 from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.popup import Popup
 from kivy.statechart.system.state import State
 
-import os
-
+############################
+# LoadDialog and its state
+#
 class LoadDialog(FloatLayout):
-    app = ObjectProperty(None)
+    statechart = ObjectProperty(None)
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
 
@@ -21,7 +21,7 @@ class SHOWING_LOAD_DIALOG(State):
 
     def enterState(self, context=None):
         print 'SHOWING_LOAD_DIALOG/enterState'
-        content = LoadDialog(load=self.load, cancel=self.cancel)
+        content = LoadDialog(load=self.load, cancel=self.cancel, statechart=self.statechart)
         self._popup = Popup(title="load file", content=content, size_hint=(0.9, 0.9))
         self._popup.open()
         
@@ -38,5 +38,3 @@ class SHOWING_LOAD_DIALOG(State):
 
     def cancel(self, *l):
         self.statechart.gotoState('SHOWING_MAIN')
-
-Factory.register('LoadDialog', cls=LoadDialog)
