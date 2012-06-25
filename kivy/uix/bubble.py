@@ -104,7 +104,8 @@ class Bubble(GridLayout):
     16, 16, 16)
     '''
 
-    background_image = StringProperty('atlas://data/images/defaulttheme/bubble')
+    background_image = StringProperty(
+        'atlas://data/images/defaulttheme/bubble')
     '''Background image of the bubble.
 
     :data:`background_image` is a :class:`~kivy.properties.StringProperty`,
