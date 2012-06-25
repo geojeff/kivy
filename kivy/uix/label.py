@@ -78,7 +78,7 @@ to detect when the user clicks on part of the text, and to react.
 The tag ``[ref=xxx]`` is used for that.
 
 In this example, we are creating a reference on the word "World". When a click
-happens on it, the function ``print_it`` will be called with the name of the 
+happens on it, the function ``print_it`` will be called with the name of the
 reference::
 
     def print_it(instance, value):
@@ -269,8 +269,8 @@ class Label(Widget):
     font_size = NumericProperty(12)
     '''Font size of the text, in pixels.
 
-    :data:`font_size` is a :class:`~kivy.properties.NumericProperty`, default to
-    12.
+    :data:`font_size` is a :class:`~kivy.properties.NumericProperty`, default
+    to 12.
     '''
 
     bold = BooleanProperty(False)
@@ -300,15 +300,15 @@ class Label(Widget):
     padding_x = NumericProperty(0)
     '''Horizontal padding of the text inside the widget box.
 
-    :data:`padding_x` is a :class:`~kivy.properties.NumericProperty`, default to
-    0
+    :data:`padding_x` is a :class:`~kivy.properties.NumericProperty`, default
+    to 0
     '''
 
     padding_y = NumericProperty(0)
     '''Vertical padding of the text inside the widget box.
 
-    :data:`padding_x` is a :class:`~kivy.properties.NumericProperty`, default to
-    0
+    :data:`padding_x` is a :class:`~kivy.properties.NumericProperty`, default
+    to 0
     '''
 
     padding = ReferenceListProperty(padding_x, padding_y)
@@ -328,7 +328,8 @@ class Label(Widget):
 
         This doesn't change the position of the text texture of the Label
         (centered), only the position of the text in this texture. You probably
-        want to bind the size of the Label to the texture_size or set a text_size.
+        want to bind the size of the Label to the texture_size or set a
+        text_size.
     '''
 
     valign = OptionProperty('bottom', options=['bottom', 'middle', 'top'])
@@ -341,21 +342,22 @@ class Label(Widget):
 
         This doesn't change the position of the text texture of the Label
         (centered), only the position of the text in this texture. You probably
-        want to bind the size of the Label to the texture_size or set a text_size.
+        want to bind the size of the Label to the texture_size or set a
+        text_size.
     '''
 
     color = ListProperty([1, 1, 1, 1])
     '''Text color, in the format (r, g, b, a)
 
-    :data:`color` is a :class:`~kivy.properties.ListProperty`, default to [1, 1,
-    1, 1].
+    :data:`color` is a :class:`~kivy.properties.ListProperty`, default to
+    [1, 1, 1, 1].
     '''
 
     texture = ObjectProperty(None, allownone=True)
     '''Texture object of the text.
-    The text is rendered automatically when a property changes. The OpenGL texture
-    created in this operation is stored in this property. You can use this 
-    :data:`texture` for any graphics elements.
+    The text is rendered automatically when a property changes. The OpenGL
+    texture created in this operation is stored in this property. You can use
+    this :data:`texture` for any graphics elements.
 
     Depending on the texture creation, the value will be a
     :class:`~kivy.graphics.texture.Texture` or
@@ -384,8 +386,9 @@ class Label(Widget):
     .. warning::
 
         The data:`texture_size` is set after the :data:`texture` property. If
-        you listen for changes to :data:`texture`, :data:`texture_size` will not
-        be up-to-date in your callback. Bind to data:`texture_size` instead.
+        you listen for changes to :data:`texture`, :data:`texture_size` will
+        not be up-to-date in your callback. Bind to data:`texture_size`
+        instead.
     '''
 
     mipmap = BooleanProperty(False)
@@ -400,9 +403,9 @@ class Label(Widget):
 
     shorten = BooleanProperty(False)
     '''
-    Indicates whether the label should attempt to shorten its textual contents as
-    much as possible if a `text_size` is given. Setting this to True without an
-    appropriately set `text_size` will lead to unexpected results.
+    Indicates whether the label should attempt to shorten its textual contents
+    as much as possible if a `text_size` is given. Setting this to True without
+    an appropriately set `text_size` will lead to unexpected results.
 
     :data:`shorten` is a :class:`~kivy.properties.BooleanProperty`, default to
     False.
@@ -413,9 +416,9 @@ class Label(Widget):
     .. versionadded:: 1.1.0
 
     If true, the text will be rendered with
-    :class:`~kivy.core.text.markup.MarkupLabel`: you can change the style of the
-    text using tags. Check :doc:`api-kivy.core.text.markup` documentation for
-    more information.
+    :class:`~kivy.core.text.markup.MarkupLabel`: you can change the style of
+    the text using tags. Check :doc:`api-kivy.core.text.markup` documentation
+    for more information.
 
     :data:`markup` is a :class:`~kivy.properties.BooleanProperty`, default to
     False.
@@ -437,9 +440,9 @@ class Label(Widget):
         {'hello': ((64, 0, 78, 16), )}
 
     You know that the reference "hello" have a bounding box set at (x1, y1,
-    x2, y2). The current Label implementation uses these references if they exist
-    in your markup text, automatically doing the collision with the touch, and
-    dispatching an ``on_ref_press`` event.
+    x2, y2). The current Label implementation uses these references if they
+    exist in your markup text, automatically doing the collision with the
+    touch, and dispatching an ``on_ref_press`` event.
 
     You can bind a ref event like this::
 
@@ -467,7 +470,7 @@ class Label(Widget):
             [anchor=content]Hello world
         """
 
-    Then, all the ``[anchor=]`` references will be removed, and you'll get all 
+    Then, all the ``[anchor=]`` references will be removed, and you'll get all
     the anchor positions in this property (only after rendering)::
 
         >>> widget = Label(text=text, markup=True)
