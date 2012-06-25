@@ -8,8 +8,8 @@ Popup
     :align: right
 
 The :class:`Popup` widget is used to create modal popups. By default, the popup
-will cover the whole "parent" window. When you are creating a popup, you must at
-a minimum set a :data:`Popup.title` and a :data:`Popup.content` widget.
+will cover the whole "parent" window. When you are creating a popup, you must
+at a minimum set a :data:`Popup.title` and a :data:`Popup.content` widget.
 
 Remember that the default size of a Widget is size_hint=(1, 1). If you don't
 want your popup to be fullscreen, deactivate the size_hint and use a specific
@@ -95,8 +95,8 @@ class Popup(FloatLayout):
     '''Default to True, this property determines if the popup is automatically
     dismissed when the user clicks outside it.
 
-    :data:`auto_dismiss` is a :class:`~kivy.properties.BooleanProperty`, default
-    to True.
+    :data:`auto_dismiss` is a :class:`~kivy.properties.BooleanProperty`,
+    default to True.
     '''
 
     attach_to = ObjectProperty(None)
@@ -222,7 +222,7 @@ class Popup(FloatLayout):
 
         .. versionchanged:: 1.3.0
 
-            When the popup is dismissed, it will be faded out, before 
+            When the popup is dismissed, it will be faded out, before
             removal from the parent. If you don't want animation, use:
 
                 popup.dismiss(animation=False)
