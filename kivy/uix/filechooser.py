@@ -6,13 +6,13 @@ FileChooser
 
 .. warning::
 
-    This is experimental and subject to change as long as this warning notice is
-    present.
+    This is experimental and subject to change as long as this warning notice
+    is present.
 
 .. versionchanged:: 1.2.0
 
-    In chooser template, the `controller` is not a direct reference anymore, but
-    a weak-reference.
+    In chooser template, the `controller` is not a direct reference anymore,
+    but a weak-reference.
     You must update all the notation `root.controller.xxx` to
     `root.controller().xxx`.
 
@@ -164,8 +164,8 @@ class FileChooserController(FloatLayout):
     sort_func = ObjectProperty(alphanumeric_folders_first)
     '''
     :class:`~kivy.properties.ObjectProperty`.
-    Provides a function to be called with a list of filenames as the only argument.
-    Returns a list of filenames sorted for display in the view.
+    Provides a function to be called with a list of filenames as the only
+    argument. Returns a list of filenames sorted for display in the view.
     '''
 
     files = ListProperty([])
@@ -204,9 +204,9 @@ class FileChooserController(FloatLayout):
     rootpath = StringProperty(None, allownone=True)
     '''
     Root path to use, instead of the system root path. If set, it will not show
-    a ".." directory to go upper the root path. For example, if you set rootpath
-    to /Users/foo, the user will be unable to go to /Users, or to any other
-    directory not starting with /Users/foo.
+    a ".." directory to go upper the root path. For example, if you set
+    rootpath to /Users/foo, the user will be unable to go to /Users, or to any
+    other directory not starting with /Users/foo.
 
     .. versionadded:: 1.2.0
 
@@ -214,7 +214,8 @@ class FileChooserController(FloatLayout):
     '''
 
     progress_cls = ObjectProperty(FileChooserProgress)
-    '''Class to use for displaying a progress indicator for filechooser loading.
+    '''Class to use for displaying a progress indicator for filechooser
+    loading.
 
     .. versionadded:: 1.2.0
 
@@ -405,8 +406,8 @@ class FileChooserController(FloatLayout):
 
     def _create_files_entries(self, *args):
         # create maximum entries during 50ms max, or 10 minimum (slow system)
-        # (on a "fast system" (core i7 2700K), we can create up to 40 entries in
-        # 50 ms. So 10 is fine for low system.
+        # (on a "fast system" (core i7 2700K), we can create up to 40 entries
+        # in 50 ms. So 10 is fine for low system.
         start = time()
         finished = False
         index = total = count = 1
@@ -447,16 +448,17 @@ class FileChooserController(FloatLayout):
         return False
 
     def cancel(self, *largs):
-        '''Cancel any background action started by filechooser, such as loading a
-        new directory.
+        '''Cancel any background action started by filechooser, such as loading
+        a new directory.
 
         .. versionadded:: 1.2.0
         '''
         Clock.unschedule(self._create_files_entries)
         self._hide_progress()
         if len(self._previous_path) > 1:
-            # if we cancel any action, the path will be set same as the previous
-            # one, so we can safely cancel the update of the previous path.
+            # if we cancel any action, the path will be set same as the
+            # previous one, so we can safely cancel the update of the previous
+            # path.
             self.path = self._previous_path[-2]
             Clock.unschedule(self._update_files)
 
@@ -515,8 +517,8 @@ class FileChooserController(FloatLayout):
 
     def _add_files(self, path, parent=None):
         force_unicode = self._force_unicode
-        # Make sure we're using unicode in case of non-ascii chars in filenames.
-        # listdir() returns unicode if you pass it unicode.
+        # Make sure we're using unicode in case of non-ascii chars in
+        # filenames. listdir() returns unicode if you pass it unicode.
         try:
             path = expanduser(path)
             path = force_unicode(path)
@@ -558,8 +560,8 @@ class FileChooserController(FloatLayout):
             yield index, total, entry
 
     def _force_unicode(self, s):
-        # the idea is, whatever is the filename, unicode or str, even if the str
-        # can't be directly returned as a unicode, return something.
+        # the idea is, whatever is the filename, unicode or str, even if the
+        # str can't be directly returned as a unicode, return something.
         if type(s) is unicode:
             return s
         encodings = self.file_encodings
