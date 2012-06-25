@@ -16,8 +16,9 @@ The Accordion widget is a form of menu where the options are stacked either
 vertically or horizontally, and the item in focus/when touched opens up
 displaying his content.
 
-The :class:`Accordion` will contain one or many :class:`AccordionItem` instances,
-that will contain one root content widget. You'll have a Tree like this:
+The :class:`Accordion` will contain one or many :class:`AccordionItem`
+instances, that will contain one root content widget. You'll have a Tree
+like this:
 
 - Accordion
 
@@ -43,8 +44,8 @@ The current implementation divides the :class:`AccordionItem` into two parts:
 #. One container for the title bar
 #. One container for the content
 
-The title bar is made from a Kv template. We'll see how to create a new template
-to customize the design of the title bar.
+The title bar is made from a Kv template. We'll see how to create a new
+template to customize the design of the title bar.
 
 .. warning::
 
@@ -56,8 +57,8 @@ to customize the design of the title bar.
 
     That means you have too many children, and there is no more space to
     display any content. This is "normal", and nothing will be done. Try to
-    increase the space for the accordion, and reduce the number of children. You
-    can also reduce the :attr:`Accordion.min_space`.
+    increase the space for the accordion, and reduce the number of children.
+    You can also reduce the :attr:`Accordion.min_space`.
 
 Simple example
 --------------
@@ -76,8 +77,8 @@ Or change the orientation to vertical::
 
     root = Accordion(orientation='vertical')
 
-AccordionItem is more configurable, and you can set your own title background when
-the item is collapsed or opened::
+AccordionItem is more configurable, and you can set your own title background
+when the item is collapsed or opened::
 
     item = AccordionItem(background_normal='image_when_collapsed.png',
         background_selected='image_when_selected.png')
@@ -110,8 +111,8 @@ class AccordionItem(FloatLayout):
 
     title = StringProperty('')
     '''Title string of the item. The title might be used in conjuction with the
-    `AccordionItemTitle` template. If you are using a custom template, you can 
-    use that property as a text entry, or not. By default, it's used for the 
+    `AccordionItemTitle` template. If you are using a custom template, you can
+    use that property as a text entry, or not. By default, it's used for the
     title text. See title_template and the example below.
 
     :data:`title` is a :class:`~kivy.properties.StringProperty`, default to ''
@@ -184,8 +185,8 @@ class AccordionItem(FloatLayout):
     accordion = ObjectProperty(None)
     '''Instance of the :class:`Accordion` that the item belongs to.
 
-    :data:`accordion` is an :class:`~kivy.properties.ObjectProperty`, default to
-    None.
+    :data:`accordion` is an :class:`~kivy.properties.ObjectProperty`, default
+    to None.
     '''
 
     background_normal = StringProperty(
@@ -221,8 +222,8 @@ class AccordionItem(FloatLayout):
     '''
 
     container = ObjectProperty(None)
-    '''(internal) Property that will be set to the container of children, inside
-    the AccordionItem representation.
+    '''(internal) Property that will be set to the container of children,
+    inside the AccordionItem representation.
     '''
 
     container_title = ObjectProperty(None)
@@ -322,8 +323,8 @@ class Accordion(Widget):
     '''Minimum space to use for title of each item. This value is automatically
     set on each children, each time the layout happens.
 
-    :data:`min_space` is a :class:`~kivy.properties.NumericProperty`, default to
-    44 (px).
+    :data:`min_space` is a :class:`~kivy.properties.NumericProperty`, default
+    to 44 (px).
     '''
 
     def __init__(self, **kwargs):
