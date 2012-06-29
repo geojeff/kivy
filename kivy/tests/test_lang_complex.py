@@ -89,7 +89,6 @@ rules_popup = """
     refwid2: myref2
     Item:
         id: myref2
-        anotherctxvalue: 'valid.png'
 
     QuestionPopup:
         size_hint: .5, .5
