@@ -112,8 +112,10 @@ called when the property changes::
         def on_progress(self):
             # Do something as a result of progress changing.
 
-Also, for property observing external to a class, bind a callback to the
-property by referring to the property name (last line of code example)::
+Also, for property observing external to a class, you can bind a callback to
+the event name as above, if the event exists in the class. But if there is no
+dedicated event, you can bind a callback directly to the property by referring
+to the property name (last line of code example)::
 
     class Worker(EventDispatcher):
 
