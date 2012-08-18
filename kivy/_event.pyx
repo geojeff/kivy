@@ -86,7 +86,9 @@ with the event name in the dispatch() call (See do_work() dispatch call):
         def on_start_callback(self, *largs):
             print 'worker start callback called', largs
 
-        # This callback gets a progress argument.
+        # This callback gets worker and progress arguments. A callback always
+        # gets the calling instance as the first argument, then come any
+        # additional arguments that may have been dispatched.
         def on_progress_callback(self, worker, progress):
             print 'worker progress callback called', worker
             print 'progress value =', progress
