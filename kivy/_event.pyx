@@ -15,55 +15,127 @@ outlined below for registering an event, including a default handler method,
 and making appropriate dispatch() calls. Observer methods in related
 classes should have a calling signature matching the dispatch() arguments
 for an observed event. See individual method sections for the full complement
-of available functionality, but here is a minimal example of creating a custom
-event and its usage::
+of available functionality, but here are minimal examples of creating custom
+events and usage::
 
     class Worker(EventDispatcher):
         
-        progress = NumericProperty(0)
-
         def __init__(self, **kwargs):
             super(Worker, self).__init__(**kwargs)
-            self.register_event_type('on_progress')
+            self.register_event_type('on_start')
 
-        def on_progress(self):
+        def on_start(self):
             pass
 
-        def some_worker_method(self):
-            # Do some work... Update self.progress...
-            self.dispatch('on_progress')
+        def work_start_method(self):
+            # Initialize some work...
+            self.dispatch('on_start')
 
-    # A class that uses a Worker, and observes its on_progress event:
-    class ProgressObserver(Widget):
+    # A class that uses a Worker, and observes its on_start event:
+    class WorkObserver(Widget):
         
         worker = ObjectProperty(None)
 
         def __init__(self, **kwargs):
-            super(ProgressObserver, self).__init__(**kwargs)
+            super(WorkObserver, self).__init__(**kwargs)
             self.worker = Worker()
-            self.worker.bind(on_progress=self.on_progress_callback)
+            self.worker.bind(on_start=self.on_start_callback)
     
-        def on_progress_callback(*largs):
-            print 'worker progress called', largs
-            print 'progress =', self.worker.progress
+        def on_start_callback(*largs):
+            print 'worker start callback called', largs
 
-An alternative to the example above, in which the dispatch call is made with
-only the event name, would be to set up the default handler to receive the
-progress value directly::
+The example above could also report progress:
 
-    def on_progress(self, progress):
-        pass
+    class Worker(EventDispatcher):
 
-The dispatch call would send along the progress value::
+        def __init__(self, **kwargs):
+            super(Worker, self).__init__(**kwargs)
+            self.register_event_type('on_start')
+            self.register_event_type('on_progress')
 
-    self.dispatch('on_progress', self.progress)
+        def on_start(self):
+            pass
 
-And the callback in the ProgressObserver class would accept the
-progress argument::
+        def on_progress(self, progress):
+            pass
 
-    def on_progress_callback(self, progress, *args):
-        print 'progress =', progress
+        def work_start_method(self):
+            # Initialize some work...
+            self.dispatch('on_start')
 
+        def work_method(self):
+            progress = calculate_progress()
+            self.dispatch('on_progress', progress)
+
+        def calculate_progress(self):
+            # Calculate progress, perhaps based on time elapsed from start.
+            pass
+
+    class WorkObserver(Widget):
+        
+        worker = ObjectProperty(None)
+
+        def __init__(self, **kwargs):
+            super(WorkObserver, self).__init__(**kwargs)
+            self.worker = Worker()
+            self.worker.bind(on_start=self.on_start_callback,
+                             on_progress=self.on_progress_callback)
+    
+        def on_start_callback(self, *largs):
+            print 'worker start callback called', largs
+
+        def on_progress_callback(self., progress, *largs):
+            print 'worker progress callback called', largs
+            print 'progress value =', progress
+
+Another, quick way to use the event system in operations within a class is to
+create a property, say progress again, and add a method that starts with 'on_'
+and ends with the property name in question, as with 'on_progress'. This
+method will be automatically called when the property changes::
+
+    class Worker(EventDispatcher):
+
+        progress = NumericProperty(0)
+
+        def __init__(self, **kwargs):
+            super(Worker, self).__init__(**kwargs)
+            self.register_event_type('on_start')
+
+        def on_start(self):
+            pass
+
+        def some_worker_method(self):
+            # Do work. Update self.progress.
+
+        def on_progress(self, progress):
+            # Do something as a result of progress changing.
+
+Also, for property observing external to a class, bind a callback to the
+property by referring to the property name (last line of code example)::
+
+    class Worker(EventDispatcher):
+
+        progress = NumericProperty(0)
+
+        def __init__(self, **kwargs):
+            super(Worker, self).__init__(**kwargs)
+            self.register_event_type('on_start')
+
+        def on_start(self):
+            pass
+
+        def some_worker_method(self):
+            # Do work. Update self.progress.
+
+        def on_progress(self, progress):
+            # Do something as a result of progress changing.
+
+    # Elsewhere in your program:
+    def progress_changed(worker, progress):
+        print 'worker', worker, 'made progress:', progress
+
+    worker = Worker()
+    worker.bind(progress=progress_changed)
 '''
 
 __all__ = ('EventDispatcher', )
