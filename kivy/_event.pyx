@@ -277,7 +277,7 @@ cdef class EventDispatcher(object):
             # With event
             self.bind(on_press=self.my_press_callback)
 
-        Usage in a class::
+        Usage in a class (Note that Button has an on_press event)::
 
             class MyClass(BoxLayout):
                 def __init__(self):
@@ -286,7 +286,7 @@ cdef class EventDispatcher(object):
                     btn.bind(on_press=self.my_callback) #bind event
                     self.add_widget(btn)
 
-                def my_callback(self,obj,value):
+                def my_callback(self, obj, value):
                     print 'press on button', obj, 'with date:', value
 
         '''
@@ -328,28 +328,7 @@ cdef class EventDispatcher(object):
 
             self.dispatch('on_start')
 
-        However, you may need to pass other arguments to event handlers. For
-        example, in a widget that customizes animation, there may be several
-        steps in the animation start() method, before the 'on_start' event is
-        fired, and the dispatch() call could include the widget::
-
-            def start(self, widget):
-                self.stop(widget)
-                self._initialize(widget)
-                self._register()
-                self.dispatch('on_start', widget)
-
-        The required matching on_start() default event handler, declared in
-        the class where the on_start event is registered, would be::
-
-            def on_start(self, widget):
-                pass
-
-        And, in a class containing an animation, in its __init__(), a binding
-        to the on_start event could be created for an event-handling method::
-
-            self.my_animation.bind(on_start=self.on_animation_start)
-
+        However, you may need to pass other arguments to event handlers.
         See module docs and animation.py for examples of event dispatching,
         including use of multiple additional arguments in dispatch() calls.
         '''
