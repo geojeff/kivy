@@ -44,7 +44,8 @@ events and usage::
         def on_start_callback(*largs):
             print 'worker start callback called', largs
 
-The example above could also report progress:
+The example above could also report progress by passing a progress value along
+with the event name in the dispatch() call (See work_method() dispatch call):
 
     class Worker(EventDispatcher):
 
@@ -84,14 +85,15 @@ The example above could also report progress:
         def on_start_callback(self, *largs):
             print 'worker start callback called', largs
 
-        def on_progress_callback(self., progress, *largs):
-            print 'worker progress callback called', largs
+        # This callback gets a progress argument.
+        def on_progress_callback(self., progress, *args):
+            print 'worker progress callback called', args
             print 'progress value =', progress
 
-Another, quick way to use the event system in operations within a class is to
-create a property, say progress again, and add a method that starts with 'on_'
-and ends with the property name in question, as with 'on_progress'. This
-method will be automatically called when the property changes::
+Another way to use the event system in operations within a class is to create
+a property, and add a method that starts with 'on_' and ends with the property
+name in question, as with 'on_progress'. This method will be called
+automatically when the progress property changes::
 
     class Worker(EventDispatcher):
 
