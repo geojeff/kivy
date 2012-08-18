@@ -63,14 +63,15 @@ with the event name in the dispatch() call (See do_work() dispatch call):
         def start_work(self):
             # Initialize some work...
             self.dispatch('on_start')
+            self.do_work()
 
         def do_work(self):
-            progress = calculate_progress()
+            progress = self.calculate_progress()
             self.dispatch('on_progress', progress)
 
         def calculate_progress(self):
             # Calculate progress, perhaps based on time elapsed from start.
-            pass
+            return 100
 
     class WorkObserver(Widget):
         
@@ -86,8 +87,8 @@ with the event name in the dispatch() call (See do_work() dispatch call):
             print 'worker start callback called', largs
 
         # This callback gets a progress argument.
-        def on_progress_callback(self, progress, *args):
-            print 'worker progress callback called', args
+        def on_progress_callback(self, worker, progress):
+            print 'worker progress callback called', worker
             print 'progress value =', progress
 
 Another way to use the event system in operations within a class is to create
