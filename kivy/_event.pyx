@@ -41,11 +41,11 @@ events and usage::
             self.worker = Worker()
             self.worker.bind(on_start=self.on_start_callback)
     
-        def on_start_callback(*largs):
+        def on_start_callback(self, *largs):
             print 'worker start callback called', largs
 
 The example above could also report progress by passing a progress value along
-with the event name in the dispatch() call (See work_method() dispatch call):
+with the event name in the dispatch() call (See do_work() dispatch call):
 
     class Worker(EventDispatcher):
 
@@ -64,7 +64,7 @@ with the event name in the dispatch() call (See work_method() dispatch call):
             # Initialize some work...
             self.dispatch('on_start')
 
-        def work_method(self):
+        def do_work(self):
             progress = calculate_progress()
             self.dispatch('on_progress', progress)
 
