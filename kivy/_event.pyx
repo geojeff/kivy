@@ -10,6 +10,60 @@ handlers.
     Properties discovering and methods have been moved from
     :class:`~kivy.uix.widget.Widget` to :class:`EventDispatcher`
 
+To use :class:`EventDispatcher`, create a subclass that follows the rules
+outlined below for registering an event, including a default handler method,
+and making appropriate dispatch() calls. Observer methods in related
+classes should have a calling signature matching the dispatch() arguments
+for an observed event. See individual method sections for the full complement
+of available functionality, but here is a minimal example of creating a custom
+event and its usage::
+
+    class Worker(EventDispatcher):
+        
+        progress = NumericProperty(0)
+
+        def __init__(self, **kwargs):
+            super(Worker, self).__init__(**kwargs)
+            self.register_event_type('on_progress')
+
+        def on_progress(self):
+            pass
+
+        def some_worker_method(self):
+            # Do some work... Update self.progress...
+            self.dispatch('on_progress')
+
+    # A class that uses a Worker, and observes its on_progress event:
+    class ProgressObserver(Widget):
+        
+        worker = ObjectProperty(None)
+
+        def __init__(self, **kwargs):
+            super(ProgressObserver, self).__init__(**kwargs)
+            self.worker = Worker()
+            self.worker.bind(on_progress=self.on_progress_callback)
+    
+        def on_progress_callback(*largs):
+            print 'worker progress called', largs
+            print 'progress =', self.worker.progress
+
+An alternative to the example above, in which the dispatch call is made with
+only the event name, would be to set up the default handler to receive the
+progress value directly::
+
+    def on_progress(self, progress):
+        pass
+
+The dispatch call would send along the progress value::
+
+    self.dispatch('on_progress', self.progress)
+
+And the callback in the ProgressObserver class would accept the
+progress argument::
+
+    def on_progress_callback(self, progress, *args):
+        print 'progress =', progress
+
 '''
 
 __all__ = ('EventDispatcher', )
@@ -24,7 +78,7 @@ cdef int widget_uid = 0
 cdef dict cache_properties = {}
 
 cdef class EventDispatcher(object):
-    '''Generic event dispatcher interface
+    '''Generic event dispatcher interface.
 
     See the module docstring for usage.
     '''
@@ -59,7 +113,7 @@ cdef class EventDispatcher(object):
                 if not isinstance(uattr, Property):
                     continue
                 if k in forbidden_properties:
-                    raise Exception('The property <%s> have a forbidden name' % k)
+                    raise Exception('Property <%s> has a forbidden name' % k)
                 attrs_found[k] = uattr
         else:
             attrs_found = cp[__cls__]
@@ -104,21 +158,6 @@ cdef class EventDispatcher(object):
 
             1. start with the prefix `on_`
             2. have a default handler in the class
-
-        Example of creating custom event::
-
-            class MyWidget(Widget):
-                def __init__(self, **kwargs):
-                    super(MyWidget, self).__init__(**kwargs)
-                    self.register_event_type('on_swipe')
-
-                def on_swipe(self):
-                    pass
-
-            def on_swipe_callback(*largs):
-                print 'my swipe is called', largs
-            w = MyWidget()
-            w.dispatch('on_swipe')
         '''
 
         if not event_type.startswith('on_'):
@@ -135,7 +174,7 @@ cdef class EventDispatcher(object):
             self.__event_stack[event_type] = []
 
     def unregister_event_types(self, str event_type):
-        '''Unregister an event type in the dispatcher
+        '''Unregister an event type in the dispatcher.
         '''
         if event_type in self.__event_stack:
             del self.__event_stack[event_type]
@@ -204,8 +243,39 @@ cdef class EventDispatcher(object):
                 self.__properties[key].unbind(self, value)
 
     def dispatch(self, str event_type, *largs):
-        '''Dispatch an event across all the handler added in bind().
-        As soon as a handler return True, the dispatching stop
+        '''Dispatch an event across all the handlers added in bind().
+        As soon as a handler returns True, dispatching stops.
+
+        An event_type, the name of the event_type as a string, is required.
+        Typical usage is to simply dispatch the event name, which will begin
+        with 'on_'::
+
+            self.dispatch('on_start')
+
+        However, you may need to pass other arguments to event handlers. For
+        example, in a widget that customizes animation, there may be several
+        steps in the animation start() method, before the 'on_start' event is
+        fired, and the dispatch() call could include the widget::
+
+            def start(self, widget):
+                self.stop(widget)
+                self._initialize(widget)
+                self._register()
+                self.dispatch('on_start', widget)
+
+        The required matching on_start() default event handler, declared in
+        the class where the on_start event is registered, would be::
+
+            def on_start(self, widget):
+                pass
+
+        And, in a class containing an animation, in its __init__(), a binding
+        to the on_start event could be created for an event-handling method::
+
+            self.my_animation.bind(on_start=self.on_animation_start)
+
+        See module docs and animation.py for examples of event dispatching,
+        including use of multiple additional arguments in dispatch() calls.
         '''
         cdef list event_stack = self.__event_stack[event_type]
         cdef object remove = event_stack.remove
@@ -236,7 +306,7 @@ cdef class EventDispatcher(object):
 
         .. versionadded:: 1.0.9
 
-        For example, if you want to position one widget next to you::
+        For example, if you want to position one widget next to another::
 
             self.bind(right=nextchild.setter('x'))
         '''
@@ -256,13 +326,13 @@ cdef class EventDispatcher(object):
 
         :return:
 
-            A :class:`~kivy.properties.Property` derivated instance corresponding
-            to the name.
+            A :class:`~kivy.properties.Property` derived instance
+            corresponding to the name.
         '''
         return self.__properties[name]
 
     cpdef dict properties(self):
-        '''Return all the properties in that class in a dictionnary of
+        '''Return all properties in the class as a dictionary of
         key/property class. Can be used for introspection.
 
         .. versionadded:: 1.0.9
@@ -281,17 +351,17 @@ cdef class EventDispatcher(object):
 
         .. warning::
 
-            This function is designed for the Kivy language, don't use it in
-            your code. You should declare the property in your class instead of
+            This function is designed for the Kivy language. Don't use it in
+            your code. You should declare properties in your class instead of
             using this method.
 
         :Parameters:
             `name`: string
                 Name of the property
 
-        The class of the property cannot be specified, it will always be an
-        :class:`~kivy.properties.ObjectProperty` class. The default value of the
-        property will be None, until you set a new value.
+        The class of the property cannot be specified. It will always be an
+        :class:`~kivy.properties.ObjectProperty` class. The default value of
+        the property will be None, until you set a new value.
 
         >>> mywidget = Widget()
         >>> mywidget.create_property('custom')
@@ -304,5 +374,3 @@ cdef class EventDispatcher(object):
         prop.link_deps(self, name)
         self.__properties[name] = prop
         setattr(self.__class__, name, prop)
-
-
