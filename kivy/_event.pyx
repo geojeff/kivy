@@ -91,9 +91,9 @@ with the event name in the dispatch() call (See work_method() dispatch call):
             print 'progress value =', progress
 
 Another way to use the event system in operations within a class is to create
-a property, and add a method that starts with 'on_' and ends with the property
-name in question, as with 'on_progress'. This method will be called
-automatically when the progress property changes::
+a property and add a method that starts with 'on_' and ends with the property
+name in question, as with 'on_progress'. This method will be automatically
+called when the property changes::
 
     class Worker(EventDispatcher):
 
@@ -109,7 +109,7 @@ automatically when the progress property changes::
         def some_worker_method(self):
             # Do work. Update self.progress.
 
-        def on_progress(self, progress):
+        def on_progress(self):
             # Do something as a result of progress changing.
 
 Also, for property observing external to a class, bind a callback to the
