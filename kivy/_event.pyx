@@ -27,7 +27,7 @@ events and usage::
         def on_start(self):
             pass
 
-        def work_start_method(self):
+        def start_work(self):
             # Initialize some work...
             self.dispatch('on_start')
 
@@ -60,7 +60,7 @@ with the event name in the dispatch() call (See work_method() dispatch call):
         def on_progress(self, progress):
             pass
 
-        def work_start_method(self):
+        def start_work(self):
             # Initialize some work...
             self.dispatch('on_start')
 
