@@ -127,7 +127,7 @@ class Adapter(EventDispatcher):
     def get_data_item(self):
         return self.data
 
-    def get_view(self, index):  #pragma: no cover
+    def get_view(self, index):  # pragma: no cover
         item_args = self.args_converter(self.data)
 
         if self.cls:
