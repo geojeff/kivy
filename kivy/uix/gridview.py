@@ -199,6 +199,66 @@ Builder.load_string('''
             size_hint_y: None
 ''')
 
+Builder.load_string('''
+<TshirtmanGridView>:
+    top_row: top_row
+    left_row: left_row
+    data: data
+
+    orientation: 'vertical'
+
+    Widget:
+        id: parent_top_row
+        size_hint_y: None
+        height: '1cm'
+        BoxLayout:
+            id: top_row
+            y: parent_top_row.y
+            x: data.x
+            height: parent_top_row.height
+            width: data.width
+
+    BoxLayout:
+        Widget:
+            id: parent_left_row
+            size_hint_x: None
+            width: '1cm'
+            BoxLayout:
+                orientation: 'vertical'
+                id: left_row
+                x: parent_left_row.x
+                y: data.y
+                height: data.height
+                width: parent_left_row.width
+
+        ScrollView
+            GridLayout:
+                size_hint: None, None
+                id: data
+                cols: 10
+                size: 2000, 2000
+''')
+
+
+class TshirtmanGridView(BoxLayout):
+    left_row = ObjectProperty(None)
+    top_row = ObjectProperty(None)
+    data = ObjectProperty(None)
+
+    def __init__(self, **kw):
+        super(MyGridView, self).__init__(**kw)
+        self.bind(left_row=self.populate)
+        self.bind(top_row=self.populate)
+        self.bind(data=self.populate)
+
+    def populate(self, *args):
+        if self.top_row and self.left_row and self.data:
+            for i in xrange(10):
+                self.left_row.add_widget(Button(text=str(i)))
+                self.top_row.add_widget(Button(text=str(i)))
+                for j in xrange(10):
+                    self.data.add_widget(Label(text=str(10 * i + j)))
+
 
 class GridView(AbstractView, EventDispatcher):
     ''':class:`~kivy.uix.listview.GridView` is a primary high-level widget,
