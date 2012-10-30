@@ -9,6 +9,8 @@ from kivy.uix.listview import SelectableView
 from kivy.uix.listview import ListItemButton
 from kivy.uix.listview import ListItemLabel
 from kivy.uix.listview import CompositeListItem
+from kivy.uix.gridview import GridRow
+from kivy.uix.gridview import GridCell
 from kivy.uix.label import Label
 
 from kivy.adapters.models import SelectableDataItem
@@ -16,6 +18,7 @@ from kivy.adapters.adapter import Adapter
 from kivy.adapters.simplelistadapter import SimpleListAdapter
 from kivy.adapters.listadapter import ListAdapter
 from kivy.adapters.dictadapter import DictAdapter
+from kivy.adapters.gridadapter import GridAdapter
 
 from kivy.properties import BooleanProperty
 from kivy.properties import StringProperty
@@ -1347,3 +1350,77 @@ class AdaptersTestCase(unittest.TestCase):
         letters_dict_adapter.cut_to_sel()
         self.assertEqual(len(letters_dict_adapter.data), 2)
 
+    def test_grid_adapter_simple(self):
+        row_keys = [i for i in xrange(10)]
+        col_keys = row_keys[:]
+
+        data = {}
+        for row_key in row_keys:
+            data[row_key] = {}
+            data[row_key]['text'] = str(row_key)
+            for col_key in col_keys:
+                data[row_key][col_key] = \
+                        {'text': "{0},{1}".format(row_key, col_key)}
+
+        args_converter = \
+            lambda rec: \
+                {'text': rec['text'],
+                 'size_hint_y': None,
+                 'height': 25,
+                 'cls_dicts': [
+                     {'cls': GridCell,
+                      'kwargs': {'text': rec[col_key]['text']}}
+                     for col_key in rec.keys() if col_key != 'text']}
+
+        grid_adapter = GridAdapter(row_keys=row_keys,
+                                   col_keys=col_keys,
+                                   data=data,
+                                   args_converter=args_converter,
+                                   cls=GridRow)
+
+        grid_cells = []
+        for i in xrange(10):
+            grid_row = grid_adapter.get_view(i)
+            grid_cells.extend(grid_row.children)
+
+        self.assertEqual(grid_adapter.get_grid_cell_count(), 100)
+        self.assertEqual(len(grid_cells), 100)
+
+    def test_grid_adapter_simple_for_grid_cell_selection(self):
+        row_keys = [i for i in xrange(10)]
+        col_keys = row_keys[:]
+
+        data = {}
+        for row_key in row_keys:
+            data[row_key] = {}
+            data[row_key]['text'] = str(row_key)
+            for col_key in col_keys:
+                data[row_key][col_key] = \
+                        {'text': "{0},{1}".format(row_key, col_key)}
+
+        args_converter = \
+            lambda rec: \
+                {'text': rec['text'],
+                 'size_hint_y': None,
+                 'height': 25,
+                 'cls_dicts': [
+                     {'cls': GridCell,
+                      'kwargs': {'text': rec[col_key]['text']}}
+                     for col_key in rec.keys() if col_key != 'text']}
+
+        grid_adapter = GridAdapter(row_keys=row_keys,
+                                   col_keys=col_keys,
+                                   data=data,
+                                   args_converter=args_converter,
+                                   cls=GridRow)
+
+        grid_cells = []
+        for i in xrange(10):
+            grid_row = grid_adapter.get_view(i)
+            grid_cells.extend(grid_row.children)
+
+        for row_key in xrange(10):
+            for col_key in [3, 6, 9]:
+                grid_adapter.handle_selection(grid_cells[row_key * 10 + col_key])
+
+        self.assertEqual(len(grid_adapter.selection), 30)

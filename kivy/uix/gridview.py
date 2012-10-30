@@ -125,6 +125,11 @@ class GridRow(SelectableView, BoxLayout):
     default to None.
     '''
 
+    adapter = ObjectProperty(None)
+    '''A reference to the managing adapter for this view, which is needed for
+    calling back during selection operations.
+    '''
+
     def __init__(self, **kwargs):
         super(GridRow, self).__init__(**kwargs)
 
@@ -170,14 +175,16 @@ class GridRow(SelectableView, BoxLayout):
         self.background_color = self.deselected_color
 
     def select_from_child(self, child, *args):
-        for c in self.children:
-            if c is not child:
-                c.select_from_composite(*args)
+        if self.adapter.selection_mode in ['select-by-row', ]:
+            for c in self.children:
+                if c is not child:
+                    c.select_from_composite(*args)
 
     def deselect_from_child(self, child, *args):
-        for c in self.children:
-            if c is not child:
-                c.deselect_from_composite(*args)
+        if self.parent.adapter.selection_mode in ['select-by-row', ]:
+            for c in self.children:
+                if c is not child:
+                    c.deselect_from_composite(*args)
 
     def __repr__(self):
         if self.representing_cell is not None:

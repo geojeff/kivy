@@ -176,6 +176,11 @@ class GridAdapter(Adapter, EventDispatcher):
     Same as for allow_empty_selection_rows.
     '''
 
+    allow_empty_selection_cells = BooleanProperty(True)
+    '''
+    Same as for allow_empty_selection_rows and _cols.
+    '''
+
     selection_limit_rows = NumericProperty(-1)
     '''When selection_mode is multiple, if selection_limit is non-negative,
     this number will limit the number of selected items. It can even be 1,
@@ -375,6 +380,7 @@ class GridAdapter(Adapter, EventDispatcher):
         item_args = self.args_converter(item)
 
         item_args['index'] = index
+        item_args['adapter'] = self
 
         if self.cls:
             view_instance = self.cls(**item_args)
