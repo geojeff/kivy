@@ -288,10 +288,21 @@ class GridAdapter(Adapter, EventDispatcher):
     def get_count(self):
         return len(self.row_keys)
 
-    def get_data_item(self, index):
+    def get_data_item_for_row(self, index):
         if index < 0 or index >= len(self.row_keys):
             return None
         return self.data[self.row_keys[index]]
+
+    def get_data_item_for_grid_cell(self, row_key, col_key):
+        if row_key < 0 or row_key >= len(self.row_keys):
+            return None
+        if col_key < 0 or col_key >= len(self.col_keys):
+            return None
+        if not row_key in self.data:
+            return None
+        if not col_key in self.data[row_key]:
+            return None
+        return self.data[row_key][col_key]
 
     def get_grid_cell_count(self):
         return len(self.row_keys) * len(self.col_keys)
@@ -375,7 +386,7 @@ class GridAdapter(Adapter, EventDispatcher):
         self.handle_selection(), and do other selection-related tasks to keep
         item views in sync with the data.
         '''
-        item = self.get_data_item(index)
+        item = self.get_data_item_for_row(index)
         if item is None:
             return None
 
@@ -497,8 +508,26 @@ class GridAdapter(Adapter, EventDispatcher):
                 child.select()
 
         if self.propagate_selection_to_data:
-            data_item = self.get_data_item(view.index)
+            cols = len(self.col_keys)
+            col_key = view.index % cols
+            row_key = (view.index - col_key) / cols
+            data_item = self.get_data_item_for_grid_cell(col_key, row_key)
             self.select_data_item(data_item)
+
+    # children are GridRows.
+
+    def select_from_child(self, child, *args):
+        if self.adapter.selection_mode in ['select-by-columns', ]:
+            for row_key in self.row_keys:
+                grid_row = self.get_view(row_key)
+                if grid_row is not child:
+                    grid_row.select_from_grid_row(child.col_key, *args)
+
+    def deselect_from_child(self, child, *args):
+        if self.adapter.selection_mode in ['select-by-columns', ]:
+            for c in self.children:
+                if c is not child:
+                    c.deselect_from_composite(*args)
 
     def select_list(self, view_list, extend=True):
         '''The select call is made for the items in the provided view_list.
@@ -538,8 +567,11 @@ class GridAdapter(Adapter, EventDispatcher):
                 child.deselect()
 
         if self.propagate_selection_to_data:
-            item = self.get_data_item(view.index)
-            self.deselect_data_item(item)
+            cols = len(self.col_keys)
+            col_key = view.index % cols
+            row_key = (view.index - col_key) / cols
+            data_item = self.get_data_item_for_grid_cell(col_key, row_key)
+            self.deselect_data_item(data_item)
 
     def deselect_list(self, l):
         for view in l:

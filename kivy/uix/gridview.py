@@ -145,12 +145,13 @@ class GridRow(SelectableView, BoxLayout):
         # below.
         index = kwargs['index']
 
+        col_index = 0
         for cls_dict in kwargs['cls_dicts']:
             cls = cls_dict['cls']
             cls_kwargs = cls_dict.get('kwargs', None)
 
             if cls_kwargs:
-                cls_kwargs['index'] = index
+                cls_kwargs['index'] = index + col_index
 
                 if 'selection_target' not in cls_kwargs:
                     cls_kwargs['selection_target'] = self
@@ -164,9 +165,11 @@ class GridRow(SelectableView, BoxLayout):
                 self.add_widget(cls(**cls_kwargs))
             else:
                 cls_kwargs = {}
+                cls_kwargs['index'] = index + col_index
                 if 'text' in kwargs:
                     cls_kwargs['text'] = kwargs['text']
                 self.add_widget(cls(**cls_kwargs))
+            col_index += 1
 
     def select(self, *args):
         self.background_color = self.selected_color
@@ -174,17 +177,25 @@ class GridRow(SelectableView, BoxLayout):
     def deselect(self, *args):
         self.background_color = self.deselected_color
 
+    # Selection within a row, all of it or only some cells, is handled here.
+    # For column selection, we report the cell selection up to the grid
+    # adapter.
+
     def select_from_child(self, child, *args):
-        if self.adapter.selection_mode in ['select-by-row', ]:
+        if self.adapter.selection_mode in ['select-by-rows', ]:
             for c in self.children:
                 if c is not child:
                     c.select_from_composite(*args)
+        elif self.adapter.selection_mode in ['select-by-columns', ]:
+            self.adapter.select_from_child(self, *args)
 
     def deselect_from_child(self, child, *args):
-        if self.adapter.selection_mode in ['select-by-row', ]:
+        if self.adapter.selection_mode in ['select-by-rows', ]:
             for c in self.children:
                 if c is not child:
                     c.deselect_from_composite(*args)
+        elif self.adapter.selection_mode in ['select-by-columns', ]:
+            self.adapter.deselect_from_child(self, *args)
 
     def __repr__(self):
         if self.representing_cell is not None:
