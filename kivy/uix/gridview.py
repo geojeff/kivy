@@ -181,7 +181,7 @@ class GridRow(SelectableView, BoxLayout):
                     c.select_from_composite(*args)
 
     def deselect_from_child(self, child, *args):
-        if self.parent.adapter.selection_mode in ['select-by-row', ]:
+        if self.adapter.selection_mode in ['select-by-row', ]:
             for c in self.children:
                 if c is not child:
                     c.deselect_from_composite(*args)

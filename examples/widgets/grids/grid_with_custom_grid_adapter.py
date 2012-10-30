@@ -59,7 +59,7 @@ class MainView(GridLayout):
                                    data=data,
                                    args_converter=args_converter,
                                    selection_mode='single-by-rows',
-                                   allow_empty_selection_rows=False,
+                                   allow_empty_selection_rows=True,
                                    cls=GridRow)
 
         # Use the adapter in our GridView:

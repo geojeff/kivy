@@ -21,11 +21,14 @@ and adds several for selection:
 
 * *selection*, a list of selected items.
 
-* *selection_mode*, 'single', 'multiple', 'none'
+* *selection_mode*, 'single-by-rows', 'multiple-by-rows',
+                'single-by-columns', 'multiple-by-columns',
+                'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
 
-* *allow_empty_selection*, a boolean -- False, and a selection is forced;
+* *allow_empty_selection_rows*, a boolean -- False, and a selection is forced;
   True, and only user or programmatic action will change selection, and it can
-  be empty.
+  be empty. There are equivalent properties for columns and grid cells,
+  allow_empty_selection_columns, allow_empty_selection_cells.
 
 and several methods used in selection operations.
 
@@ -99,27 +102,26 @@ class GridAdapter(Adapter, EventDispatcher):
     to [].
     '''
 
-    selection_mode = OptionProperty('single-by-grid-cell',
+    selection_mode = OptionProperty('single-by-grid-cells',
             options=('none', 'single-by-rows', 'multiple-by-rows',
                 'single-by-columns', 'multiple-by-columns',
-                'single-by-grid-cell', 'multiple-by-grid-cell'))
+                'single-by-grid-cells', 'multiple-by-grid-cells'))
     '''
     Selection modes:
 
        * *none*, use the list as a simple list (no select action). This option is
          here so that selection can be turned off, momentarily or permanently,
-         for an existing list adapter.
-         :class:`~kivy.adapters.listadapter.ListAdapter` is not meant to be
-         used as a primary no-selection list adapter.  Use
-         :class:`~kivy.adapters.simplelistadapter.SimpleListAdapter` for that.
+         for an existing grid adapter.
 
-       * *single*, multi-touch/click ignored. single item selecting only
+       * *single-*, multi-touch/click ignored. single item selecting only, for
+         variants: single-by-rows, single-by-columns, single-by-grid-cells.
 
-       * *multiple*, multi-touch / incremental addition to selection allowed;
-         may be limited to a count by selection_limit
+       * *multiple-*, multi-touch / incremental addition to selection allowed;
+         may be limited to a count by selection_limit. Variants include:
+         multiple-by-rows, multiple-by-columns, multiple-by-grid-cells.
 
     :data:`selection_mode` is an :class:`~kivy.properties.OptionProperty`,
-    default to 'single'.
+    default to 'single-by-grid-cells'.
     '''
 
     propagate_selection_to_data = BooleanProperty(False)
