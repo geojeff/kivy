@@ -502,17 +502,31 @@ class GridAdapter(Adapter, EventDispatcher):
              #if hasattr(sibling, 'select'):
                  #sibling.select()
 
-        # child selection
+        cols = len(self.col_keys)
+        col_key = cols - (view.index % cols) - 1
+        row_key = (view.index - col_key) / cols
+
+        # Grid cells, as well as grid rows, could have children.
         for child in view.children:
             if hasattr(child, 'select'):
                 child.select()
 
+        if self.selection_mode == 'single-by-columns':
+            for i in xrange(len(self.row_keys)):
+                grid_cell = self.get_view(i).children[col_key]
+                if grid_cell != view:
+                    grid_cell.select_from_adapter()
+                    grid_cell.is_selected = True
+                    self.selection.append(grid_cell)
+
         if self.propagate_selection_to_data:
-            cols = len(self.col_keys)
-            col_key = view.index % cols
-            row_key = (view.index - col_key) / cols
-            data_item = self.get_data_item_for_grid_cell(col_key, row_key)
-            self.select_data_item(data_item)
+            if self.selection_mode == 'single-by-grid-cells':
+                # Selection will only extend grid-cell-deep.
+                data_item = self.get_data_item_for_grid_cell(col_key, row_key)
+                self.select_data_item(data_item)
+            elif self.selection_mode == 'single-by-rows':
+                data_item = self.get_data_item(view.index)
+                self.select_data_item(data_item)
 
     # children are GridRows.
 
@@ -561,17 +575,31 @@ class GridAdapter(Adapter, EventDispatcher):
              #if hasattr(sibling, 'deselect'):
                  #sibling.deselect()
 
-        # child deselection
+        cols = len(self.col_keys)
+        col_key = cols - (view.index % cols) - 1
+        row_key = (view.index - col_key) / cols
+
+        # Grid cells, as well as grid rows, could have children.
         for child in view.children:
             if hasattr(child, 'deselect'):
                 child.deselect()
 
+        if self.selection_mode == 'single-by-columns':
+            for i in xrange(len(self.row_keys)):
+                grid_cell = self.get_view(i).children[col_key]
+                if grid_cell != view:
+                    grid_cell.deselect_from_adapter()
+                    grid_cell.is_selected = False
+                    self.selection.remove(grid_cell)
+
         if self.propagate_selection_to_data:
-            cols = len(self.col_keys)
-            col_key = view.index % cols
-            row_key = (view.index - col_key) / cols
-            data_item = self.get_data_item_for_grid_cell(col_key, row_key)
-            self.deselect_data_item(data_item)
+            if self.selection_mode == 'single-by-grid-cells':
+                # Selection will only extend grid-cell-deep.
+                data_item = self.get_data_item_for_grid_cell(col_key, row_key)
+                self.deselect_data_item(data_item)
+            elif self.selection_mode == 'single-by-rows':
+                data_item = self.get_data_item(view.index)
+                self.deselect_data_item(data_item)
 
     def deselect_list(self, l):
         for view in l:
@@ -594,5 +622,4 @@ class GridAdapter(Adapter, EventDispatcher):
                 # Select the first item if we have it.
                 v = self.get_view(0)
                 if v is not None:
-                    print 'selecting first data item view', v, v.is_selected
                     self.handle_selection(v)

@@ -80,10 +80,10 @@ class GridCell(SelectableView, Button):
         if type(self.parent) is GridRow:
             self.parent.deselect_from_child(self, *args)
 
-    def select_from_composite(self, *args):
+    def select_from_adapter(self, *args):
         self.background_color = self.selected_color
 
-    def deselect_from_composite(self, *args):
+    def deselect_from_adapter(self, *args):
         self.background_color = self.deselected_color
 
     def __repr__(self):
@@ -145,13 +145,14 @@ class GridRow(SelectableView, BoxLayout):
         # below.
         index = kwargs['index']
 
+        cols = len(kwargs['cls_dicts'])
         col_index = 0
         for cls_dict in kwargs['cls_dicts']:
             cls = cls_dict['cls']
             cls_kwargs = cls_dict.get('kwargs', None)
 
             if cls_kwargs:
-                cls_kwargs['index'] = index + col_index
+                cls_kwargs['index'] = (index * cols) + col_index
 
                 if 'selection_target' not in cls_kwargs:
                     cls_kwargs['selection_target'] = self
@@ -165,7 +166,7 @@ class GridRow(SelectableView, BoxLayout):
                 self.add_widget(cls(**cls_kwargs))
             else:
                 cls_kwargs = {}
-                cls_kwargs['index'] = index + col_index
+                cls_kwargs['index'] = (index * cols) + col_index
                 if 'text' in kwargs:
                     cls_kwargs['text'] = kwargs['text']
                 self.add_widget(cls(**cls_kwargs))
