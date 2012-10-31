@@ -109,13 +109,9 @@ class GridCell(SelectableGridCellView, Button):
 
     def select(self, *args):
         self.background_color = self.selected_color
-        if type(self.parent) is GridRow:
-            self.parent.select_from_child(self, *args)
 
     def deselect(self, *args):
         self.background_color = self.deselected_color
-        if type(self.parent) is GridRow:
-            self.parent.deselect_from_child(self, *args)
 
     def select_from_adapter(self, *args):
         self.background_color = self.selected_color
@@ -225,26 +221,6 @@ class GridRow(SelectableView, BoxLayout):
 
     def deselect(self, *args):
         self.background_color = self.deselected_color
-
-    # Selection within a row, all of it or only some cells, is handled here.
-    # For column selection, we report the cell selection up to the grid
-    # adapter.
-
-    def select_from_child(self, child, *args):
-        if self.adapter.selection_mode in ['select-by-rows', ]:
-            for c in self.children:
-                if c is not child:
-                    c.select_from_composite(*args)
-        elif self.adapter.selection_mode in ['select-by-columns', ]:
-            self.adapter.select_from_child(self, *args)
-
-    def deselect_from_child(self, child, *args):
-        if self.adapter.selection_mode in ['select-by-rows', ]:
-            for c in self.children:
-                if c is not child:
-                    c.deselect_from_composite(*args)
-        elif self.adapter.selection_mode in ['select-by-columns', ]:
-            self.adapter.deselect_from_child(self, *args)
 
     def __repr__(self):
         if self.representing_cell is not None:

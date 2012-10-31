@@ -1386,7 +1386,7 @@ class AdaptersTestCase(unittest.TestCase):
         self.assertEqual(grid_adapter.get_grid_cell_count(), 100)
         self.assertEqual(len(grid_cells), 100)
 
-    def test_grid_adapter_simple_for_cell_selection(self):
+    def test_grid_adapter_for_cell_selection(self):
         row_keys = [i for i in xrange(10)]
         col_keys = row_keys[:]
 
@@ -1428,15 +1428,21 @@ class AdaptersTestCase(unittest.TestCase):
         self.assertEqual(len(grid_adapter.selection), 30)
 
         # Reset for single-by-grid-cells selection mode.
-        #grid_adapter.selection_mode = 'single-by-grid-cells'
+        grid_adapter.selection_mode = 'single-by-grid-cells'
 
-        #self.assertEqual(len(grid_adapter.selection), 0)
+        self.assertEqual(len(grid_adapter.selection), 30)
 
-        #grid_adapter.allow_empty_selection = False
+        grid_adapter.allow_empty_selection = False
 
-        #self.assertEqual(len(grid_adapter.selection), 1)
+        grid_adapter.deselect_all()
 
-    def test_grid_adapter_simple_for_column_selection(self):
+        self.assertEqual(len(grid_adapter.selection), 1)
+
+        grid_adapter.select_all()
+
+        #self.assertEqual(len(grid_adapter.selection), 100)
+
+    def test_grid_adapter_for_column_selection(self):
         row_keys = [i for i in xrange(10)]
         col_keys = row_keys[:]
 
