@@ -42,7 +42,44 @@ from math import ceil, floor
 __all__ = ('GridCell', 'GridRow', 'GridView', )
 
 
-class GridCell(SelectableView, Button):
+class SelectableGridCellView(SelectableView):
+    '''The :class:`~kivy.uix.gridview.SelectableGridCellView` mixin is used to
+    design GridRow classes that are to be instantiated by an adapter to be used
+    in a gridview. From :class:`~kivy.uix.listview.SelectableView`,
+    :class:`~kivy.uix.gridview.SelectableGridCellView` gets two properties,
+    index and is_selected, and two methods, select() and deselect(). select()
+    and deselect() are to be overridden with display code to mark items as
+    selected or not, if desired.
+
+    The row_key and col_key properties added below allow dictionary-style
+    reference to grid cell views.
+
+    The index property, inherited from
+    :class:`~kivy.uix.listview.SelectableView`, is set also, and is a
+    two-dimensional array-style reference, in row-major order.
+    '''
+
+    row_key = ObjectProperty(None)
+    '''The row key into the underlying dict and data item this view
+    represents.
+
+    :data:`row_key` is a :class:`~kivy.properties.ObjectProperty`, default
+    to None.
+    '''
+
+    col_key = ObjectProperty(None)
+    '''The col key into the underlying dict and data item this view
+    represents.
+
+    :data:`col_key` is a :class:`~kivy.properties.ObjectProperty`, default
+    to None.
+    '''
+
+    def __init__(self, **kwargs):
+        super(SelectableGridCellView, self).__init__(**kwargs)
+
+
+class GridCell(SelectableGridCellView, Button):
     ''':class:`~kivy.uix.listview.GridCell` mixes
     :class:`~kivy.uix.listview.SelectableView` with
     :class:`~kivy.uix.button.Button` to produce a button suitable for use in
@@ -145,14 +182,23 @@ class GridRow(SelectableView, BoxLayout):
         # below.
         index = kwargs['index']
 
+        row_key = self.adapter.row_keys[index]
+        col_keys = self.adapter.col_keys
+
         cols = len(kwargs['cls_dicts'])
+
+        if cols != len(col_keys):
+            raise Exception('GridRow: # of cls_dicts mismatches # of columns')
+
         col_index = 0
-        for cls_dict in kwargs['cls_dicts']:
+        for cls_dict, col_key in zip(kwargs['cls_dicts'], col_keys):
             cls = cls_dict['cls']
             cls_kwargs = cls_dict.get('kwargs', None)
 
             if cls_kwargs:
                 cls_kwargs['index'] = (index * cols) + col_index
+                cls_kwargs['row_key'] = row_key
+                cls_kwargs['col_key'] = col_key
 
                 if 'selection_target' not in cls_kwargs:
                     cls_kwargs['selection_target'] = self
@@ -167,6 +213,8 @@ class GridRow(SelectableView, BoxLayout):
             else:
                 cls_kwargs = {}
                 cls_kwargs['index'] = (index * cols) + col_index
+                cls_kwargs['row_key'] = row_key
+                cls_kwargs['col_key'] = col_key
                 if 'text' in kwargs:
                     cls_kwargs['text'] = kwargs['text']
                 self.add_widget(cls(**cls_kwargs))
