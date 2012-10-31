@@ -25,10 +25,9 @@ and adds several for selection:
                 'single-by-columns', 'multiple-by-columns',
                 'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
 
-* *allow_empty_selection_rows*, a boolean -- False, and a selection is forced;
+* *allow_empty_selection*, a boolean -- False, and a selection is forced;
   True, and only user or programmatic action will change selection, and it can
-  be empty. There are equivalent properties for columns and grid cells,
-  allow_empty_selection_columns, allow_empty_selection_cells.
+  be empty.
 
 and several methods used in selection operations.
 
@@ -160,8 +159,8 @@ class GridAdapter(Adapter, EventDispatcher):
     default to False.
     '''
 
-    allow_empty_selection_rows = BooleanProperty(True)
-    '''The allow_empty_selection may be used for cascading selection between
+    allow_empty_selection = BooleanProperty(True)
+    '''allow_empty_selection may be used for cascading selection between
     several list views, or between a list view and an observing view. Such
     automatic maintainence of selection is important for all but simple
     list displays. Set allow_empty_selection False, so that selection is
@@ -173,17 +172,7 @@ class GridAdapter(Adapter, EventDispatcher):
     default to True.
     '''
 
-    allow_empty_selection_cols = BooleanProperty(True)
-    '''
-    Same as for allow_empty_selection_rows.
-    '''
-
-    allow_empty_selection_cells = BooleanProperty(True)
-    '''
-    Same as for allow_empty_selection_rows and _cols.
-    '''
-
-    selection_limit_rows = NumericProperty(-1)
+    selection_limit = NumericProperty(-1)
     '''When selection_mode is multiple, if selection_limit is non-negative,
     this number will limit the number of selected items. It can even be 1,
     which is equivalent to single selection. This is because a program could
@@ -195,16 +184,6 @@ class GridAdapter(Adapter, EventDispatcher):
 
     :data:`selection_limit` is a :class:`~kivy.properties.NumericProperty`,
     default to -1 (no limit).
-    '''
-
-    selection_limit_cols = NumericProperty(-1)
-    '''
-    Same as for seleciton_limit_rows.
-    '''
-
-    selection_limit_cells = NumericProperty(-1)
-    '''
-    Same as for seleciton_limit_rows and _cols.
     '''
 
     cached_views = DictProperty({})
@@ -239,7 +218,7 @@ class GridAdapter(Adapter, EventDispatcher):
         self.register_event_type('on_selection_change')
 
         self.bind(selection_mode=self.selection_mode_changed,
-                  allow_empty_selection_rows=self.check_for_empty_selection,
+                  allow_empty_selection=self.check_for_empty_selection,
                   data=self.update_for_new_data)
 
         self.update_for_new_data()
@@ -439,12 +418,17 @@ class GridAdapter(Adapter, EventDispatcher):
 
     def handle_selection(self, view, hold_dispatch=False, *args):
         if view not in self.selection:
-            if self.selection_mode in ['none', 'single'] and \
+            if self.selection_mode in ['none',
+                                       'single-by-rows',
+                                       'single-by-columns',
+                                       'single-by-grid-cells'] and \
                     len(self.selection) > 0:
                 for selected_view in self.selection:
                     self.deselect_item_view(selected_view)
             if self.selection_mode != 'none':
-                if self.selection_mode == 'multiple':
+                if self.selection_mode in ['multiple-by-rows',
+                                           'multiple-by-columns',
+                                           'multiple-by-grid-cells']:
                     if self.allow_empty_selection:
                         # If < 0, selection_limit is not active.
                         if self.selection_limit < 0:
@@ -624,7 +608,7 @@ class GridAdapter(Adapter, EventDispatcher):
         self.check_for_empty_selection()
 
     def check_for_empty_selection(self, *args):
-        if not self.allow_empty_selection_rows:
+        if not self.allow_empty_selection:
             if len(self.selection) == 0:
                 # Select the first item if we have it.
                 v = self.get_view(0)

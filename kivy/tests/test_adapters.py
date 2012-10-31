@@ -1408,10 +1408,10 @@ class AdaptersTestCase(unittest.TestCase):
                       'kwargs': {'text': rec[col_key]['text']}}
                      for col_key in rec.keys() if col_key != 'text']}
 
-        # Check that the default selection mode is 'select-by-grid-cells'.
         grid_adapter = GridAdapter(row_keys=row_keys,
                                    col_keys=col_keys,
                                    data=data,
+                                   selection_mode='multiple-by-grid-cells',
                                    args_converter=args_converter,
                                    cls=GridRow)
 
