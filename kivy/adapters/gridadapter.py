@@ -610,7 +610,19 @@ class GridAdapter(Adapter, EventDispatcher):
     def check_for_empty_selection(self, *args):
         if not self.allow_empty_selection:
             if len(self.selection) == 0:
-                # Select the first item if we have it.
-                v = self.get_view(0)
-                if v is not None:
-                    self.handle_selection(v)
+                if self.selection_mode in ['single-by-rows',
+                                           'multiple-by-rows']:
+                    # Select the first grid row view instance if we have it.
+                    v = self.get_view(0)
+                    if v is not None:
+                        self.handle_selection(v)
+                elif self.selection_mode in ['single-by-columns',
+                                             'multiple-by-columns',
+                                             'single-by-grid-cells',
+                                             'multiple-by-grid-cells']:
+                    first_grid_row = self.get_view(0)
+                    if first_grid_row is not None:
+                        col_key = len(self.col_keys) - 1
+                        grid_cell = first_grid_row.children[col_key]
+                        if grid_cell:
+                            self.handle_selection(grid_cell)
