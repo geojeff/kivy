@@ -58,7 +58,7 @@ class MainView(GridLayout):
                                    col_keys=col_keys,
                                    data=data,
                                    args_converter=args_converter,
-                                   selection_mode='single-by-columns',
+                                   selection_mode='multiple-by-columns',
                                    allow_empty_selection=False,
                                    cls=GridRow)
 

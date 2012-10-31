@@ -12,7 +12,8 @@ GridAdapter
 :class:`~kivy.adapters.gridadapter.GridAdapter` is an adapter around a python
 dictionary of records.
 
-Selection operations, as in :class:`ListAdapter`, are a main concern for the class.
+Selection operations, as in :class:`ListAdapter`, are a main concern for the
+class.
 
 From :class:`Adapter`, :class:`GridAdapter` gets cls, template, and
 args_converter properties.
@@ -53,6 +54,7 @@ from kivy.properties import BooleanProperty
 from kivy.properties import OptionProperty
 from kivy.properties import NumericProperty
 from kivy.lang import Builder
+
 
 class GridAdapter(Adapter, EventDispatcher):
     ''':class:`~kivy.adapters.gridadapter.GridAdapter` is an adapter around a
@@ -108,9 +110,9 @@ class GridAdapter(Adapter, EventDispatcher):
     '''
     Selection modes:
 
-       * *none*, use the list as a simple list (no select action). This option is
-         here so that selection can be turned off, momentarily or permanently,
-         for an existing grid adapter.
+       * *none*, use the list as a simple list (no select action). This option
+         is here so that selection can be turned off, momentarily or
+         permanently, for an existing grid adapter.
 
        * *single-*, multi-touch/click ignored. single item selecting only, for
          variants: single-by-rows, single-by-columns, single-by-grid-cells.
@@ -154,7 +156,7 @@ class GridAdapter(Adapter, EventDispatcher):
     operate on list selection, but having selection stored on the data might
     prove convenient in some cases.
 
-    :data:`propagate_selection_to_data` is a 
+    :data:`propagate_selection_to_data` is a
     :class:`~kivy.properties.BooleanProperty`,
     default to False.
     '''
@@ -167,7 +169,7 @@ class GridAdapter(Adapter, EventDispatcher):
     auto-initialized, and always maintained, and so that any observing views
     may likewise be updated to stay in sync.
 
-    :data:`allow_empty_selection` is a 
+    :data:`allow_empty_selection` is a
     :class:`~kivy.properties.BooleanProperty`,
     default to True.
     '''
@@ -338,7 +340,7 @@ class GridAdapter(Adapter, EventDispatcher):
         if len(self.selection) > 0:
             selected_keys = [sel.text for sel in self.selection]
             self.data = {key: self.data[key] for key in selected_keys}
-            
+
     def delete_cache(self, *args):
         self.cached_views = {}
 
@@ -380,10 +382,10 @@ class GridAdapter(Adapter, EventDispatcher):
             view_instance = Builder.template(self.template, **item_args)
 
         if self.propagate_selection_to_data:
-            # The data item must be a subclass of SelectableDataItem, or must have
-            # an is_selected boolean or function, so it has is_selected available.
-            # If is_selected is unavailable on the data item, an exception is
-            # raised.
+            # The data item must be a subclass of SelectableDataItem, or must
+            # have an is_selected boolean or function, so it has is_selected
+            # available.  If is_selected is unavailable on the data item, an
+            # exception is raised.
             #
             if isinstance(item, SelectableDataItem):
                 if item.is_selected:
@@ -392,7 +394,7 @@ class GridAdapter(Adapter, EventDispatcher):
                 if item['is_selected']:
                     self.handle_selection(view_instance)
             elif hasattr(item, 'is_selected'):
-                if (inspect.isfunction(item.is_selected) 
+                if (inspect.isfunction(item.is_selected)
                         or inspect.ismethod(item.is_selected)):
                     if item.is_selected():
                         self.handle_selection(view_instance)
@@ -466,7 +468,7 @@ class GridAdapter(Adapter, EventDispatcher):
         elif type(item) == dict:
             item['is_selected'] = value
         elif hasattr(item, 'is_selected'):
-            if (inspect.isfunction(item.is_selected) 
+            if (inspect.isfunction(item.is_selected)
                     or inspect.ismethod(item.is_selected)):
                 item.is_selected()
             else:
@@ -502,7 +504,8 @@ class GridAdapter(Adapter, EventDispatcher):
         # In this low-level method, we only have to check for the single-
         # modes, because we do the atomic operation of selecting here.
 
-        if self.selection_mode == 'single-by-columns':
+        if self.selection_mode in ['single-by-columns',
+                                   'multiple-by-columns']:
             for i in xrange(len(self.row_keys)):
                 grid_cell = self.get_view(i).children[col_key]
                 if grid_cell != view:
@@ -560,7 +563,8 @@ class GridAdapter(Adapter, EventDispatcher):
             if hasattr(child, 'deselect'):
                 child.deselect()
 
-        if self.selection_mode == 'single-by-columns':
+        if self.selection_mode in ['single-by-columns',
+                                   'multiple-by-columns']:
             for i in xrange(len(self.row_keys)):
                 grid_cell = self.get_view(i).children[col_key]
                 if grid_cell != view:
