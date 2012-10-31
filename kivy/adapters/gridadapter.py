@@ -492,11 +492,6 @@ class GridAdapter(Adapter, EventDispatcher):
         col_key = cols - (view.index % cols) - 1
         row_key = (view.index - col_key) / cols
 
-        # Grid cells, as well as grid rows, could have children.
-        for child in view.children:
-            if hasattr(child, 'select'):
-                child.select()
-
         # Selection modes are : 'single-by-rows', 'multiple-by-rows',
         #         'single-by-columns', 'multiple-by-columns',
         #         'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
@@ -557,11 +552,6 @@ class GridAdapter(Adapter, EventDispatcher):
         cols = len(self.col_keys)
         col_key = cols - (view.index % cols) - 1
         row_key = (view.index - col_key) / cols
-
-        # Grid cells, as well as grid rows, could have children.
-        for child in view.children:
-            if hasattr(child, 'deselect'):
-                child.deselect()
 
         if self.selection_mode in ['single-by-columns',
                                    'multiple-by-columns']:
