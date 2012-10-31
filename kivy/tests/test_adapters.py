@@ -297,12 +297,12 @@ class AdaptersTestCase(unittest.TestCase):
                  'cls_dicts': [{'cls': ListItemButton,
                                 'kwargs': {'text': rec['text']}},
                                {'cls': ListItemLabel,
-                                'kwargs': {'text': "Middle-{0}".format(rec['text']),
+                                'kwargs': {'text': "#-{0}".format(rec['text']),
                                            'is_representing_cls': True}},
-                               {'cls': ListItemButton}, 
+                               {'cls': ListItemButton},
                                {'cls': ListItemButton,
                                 'kwargs': {'some key': 'some value'}},
-                               {'cls': ListItemButton, 
+                               {'cls': ListItemButton,
                                 'kwargs': {'text': rec['text']}}]}
 
         reset_to_defaults(fruit_data)
@@ -606,7 +606,7 @@ class AdaptersTestCase(unittest.TestCase):
         self.assertTrue(view.is_selected)
 
     def test_list_adapter_with_widget_as_data_item_class(self):
-        
+
         # Use a widget as data item.
         class DataItem(Label):
             is_selected = BooleanProperty(True)
@@ -1046,12 +1046,13 @@ class AdaptersTestCase(unittest.TestCase):
 
     def test_dict_adapter_bad_sorted_keys(self):
         with self.assertRaises(Exception) as cm:
-            dict_adapter = DictAdapter(sorted_keys={},
-                                       data=self.integers_dict,
-                                       args_converter=self.composite_args_converter,
-                                       selection_mode='single',
-                                       allow_empty_selection=False,
-                                       cls=CompositeListItem)
+            dict_adapter = DictAdapter(
+                    sorted_keys={},
+                    data=self.integers_dict,
+                    args_converter=self.composite_args_converter,
+                    selection_mode='single',
+                    allow_empty_selection=False,
+                    cls=CompositeListItem)
 
         msg = 'DictAdapter: sorted_keys must be tuple or list'
         self.assertEqual(str(cm.exception), msg)
@@ -1223,7 +1224,6 @@ class AdaptersTestCase(unittest.TestCase):
              'Nectarine', 'Orange', 'Peach', 'Pear', 'Pineapple', 'Plum',
              'Strawberry', 'Tangerine', 'Watermelon'])
 
-
         apple_view = dict_adapter.get_view(0)
         self.assertEqual(apple_view.text, 'Apple')
 
@@ -1386,7 +1386,47 @@ class AdaptersTestCase(unittest.TestCase):
         self.assertEqual(grid_adapter.get_grid_cell_count(), 100)
         self.assertEqual(len(grid_cells), 100)
 
-    def test_grid_adapter_simple_for_grid_cell_selection(self):
+    def test_grid_adapter_simple_for_cell_selection(self):
+        row_keys = [i for i in xrange(10)]
+        col_keys = row_keys[:]
+
+        data = {}
+        for row_key in row_keys:
+            data[row_key] = {}
+            data[row_key]['text'] = str(row_key)
+            for col_key in col_keys:
+                data[row_key][col_key] = \
+                        {'text': "{0},{1}".format(row_key, col_key)}
+
+        args_converter = \
+            lambda rec: \
+                {'text': rec['text'],
+                 'size_hint_y': None,
+                 'height': 25,
+                 'cls_dicts': [
+                     {'cls': GridCell,
+                      'kwargs': {'text': rec[col_key]['text']}}
+                     for col_key in rec.keys() if col_key != 'text']}
+
+        # Check that the default selection mode is 'select-by-grid-cells'.
+        grid_adapter = GridAdapter(row_keys=row_keys,
+                                   col_keys=col_keys,
+                                   data=data,
+                                   args_converter=args_converter,
+                                   cls=GridRow)
+
+        grid_cells = []
+        for i in xrange(10):
+            grid_row = grid_adapter.get_view(i)
+            grid_cells.extend(grid_row.children)
+
+        for row in xrange(10):
+            for col in [3, 6, 9]:
+                grid_adapter.handle_selection(grid_cells[row * 10 + col])
+
+        self.assertEqual(len(grid_adapter.selection), 30)
+
+    def test_grid_adapter_simple_for_column_selection(self):
         row_keys = [i for i in xrange(10)]
         col_keys = row_keys[:]
 
@@ -1411,16 +1451,32 @@ class AdaptersTestCase(unittest.TestCase):
         grid_adapter = GridAdapter(row_keys=row_keys,
                                    col_keys=col_keys,
                                    data=data,
+                                   selection_mode='single-by-columns',
                                    args_converter=args_converter,
                                    cls=GridRow)
 
-        grid_cells = []
-        for i in xrange(10):
-            grid_row = grid_adapter.get_view(i)
-            grid_cells.extend(grid_row.children)
+        # Get the first row (GridRow view instance).
+        grid_row = grid_adapter.get_view(0)
 
+        # Get the grid cell in the 3rd column. GridCell instances are added to
+        # the GridRow instance in order, with add_widget(), but then end up in
+        # reverse order for indexing. So, we must do a little index math.
+        cols = 10
+        relative_col_index = 2
+        third_col_index = cols - (relative_col_index % cols) - 1
+        cell_0_2 = grid_row.children[third_col_index]
+
+        # Select the cell.
+        grid_adapter.handle_selection(cell_0_2)
+
+        # The entire column 3 should be selected.
+        self.assertEqual(len(grid_adapter.selection), 10)
+
+        expected_cell_indices = []
         for row_key in xrange(10):
-            for col_key in [3, 6, 9]:
-                grid_adapter.handle_selection(grid_cells[row_key * 10 + col_key])
+            expected_cell_indices.append(row_key * 10 + relative_col_index)
 
-        self.assertEqual(len(grid_adapter.selection), 30)
+        selected_cell_indices = [cell.index for cell in grid_adapter.selection]
+
+        self.assertEqual(sorted(expected_cell_indices),
+                         sorted(selected_cell_indices))

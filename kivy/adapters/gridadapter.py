@@ -511,6 +511,13 @@ class GridAdapter(Adapter, EventDispatcher):
             if hasattr(child, 'select'):
                 child.select()
 
+        # Selection modes are : 'single-by-rows', 'multiple-by-rows',
+        #         'single-by-columns', 'multiple-by-columns',
+        #         'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
+        #
+        # In this low-level method, we only have to check for the single-
+        # modes, because we do the atomic operation of selecting here.
+
         if self.selection_mode == 'single-by-columns':
             for i in xrange(len(self.row_keys)):
                 grid_cell = self.get_view(i).children[col_key]
