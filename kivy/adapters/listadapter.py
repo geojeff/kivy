@@ -300,6 +300,7 @@ class ListAdapter(Adapter, EventDispatcher):
         self.set_data_item_selection(item, False)
 
     def set_data_item_selection(self, item, value):
+        '''Keep a record of selection[True/False] for various item types (SelectableDataItems, dict items, or function)'''
         if isinstance(item, SelectableDataItem):
             item.is_selected = value
         elif type(item) == dict:

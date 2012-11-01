@@ -23,6 +23,32 @@ vertical scrollable list. :class:`AbstractView` has one property, adapter.
         `on_scroll_complete`: (boolean, )
             Fired when scrolling completes.
 
+Basic Example
+-------------
+
+In its simplest form, we make a gridview with 100 rows and 10 columns::
+
+    from kivy.uix.gridview import GridView
+    from kivy.uix.gridlayout import GridLayout
+
+
+    class MainView(GridLayout):
+
+        def __init__(self, **kwargs):
+            kwargs['cols'] = 2
+            kwargs['rows'] = 5
+            kwargs['size_hint'] = (1.0, 1.0)
+            super(MainView, self).__init__(**kwargs)
+
+            grid_view = GridView(cols=10, rows=100)
+
+            self.add_widget(grid_view)
+
+
+    if __name__ == '__main__':
+        from kivy.base import runTouchApp
+        runTouchApp(MainView(width=800))
+
 '''
 
 from kivy.event import EventDispatcher

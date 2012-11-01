@@ -4,6 +4,7 @@ Kivy.egg-info
 *.pyc
 *.pyo
 *~
+*.pyd
 *.swp
 *.DS_Store
 *.kpf
