@@ -418,6 +418,12 @@ class GridAdapter(Adapter, EventDispatcher):
         '''
         pass
 
+    def grid_cell(self, row_key, col_key):
+        grid_row = self.get_view(self.row_keys.index(row_key))
+        for grid_cell in grid_row.children:
+            if grid_cell.col_key == col_key:
+                return grid_cell
+        
     def handle_selection(self, view, hold_dispatch=False, *args):
         if view not in self.selection:
             if self.selection_mode in ['none',

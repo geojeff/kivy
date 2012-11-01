@@ -1448,6 +1448,19 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(len(grid_adapter.selection), 1)
 
+        grid_adapter.selection_mode = 'single-by-grid-cells'
+
+        grid_adapter.allow_empty_selection = True
+
+        grid_adapter.deselect_all()
+
+        grid_adapter.handle_selection(grid_adapter.grid_cell(4, 4))
+
+        self.assertEqual(len(grid_adapter.selection), 1)
+
+        self.assertEqual(grid_adapter.selection[0].row_key, 4)
+        self.assertEqual(grid_adapter.selection[0].col_key, 4)
+
     def test_grid_adapter_for_column_selection(self):
         row_keys = [i for i in xrange(10)]
         col_keys = row_keys[:]
