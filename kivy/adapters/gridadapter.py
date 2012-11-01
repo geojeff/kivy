@@ -479,25 +479,9 @@ class GridAdapter(Adapter, EventDispatcher):
         view.is_selected = True
         self.selection.append(view)
 
-        # [TODO] sibling selection for composite items
-        #        Needed? Or handled from parent?
-        #        (avoid circular, redundant selection)
-        #if hasattr(view, 'parent') and hasattr(view.parent, 'children'):
-         #siblings = [child for child in view.parent.children if child != view]
-         #for sibling in siblings:
-             #if hasattr(sibling, 'select'):
-                 #sibling.select()
-
         cols = len(self.col_keys)
         col_key = cols - (view.index % cols) - 1
         row_key = (view.index - col_key) / cols
-
-        # Selection modes are : 'single-by-rows', 'multiple-by-rows',
-        #         'single-by-columns', 'multiple-by-columns',
-        #         'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
-        #
-        # In this low-level method, we only have to check for the single-
-        # modes, because we do the atomic operation of selecting here.
 
         if self.selection_mode in ['single-by-columns',
                                    'multiple-by-columns']:
@@ -540,15 +524,6 @@ class GridAdapter(Adapter, EventDispatcher):
         view.is_selected = False
         self.selection.remove(view)
 
-        # [TODO] sibling deselection for composite items
-        #        Needed? Or handled from parent?
-        #        (avoid circular, redundant selection)
-        #if hasattr(view, 'parent') and hasattr(view.parent, 'children'):
-         #siblings = [child for child in view.parent.children if child != view]
-         #for sibling in siblings:
-             #if hasattr(sibling, 'deselect'):
-                 #sibling.deselect()
-
         cols = len(self.col_keys)
         col_key = cols - (view.index % cols) - 1
         row_key = (view.index - col_key) / cols
@@ -583,20 +558,23 @@ class GridAdapter(Adapter, EventDispatcher):
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 if not grid_row.is_selected:
-                    self.handle_selection(grid_row)
+                    self.handle_selection(grid_row, hold_dispatch=True)
+            self.dispatch('on_selection_change')
         elif self.selection_mode in ['single-by-columns',
                                      'multiple-by-columns']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if not grid_cell.is_selected:
-                    self.handle_selection(grid_cell)
+                    self.handle_selection(grid_cell, hold_dispatch=True)
+            self.dispatch('on_selection_change')
         elif self.selection_mode in ['single-by-grid-cells',
                                      'multiple-by-grid-cells']:
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 for grid_cell in grid_row.children:
                     if not grid_cell.is_selected:
-                        self.handle_selection(grid_cell)
+                        self.handle_selection(grid_cell, hold_dispatch=True)
+            self.dispatch('on_selection_change')
 
     def deselect_all(self):
         if self.selection_mode in ['none',
@@ -605,20 +583,23 @@ class GridAdapter(Adapter, EventDispatcher):
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 if grid_row.is_selected:
-                    self.handle_selection(grid_row)
+                    self.handle_selection(grid_row, hold_dispatch=True)
+            self.dispatch('on_selection_change')
         elif self.selection_mode in ['single-by-columns',
                                      'multiple-by-columns']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if grid_cell.is_selected:
-                    self.handle_selection(grid_cell)
+                    self.handle_selection(grid_cell, hold_dispatch=True)
+            self.dispatch('on_selection_change')
         elif self.selection_mode in ['single-by-grid-cells',
                                      'multiple-by-grid-cells']:
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 for grid_cell in grid_row.children:
                     if grid_cell.is_selected:
-                        self.handle_selection(grid_cell)
+                        self.handle_selection(grid_cell, hold_dispatch=True)
+            self.dispatch('on_selection_change')
 
     def initialize_selection(self, *args):
         if len(self.selection) > 0:

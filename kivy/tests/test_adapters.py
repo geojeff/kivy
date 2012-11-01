@@ -1438,9 +1438,15 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(len(grid_adapter.selection), 1)
 
+        grid_adapter.selection_mode = 'multiple-by-grid-cells'
+
         grid_adapter.select_all()
 
-        #self.assertEqual(len(grid_adapter.selection), 100)
+        self.assertEqual(len(grid_adapter.selection), 100)
+
+        grid_adapter.deselect_all()
+
+        self.assertEqual(len(grid_adapter.selection), 1)
 
     def test_grid_adapter_for_column_selection(self):
         row_keys = [i for i in xrange(10)]
