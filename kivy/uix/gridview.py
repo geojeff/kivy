@@ -477,22 +477,23 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                           'kwargs': {'text': rec[col_key]['text']}}
                          for col_key in rec.keys() if col_key != 'text']}
 
+            if (not 'rows_header_view_cls' in kwargs
+                    and not 'rows_header_view_template' in kwargs):
+                self.rows_header_view_cls = HeaderButton
+            if (not 'columns_header_view_cls' in kwargs
+                    and not 'columns_header_view_template' in kwargs):
+                self.columns_header_view_cls = HeaderButton
+
             grid_adapter = GridAdapter(row_keys=row_keys,
                                        col_keys=col_keys,
                                        data=data,
                                        args_converter=args_converter,
+                                       selection_mode='single-by-rows',
                                        cls=GridRow)
 
             kwargs['adapter'] = grid_adapter
 
         super(GridView, self).__init__(**kwargs)
-
-        if (not self.rows_header_view_cls
-                and not self.rows_header_view_template):
-            self.rows_header_view_cls = HeaderButton
-        if (not self.columns_header_view_cls
-                and not self.columns_header_view_template):
-            self.columns_header_view_cls = HeaderButton
 
         self.register_event_type('on_scroll_complete')
 
@@ -510,10 +511,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
         self.adapter.bind_triggers_to_view(self._trigger_populate)
 
     # Terminology can be confusing here. The columns_header runs left-to-right.
-    def columns_header_view(self, index):
-        if index < 0 or index >= len(self.adapter.col_keys):
-            return None
-        col_key = self.adapter.col_keys[index]
+    def columns_header_view(self, col_key):
         col_button = None
         header_args = {}
         header_args['text'] = str(col_key)
@@ -525,7 +523,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
             col_button = Builder.template(self.columns_header_view_template,
                                           **header_args)
         if col_button:
-            col_button.bind(on_release=self.select_column)
+            col_button.bind(on_release=self.handle_columns_header_action)
         return col_button
 
     # Terminology can be confusing here. The rows_header runs up-and-down.
@@ -544,14 +542,14 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
             row_button = Builder.template(self.rows_header_view_template,
                                           **header_args)
         if row_button:
-            row_button.bind(on_release=self.select_row)
+            row_button.bind(on_release=self.handle_rows_header_action)
         return row_button
 
-    def select_row(self, button, *args):
-        self.adapter.select_row(button.key)
+    def handle_rows_header_action(self, button, *args):
+        self.adapter.handle_row_selection(button.key)
 
-    def select_column(self, button, *args):
-        self.adapter.select_column(button.key)
+    def handle_columns_header_action(self, button, *args):
+        self.adapter.handle_column_selection(button.key)
 
     def _scroll(self, scroll_y):
         # [TODO] GridView -- row_height default is now 25, so needed?
@@ -660,9 +658,8 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                     self.row_height = real_height / count
 
         # After self.row_height guaranteed.
-        for col_index in xrange(len(self.adapter.col_keys)):
-            columns_header.add_widget(
-                    self.columns_header_view(col_index))
+        for col_key in self.adapter.col_keys:
+            columns_header.add_widget(self.columns_header_view(col_key))
 
     def scroll_to(self, index=0):
         if not self.scrolling:

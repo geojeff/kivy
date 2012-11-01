@@ -424,7 +424,7 @@ class GridAdapter(Adapter, EventDispatcher):
             if grid_cell.col_key == col_key:
                 return grid_cell
         
-    def select_row(self, row_key):
+    def handle_row_selection(self, row_key):
         index = self.row_keys.index(row_key)
         grid_row = self.get_view(index)
         if self.selection_mode in ['single-by-rows',
@@ -439,15 +439,13 @@ class GridAdapter(Adapter, EventDispatcher):
                     self.handle_selection(grid_cell, hold_dispatch=True)
             self.dispatch('on_selection_change')
 
-    def select_column(self, col_key):
+    def handle_column_selection(self, col_key):
         if self.selection_mode in ['single-by-columns',
                                    'multiple-by-columns',
                                    'multiple-by-grid-cells']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if grid_cell.col_key == col_key:
-                    if grid_cell.is_selected:
-                        self.handle_selection(grid_cell)
                     self.handle_selection(grid_cell)
 
     def handle_selection(self, view, hold_dispatch=False, *args):
