@@ -1454,7 +1454,7 @@ class AdaptersTestCase(unittest.TestCase):
 
         grid_adapter.deselect_all()
 
-        grid_adapter.handle_selection(grid_adapter.grid_cell(4, 4))
+        grid_adapter.handle_selection(grid_adapter.grid_cell_view(4, 4))
 
         self.assertEqual(len(grid_adapter.selection), 1)
 

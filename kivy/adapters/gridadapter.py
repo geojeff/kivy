@@ -418,24 +418,70 @@ class GridAdapter(Adapter, EventDispatcher):
         '''
         pass
 
-    def grid_cell(self, row_key, col_key):
+    def grid_cell_view(self, row_key, col_key):
         grid_row = self.get_view(self.row_keys.index(row_key))
         for grid_cell in grid_row.children:
             if grid_cell.col_key == col_key:
                 return grid_cell
         
+    def select_row(self, row_key):
+        index = self.row_keys.index(row_key)
+        grid_row = self.get_view(index)
+        if self.selection_mode in ['single-by-rows',
+                                   'multiple-by-rows']:
+            col_key = len(self.col_keys) - 1
+            grid_cell = grid_row.children[col_key]
+            if grid_cell:
+                self.handle_selection(grid_cell)
+        elif self.selection_mode in ['multiple-by-grid-cells']:
+            for grid_cell in grid_row.children:
+                if not grid_cell.is_selected:
+                    self.handle_selection(grid_cell, hold_dispatch=True)
+            self.dispatch('on_selection_change')
+
+    def select_column(self, col_key):
+        if self.selection_mode in ['single-by-columns',
+                                   'multiple-by-columns',
+                                   'multiple-by-grid-cells']:
+            first_grid_row = self.get_view(0)
+            for grid_cell in first_grid_row.children:
+                if grid_cell.col_key == col_key:
+                    if grid_cell.is_selected:
+                        self.handle_selection(grid_cell)
+                    self.handle_selection(grid_cell)
+
     def handle_selection(self, view, hold_dispatch=False, *args):
-        if view not in self.selection:
-            if self.selection_mode in ['none',
-                                       'single-by-rows',
-                                       'single-by-columns',
-                                       'single-by-grid-cells'] and \
-                    len(self.selection) > 0:
+        grid_row = self.get_view(self.row_keys.index(view.row_key))
+        op = 'select'
+        if ((self.selection_mode in ['single-by-rows', 'multiple-by-rows']
+                and grid_row in self.selection)
+            or (view in self.selection)):
+            op = 'deselect'
+        if op == 'select':
+            if (len(self.selection) > 0
+                and
+                self.selection_mode in ['none',
+                                        'single-by-rows',
+                                        'single-by-columns',
+                                        'single-by-grid-cells']):
                 for selected_view in self.selection:
                     self.deselect_item_view(selected_view)
-            if self.selection_mode != 'none':
-                if self.selection_mode in ['multiple-by-rows',
-                                           'multiple-by-columns',
+            if self.selection_mode in ['single-by-rows',
+                                       'multiple-by-rows']:
+                if self.selection_mode == 'multiple-by-rows':
+                    if self.allow_empty_selection:
+                        # If < 0, selection_limit is not active.
+                        if self.selection_limit < 0:
+                            self.select_item_view(grid_row)
+                        else:
+                            if len(self.selection) < self.selection_limit:
+                                self.select_item_view(grid_row)
+                    else:
+                        self.select_item_view(grid_row)
+                else:
+                    self.select_item_view(grid_row)
+            elif self.selection_mode != 'none':
+                if self.selection_mode in ['multiple-by-columns',
                                            'multiple-by-grid-cells']:
                     if self.allow_empty_selection:
                         # If < 0, selection_limit is not active.
@@ -449,7 +495,11 @@ class GridAdapter(Adapter, EventDispatcher):
                 else:
                     self.select_item_view(view)
         else:
-            self.deselect_item_view(view)
+            if self.selection_mode in ['single-by-rows',
+                                       'multiple-by-rows']:
+                self.deselect_item_view(grid_row)
+            else:
+                self.deselect_item_view(view)
             if self.selection_mode != 'none':
                 # If the deselection makes selection empty, the following call
                 # will check allows_empty_selection, and if False, will
@@ -498,6 +548,10 @@ class GridAdapter(Adapter, EventDispatcher):
                     grid_cell.is_selected = True
                     self.selection.append(grid_cell)
 
+        for child in view.children:
+            if hasattr(child, 'select'):
+                child.select()
+
         if self.propagate_selection_to_data:
             if self.selection_mode == 'single-by-grid-cells':
                 # Selection will only extend grid-cell-deep.
@@ -542,6 +596,10 @@ class GridAdapter(Adapter, EventDispatcher):
                     grid_cell.deselect_from_adapter()
                     grid_cell.is_selected = False
                     self.selection.remove(grid_cell)
+
+        for child in view.children:
+            if hasattr(child, 'deselect'):
+                child.deselect()
 
         if self.propagate_selection_to_data:
             if self.selection_mode == 'single-by-grid-cells':
@@ -617,16 +675,7 @@ class GridAdapter(Adapter, EventDispatcher):
     def check_for_empty_selection(self, *args):
         if not self.allow_empty_selection:
             if len(self.selection) == 0:
-                if self.selection_mode in ['single-by-rows',
-                                           'multiple-by-rows']:
-                    # Select the first grid row view instance if we have it.
-                    v = self.get_view(0)
-                    if v is not None:
-                        self.handle_selection(v)
-                elif self.selection_mode in ['single-by-columns',
-                                             'multiple-by-columns',
-                                             'single-by-grid-cells',
-                                             'multiple-by-grid-cells']:
+                if self.selection_mode != None:
                     first_grid_row = self.get_view(0)
                     if first_grid_row is not None:
                         col_key = len(self.col_keys) - 1

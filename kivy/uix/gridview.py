@@ -231,79 +231,76 @@ class GridRow(SelectableView, BoxLayout):
 
 Builder.load_string('''
 <GridView>:
+    rows_header: rows_header
+    columns_header: columns_header
     container: container
-    ScrollView:
-        pos: root.pos
-        on_scroll_y: root._scroll(args[1])
-        do_scroll_x: False
-        GridLayout:
-            cols: 1
-            id: container
-            size_hint_y: None
-''')
-
-Builder.load_string('''
-<TshirtmanGridView>:
-    top_row: top_row
-    left_row: left_row
-    data: data
 
     orientation: 'vertical'
 
     Widget:
-        id: parent_top_row
+        id: parent_columns_header
         size_hint_y: None
         height: '1cm'
         BoxLayout:
-            id: top_row
-            y: parent_top_row.y
-            x: data.x
-            height: parent_top_row.height
-            width: data.width
+            id: columns_header
+            y: parent_columns_header.y
+            x: container.x
+            height: parent_columns_header.height
+            width: container.width
 
     BoxLayout:
         Widget:
-            id: parent_left_row
+            id: parent_rows_header
             size_hint_x: None
             width: '1cm'
+
             BoxLayout:
                 orientation: 'vertical'
-                id: left_row
-                x: parent_left_row.x
-                y: data.y
-                height: data.height
-                width: parent_left_row.width
+                id: rows_header
+                x: parent_rows_header.x
+                y: container.y
+                height: container.height
+                width: parent_rows_header.width
 
         ScrollView
             GridLayout:
-                size_hint: None, None
-                id: data
-                cols: 10
-                size: 2000, 2000
+                size_hint_y: None
+                id: container
+                cols: 1
+
 ''')
 
 
-class TshirtmanGridView(BoxLayout):
-    left_row = ObjectProperty(None)
-    top_row = ObjectProperty(None)
-    data = ObjectProperty(None)
+class HeaderButton(Button):
+    '''The :class:`~kivy.uix.gridview.HeaderButtonView` mixin is used to design
+    header row or column buttons to be used in a gridview.
+    '''
 
-    def __init__(self, **kw):
-        super(MyGridView, self).__init__(**kw)
-        self.bind(left_row=self.populate)
-        self.bind(top_row=self.populate)
-        self.bind(data=self.populate)
+    key = ObjectProperty(None)
+    '''A key into the underlying data (either a row key or a col key).
 
-    def populate(self, *args):
-        if self.top_row and self.left_row and self.data:
-            for i in xrange(10):
-                self.left_row.add_widget(Button(text=str(i)))
-                self.top_row.add_widget(Button(text=str(i)))
-                for j in xrange(10):
-                    self.data.add_widget(Label(text=str(10 * i + j)))
+    :data:`key` is a :class:`~kivy.properties.ObjectProperty`, default
+    to None.
+    '''
+
+    is_selected = BooleanProperty(False)
+    '''A boolean for the state of selection.
+
+    :data:`is_selected` is a :class:`~kivy.properties.BooleanProperty`, default
+    to False.
+    '''
+
+    def __init__(self, **kwargs):
+        super(HeaderButton, self).__init__(**kwargs)
+
+    def select(self, *args):
+        self.background_color = self.selected_color
+
+    def deselect(self, *args):
+        self.background_color = self.deselected_color
 
 
-class GridView(AbstractView, EventDispatcher):
+class GridView(BoxLayout, AbstractView, EventDispatcher):
     ''':class:`~kivy.uix.listview.GridView` is a primary high-level widget,
     handling the common task of presenting grid rows in a scrolling list.
 
@@ -313,6 +310,56 @@ class GridView(AbstractView, EventDispatcher):
     :class:`~kivy.uix.listview.GridView` also subclasses
     :class:`EventDispatcher` for scrolling.  The event *on_scroll_complete* is
     used in refreshing the main view.
+    '''
+
+    columns_header = ObjectProperty(None)
+    '''The columns_header is the column of header buttons normally placed on the
+    left side of the grid.
+
+    :data:`columns_header` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    rows_header = ObjectProperty(None)
+    '''The rows_header is the row of header buttons normally placed on the top
+    side of the grid.
+
+    :data:`rows_header` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    rows_header_view_cls = ObjectProperty(None)
+    '''
+    A class for instantiating a header row item. (Use this or template).
+
+    :data:`rows_header_view_cls` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    rows_header_view_template = ObjectProperty(None)
+    '''
+    A class for instantiating a header row item. (Use this or
+    rows_header_view_cls).
+
+    :data:`rows_header_view_cls` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    columns_header_view_cls = ObjectProperty(None)
+    '''
+    A class for instantiating a header col item. (Use this or template).
+
+    :data:`columns_header_view_cls` is an
+    :class:`~kivy.properties.ObjectProperty`, default to None.
+    '''
+
+    columns_header_view_template = ObjectProperty(None)
+    '''
+    A class for instantiating a header col item. (Use this or
+    columns_header_view_cls).
+
+    :data:`columns_header_view_template` is an
+    :class:`~kivy.properties.ObjectProperty`, default to None.
     '''
 
     container = ObjectProperty(None)
@@ -336,6 +383,7 @@ class GridView(AbstractView, EventDispatcher):
     :data:`row_height` is a :class:`~kivy.properties.NumericProperty`,
     default to None.
     '''
+
     scrolling = BooleanProperty(False)
     '''If the scroll_to() method is called while scrolling operations are
     happening, a call recursion error can occur. scroll_to() checks to see that
@@ -354,6 +402,9 @@ class GridView(AbstractView, EventDispatcher):
     _wend = NumericProperty(None)
 
     def __init__(self, **kwargs):
+        if 'row_height' not in kwargs:
+            self.row_height = 25
+
         # Check for an adapter argument. If it doesn't exist, we
         # assume that we must make a default GridAdapter using rows and cols
         # integer arguments, to make a simple grid, if they were provided, or
@@ -410,6 +461,13 @@ class GridView(AbstractView, EventDispatcher):
 
         super(GridView, self).__init__(**kwargs)
 
+        if (not self.rows_header_view_cls
+                and not self.rows_header_view_template):
+            self.rows_header_view_cls = HeaderButton
+        if (not self.columns_header_view_cls
+                and not self.columns_header_view_template):
+            self.columns_header_view_cls = HeaderButton
+
         self.register_event_type('on_scroll_complete')
 
         self._trigger_populate = Clock.create_trigger(self._spopulate, -1)
@@ -425,7 +483,52 @@ class GridView(AbstractView, EventDispatcher):
         # bindings back to the view updating function here.
         self.adapter.bind_triggers_to_view(self._trigger_populate)
 
+    # Terminology can be confusing here. The columns_header runs left-to-right.
+    def columns_header_view(self, index):
+        if index < 0 or index >= len(self.adapter.col_keys):
+            return None
+        col_key = self.adapter.col_keys[index]
+        col_button = None
+        header_args = {}
+        header_args['text'] = str(col_key)
+        header_args['key'] = col_key
+        header_args['height'] = self.row_height
+        if self.columns_header_view_cls:
+            col_button = self.columns_header_view_cls(**header_args)
+        elif self.columns_header_view_template:
+            col_button = Builder.template(self.columns_header_view_template,
+                                          **header_args)
+        if col_button:
+            col_button.bind(on_release=self.select_column)
+        return col_button
+
+    # Terminology can be confusing here. The rows_header runs up-and-down.
+    def rows_header_view(self, index):
+        if index < 0 or index >= len(self.adapter.row_keys):
+            return None
+        row_key = self.adapter.row_keys[index]
+        row_button = None
+        header_args = {}
+        header_args['text'] = str(row_key)
+        header_args['key'] = row_key
+        header_args['height'] = self.row_height
+        if self.rows_header_view_cls:
+            row_button = self.rows_header_view_cls(**header_args)
+        elif self.rows_header_view_template:
+            row_button = Builder.template(self.rows_header_view_template,
+                                          **header_args)
+        if row_button:
+            row_button.bind(on_release=self.select_row)
+        return row_button
+
+    def select_row(self, button, *args):
+        self.adapter.select_row(button.key)
+
+    def select_column(self, button, *args):
+        self.adapter.select_column(button.key)
+
     def _scroll(self, scroll_y):
+        # [TODO] GridView -- row_height default is now 25, so needed?
         if self.row_height is None:
             return
         scroll_y = 1 - min(1, max(scroll_y, 0))
@@ -459,7 +562,10 @@ class GridView(AbstractView, EventDispatcher):
         This method is a slightly modified copy of the same function in
         :class:`~kivy.uix.listview.ListView`.
         '''
+
         container = self.container
+        columns_header = self.columns_header
+        rows_header = self.rows_header
         sizes = self._sizes
         rh = self.row_height
 
@@ -470,6 +576,10 @@ class GridView(AbstractView, EventDispatcher):
 
         # clear the view
         container.clear_widgets()
+        if columns_header:
+            columns_header.clear_widgets()
+        if rows_header:
+            rows_header.clear_widgets()
 
         # guess only ?
         if iend is not None:
@@ -479,16 +589,19 @@ class GridView(AbstractView, EventDispatcher):
             for x in xrange(istart):
                 fh += sizes[x] if x in sizes else rh
             container.add_widget(Widget(size_hint_y=None, height=fh))
+            rows_header.add_widget(Widget(size_hint_y=None, height=fh))
 
             # now fill with real row_view
             index = istart
             while index <= iend:
                 row_view = self.adapter.get_view(index)
+                rows_header_view = self.rows_header_view(index)
                 index += 1
                 if row_view is None:
                     continue
                 sizes[index] = row_view.height
                 container.add_widget(row_view)
+                rows_header.add_widget(rows_header_view)
         else:
             available_height = self.height
             real_height = 0
@@ -498,10 +611,12 @@ class GridView(AbstractView, EventDispatcher):
                 row_view = self.adapter.get_view(index)
                 if row_view is None:
                     break
+                rows_header_view = self.rows_header_view(index)
                 sizes[index] = row_view.height
                 index += 1
                 count += 1
                 container.add_widget(row_view)
+                rows_header.add_widget(rows_header_view)
                 available_height -= row_view.height
                 real_height += row_view.height
 
@@ -512,8 +627,16 @@ class GridView(AbstractView, EventDispatcher):
             if count:
                 container.height = \
                     real_height / count * self.adapter.get_count()
+                rows_header.height = \
+                    real_height / count * self.adapter.get_count()
+                # [TODO] GridView -- row_height default is now 25, so needed?
                 if self.row_height is None:
                     self.row_height = real_height / count
+
+        # After self.row_height guaranteed.
+        for col_index in xrange(len(self.adapter.col_keys)):
+            columns_header.add_widget(
+                    self.columns_header_view(col_index))
 
     def scroll_to(self, index=0):
         if not self.scrolling:

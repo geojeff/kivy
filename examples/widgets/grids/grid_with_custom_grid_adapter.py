@@ -58,8 +58,8 @@ class MainView(GridLayout):
                                    col_keys=col_keys,
                                    data=data,
                                    args_converter=args_converter,
-                                   selection_mode='multiple-by-columns',
-                                   allow_empty_selection=False,
+                                   selection_mode='multiple-by-rows',
+                                   allow_empty_selection=True,
                                    cls=GridRow)
 
         # Use the adapter in our GridView:
