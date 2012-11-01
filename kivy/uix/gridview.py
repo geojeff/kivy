@@ -477,23 +477,31 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                           'kwargs': {'text': rec[col_key]['text']}}
                          for col_key in rec.keys() if col_key != 'text']}
 
-            if (not 'rows_header_view_cls' in kwargs
-                    and not 'rows_header_view_template' in kwargs):
-                self.rows_header_view_cls = HeaderButton
-            if (not 'columns_header_view_cls' in kwargs
-                    and not 'columns_header_view_template' in kwargs):
-                self.columns_header_view_cls = HeaderButton
+            #if (not 'rows_header_view_cls' in kwargs
+            #        and not 'rows_header_view_template' in kwargs):
+            #    kwargs['rows_header_view_cls'] = HeaderButton
+            #if (not 'columns_header_view_cls' in kwargs
+            #        and not 'columns_header_view_template' in kwargs):
+            #    kwargs['columns_header_view_cls'] = HeaderButton
 
             grid_adapter = GridAdapter(row_keys=row_keys,
                                        col_keys=col_keys,
                                        data=data,
                                        args_converter=args_converter,
                                        selection_mode='single-by-rows',
+                                       allow_empty_selection=True,
                                        cls=GridRow)
 
             kwargs['adapter'] = grid_adapter
 
         super(GridView, self).__init__(**kwargs)
+
+        if (not self.rows_header_view_cls
+                and not self.rows_header_view_template):
+            self.rows_header_view_cls = HeaderButton
+        if (not self.columns_header_view_cls
+                and not self.columns_header_view_template):
+            self.columns_header_view_cls = HeaderButton
 
         self.register_event_type('on_scroll_complete')
 
