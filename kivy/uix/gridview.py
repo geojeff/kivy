@@ -210,7 +210,8 @@ class GridRow(SelectableView, BoxLayout):
         cols = len(kwargs['cls_dicts'])
 
         if cols != len(col_keys):
-            raise Exception('GridRow: # of cls_dicts mismatches # of columns')
+            msg = "GridRow: # of cls_dicts ({0}) mismatches # of columns ({1})"
+            raise Exception(msg.format(cols, len(col_keys)))
 
         col_index = 0
         for cls_dict, col_key in zip(kwargs['cls_dicts'], col_keys):
@@ -476,13 +477,6 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                          {'cls': GridCell,
                           'kwargs': {'text': rec[col_key]['text']}}
                          for col_key in rec.keys() if col_key != 'text']}
-
-            #if (not 'rows_header_view_cls' in kwargs
-            #        and not 'rows_header_view_template' in kwargs):
-            #    kwargs['rows_header_view_cls'] = HeaderButton
-            #if (not 'columns_header_view_cls' in kwargs
-            #        and not 'columns_header_view_template' in kwargs):
-            #    kwargs['columns_header_view_cls'] = HeaderButton
 
             grid_adapter = GridAdapter(row_keys=row_keys,
                                        col_keys=col_keys,

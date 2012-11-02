@@ -240,6 +240,7 @@ class GridAdapter(Adapter, EventDispatcher):
     # first, followed by a reset of row_keys and col_keys, if needed.
     def initialize_row_and_col_keys(self, *args):
         stale_keys = False
+
         for row_key in self.row_keys:
             if not row_key in self.data:
                 stale_keys = True
@@ -248,10 +249,22 @@ class GridAdapter(Adapter, EventDispatcher):
                 if not col_key in self.data[row_key]:
                     stale_keys = True
                     break
+
+        if not stale_keys:
+            if len(self.row_keys) != len(self.data):
+                stale_keys = True
+
+            if len(self.col_keys) != len(self.data[self.row_keys[0]]):
+                stale_keys = True
+
         if stale_keys:
-            data_keys = self.data.keys()
-            self.row_keys = data_keys
-            self.col_keys = self.data[self.row_keys[0]].keys()
+            self.row_keys = self.data.keys()
+            
+            # One of the col_keys is 'text', so skip it.
+            self.col_keys = \
+                [key for key in self.data[self.row_keys[0]].keys()
+                        if key != 'text']
+
         self.delete_cache()
         self.initialize_selection()
 
@@ -593,7 +606,8 @@ class GridAdapter(Adapter, EventDispatcher):
                 if grid_cell != view:
                     grid_cell.deselect_from_adapter()
                     grid_cell.is_selected = False
-                    self.selection.remove(grid_cell)
+                    if grid_cell in self.selection:
+                        self.selection.remove(grid_cell)
 
         for child in view.children:
             if hasattr(child, 'deselect'):
