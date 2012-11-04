@@ -264,7 +264,7 @@ class GridAdapter(Adapter, EventDispatcher):
 
         if stale_keys:
             self.row_keys = self.data.keys()
-            
+
             # One of the col_keys is 'text', so skip it.
             self.col_keys = \
                 [key for key in self.data[self.row_keys[0]].keys()
@@ -441,7 +441,7 @@ class GridAdapter(Adapter, EventDispatcher):
         for grid_cell in grid_row.children:
             if grid_cell.col_key == col_key:
                 return grid_cell
-        
+
     # handle_row_selection() takes advantage of the existence of GridRow,
     # using its methods to aid processing of grid_cells.
     #
@@ -504,7 +504,8 @@ class GridAdapter(Adapter, EventDispatcher):
                     handled = True
                     break
             if not handled:
-                if len(selected_cells_in_column) > len(unselected_cells_in_column):
+                if (len(selected_cells_in_column)
+                        > len(unselected_cells_in_column)):
                     self.handle_selection(selected_cells_in_column[-1])
                 else:
                     self.handle_selection(unselected_cells_in_column[-1])
@@ -550,28 +551,17 @@ class GridAdapter(Adapter, EventDispatcher):
                             selection_removals.append(
                                     self.selection.index(selected_view))
 
-            if self.selection_mode in ['row-single',
-                                       'row-multiple']:
-                if self.selection_mode == 'row-multiple':
-                    # If < 0, selection_limit is not active.
-                    if self.selection_limit < 0:
-                        self.do_selection_op('select', view)
-                    else:
-                        if len(self.selection) < self.selection_limit:
-                            self.do_selection_op('select', view)
-                else:
+            if self.selection_mode in ['row-multiple',
+                                       'column-multiple',
+                                       'cell-multiple']:
+                # If < 0, selection_limit is not active.
+                if self.selection_limit < 0:
                     self.do_selection_op('select', view)
-            elif self.selection_mode != 'none':
-                if self.selection_mode in ['column-multiple',
-                                           'cell-multiple']:
-                    # If < 0, selection_limit is not active.
-                    if self.selection_limit < 0:
-                        self.do_selection_op('select', view)
-                    else:
-                        if len(self.selection) < self.selection_limit:
-                            self.do_selection_op('select', view)
                 else:
-                    self.do_selection_op('select', view)
+                    if len(self.selection) < self.selection_limit:
+                        self.do_selection_op('select', view)
+            else:
+                self.do_selection_op('select', view)
         else:
             selection_removals.extend(self.do_selection_op('deselect', view))
 
