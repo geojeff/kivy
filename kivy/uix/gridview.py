@@ -139,12 +139,6 @@ class GridCell(SelectableGridCellView, Button):
     def deselect(self, *args):
         self.background_color = self.deselected_color
 
-    def select_from_adapter(self, *args):
-        self.background_color = self.selected_color
-
-    def deselect_from_adapter(self, *args):
-        self.background_color = self.deselected_color
-
     def __repr__(self):
         return self.text
 
@@ -187,6 +181,17 @@ class GridRow(SelectableView, BoxLayout):
     adapter = ObjectProperty(None)
     '''A reference to the managing adapter for this view, which is needed for
     calling back during selection operations.
+
+    :data:`adapter` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    col_key_indices = DictProperty({})
+    '''A dictionary of col_keys and indices into the children list, for easier
+    grid_cell lookup.
+
+    :data:`col_key_indices` is an :class:`~kivy.properties.DictProperty`,
+    default to {}.
     '''
 
     def __init__(self, **kwargs):
@@ -241,7 +246,12 @@ class GridRow(SelectableView, BoxLayout):
                 if 'text' in kwargs:
                     cls_kwargs['text'] = kwargs['text']
                 self.add_widget(cls(**cls_kwargs))
+            self.col_key_indices[col_key] = cols - col_index - 1
             col_index += 1
+
+    def grid_cell(self, col_key):
+        if col_key in self.col_key_indices:
+            return self.children[self.col_key_indices[col_key]]
 
     def select(self, *args):
         self.background_color = self.selected_color
@@ -482,7 +492,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                                        col_keys=col_keys,
                                        data=data,
                                        args_converter=args_converter,
-                                       selection_mode='single-by-rows',
+                                       selection_mode='singular-by-rows',
                                        allow_empty_selection=True,
                                        cls=GridRow)
 

@@ -22,9 +22,9 @@ and adds several for selection:
 
 * *selection*, a list of selected items.
 
-* *selection_mode*, 'single-by-rows', 'multiple-by-rows',
-                'single-by-columns', 'multiple-by-columns',
-                'single-by-grid-cells', 'multiple-by-grid-cells', 'none'
+* *selection_mode*, 'singular-by-rows', 'additive-by-rows',
+                'singular-by-columns', 'additive-by-columns',
+                'singular-by-grid-cells', 'additive-by-grid-cells', 'none'
 
 * *allow_empty_selection*, a boolean -- False, and a selection is forced;
   True, and only user or programmatic action will change selection, and it can
@@ -103,10 +103,15 @@ class GridAdapter(Adapter, EventDispatcher):
     to [].
     '''
 
-    selection_mode = OptionProperty('single-by-grid-cells',
-            options=('none', 'single-by-rows', 'multiple-by-rows',
-                'single-by-columns', 'multiple-by-columns',
-                'single-by-grid-cells', 'multiple-by-grid-cells'))
+    # [TODO] Add these modes?
+    #
+    #            singular-by-rows-or-columns?
+    #            additive-by-rows-or-columns?
+    #
+    selection_mode = OptionProperty('singular-by-grid-cells',
+            options=('none', 'singular-by-rows', 'additive-by-rows',
+                'singular-by-columns', 'additive-by-columns',
+                'singular-by-grid-cells', 'additive-by-grid-cells'))
     '''
     Selection modes:
 
@@ -114,15 +119,15 @@ class GridAdapter(Adapter, EventDispatcher):
          is here so that selection can be turned off, momentarily or
          permanently, for an existing grid adapter.
 
-       * *single-*, multi-touch/click ignored. single item selecting only, for
-         variants: single-by-rows, single-by-columns, single-by-grid-cells.
+       * *singular-*, multi-touch/click ignored. single item selecting only, for
+         variants: singular-by-rows, singular-by-columns, singular-by-grid-cells.
 
-       * *multiple-*, multi-touch / incremental addition to selection allowed;
+       * *additive-*, multi-touch / incremental addition to selection allowed;
          may be limited to a count by selection_limit. Variants include:
-         multiple-by-rows, multiple-by-columns, multiple-by-grid-cells.
+         additive-by-rows, additive-by-columns, additive-by-grid-cells.
 
     :data:`selection_mode` is an :class:`~kivy.properties.OptionProperty`,
-    default to 'single-by-grid-cells'.
+    default to 'singular-by-grid-cells'.
     '''
 
     propagate_selection_to_data = BooleanProperty(False)
@@ -175,9 +180,9 @@ class GridAdapter(Adapter, EventDispatcher):
     '''
 
     selection_limit = NumericProperty(-1)
-    '''When selection_mode is multiple, if selection_limit is non-negative,
+    '''When selection_mode is additive, if selection_limit is non-negative,
     this number will limit the number of selected items. It can even be 1,
-    which is equivalent to single selection. This is because a program could
+    which is equivalent to singular selection. This is because a program could
     be programmatically changing selection_limit on the fly, and all possible
     values should be included.
 
@@ -360,7 +365,7 @@ class GridAdapter(Adapter, EventDispatcher):
     def selection_mode_changed(self, *args):
         if self.selection_mode == 'none':
             for selected_view in self.selection:
-                self.deselect_item_view(selected_view)
+                self.do_selection_op('deselect', selected_view)
         else:
             self.check_for_empty_selection()
 
@@ -437,88 +442,144 @@ class GridAdapter(Adapter, EventDispatcher):
             if grid_cell.col_key == col_key:
                 return grid_cell
         
+    # handle_row_selection() takes advantage of the existence of GridRow,
+    # using its methods to aid processing of grid_cells.
+    #
     def handle_row_selection(self, row_key):
         index = self.row_keys.index(row_key)
         grid_row = self.get_view(index)
-        if self.selection_mode in ['single-by-rows',
-                                   'multiple-by-rows']:
-            col_key = len(self.col_keys) - 1
-            grid_cell = grid_row.children[col_key]
-            if grid_cell:
-                self.handle_selection(grid_cell)
-        elif self.selection_mode in ['multiple-by-grid-cells']:
-            for grid_cell in grid_row.children:
-                if not grid_cell.is_selected:
-                    self.handle_selection(grid_cell, hold_dispatch=True)
-            self.dispatch('on_selection_change')
 
+        if self.selection_mode in ['singular-by-rows',
+                                   'additive-by-rows',
+                                   'additive-by-grid-cells']:
+            selected_cells_in_row = []
+            unselected_cells_in_row = []
+            cols = len(self.col_keys)
+            half_count = cols / 2
+            handled = False
+            for grid_cell in grid_row.children:
+                if grid_cell.is_selected:
+                    selected_cells_in_row.append(grid_cell)
+                else:
+                    unselected_cells_in_row.append(grid_cell)
+                if len(selected_cells_in_row) > half_count:
+                    self.handle_selection(selected_cells_in_row[-1])
+                    handled = True
+                    break
+                if len(unselected_cells_in_row) > half_count:
+                    self.handle_selection(unselected_cells_in_row[-1])
+                    handled = True
+                    break
+            if not handled:
+                if len(selected_cells_in_row) > len(unselected_cells_in_row):
+                    self.handle_selection(selected_cells_in_row[-1])
+                else:
+                    self.handle_selection(unselected_cells_in_row[-1])
+
+    # handle_column_selection() has no "grid column" class to use, so there is
+    # a loop over grid rows, finding the grid cells for the column.
+    #
     def handle_column_selection(self, col_key):
-        if self.selection_mode in ['single-by-columns',
-                                   'multiple-by-columns',
-                                   'multiple-by-grid-cells']:
-            first_grid_row = self.get_view(0)
-            for grid_cell in first_grid_row.children:
-                if grid_cell.col_key == col_key:
-                    self.handle_selection(grid_cell)
+        if self.selection_mode in ['singular-by-columns',
+                                   'additive-by-columns',
+                                   'additive-by-grid-cells']:
+            selected_cells_in_column = []
+            unselected_cells_in_column = []
+            rows = len(self.row_keys)
+            half_count = rows / 2
+            handled = False
+            grid_rows = [self.get_view(i) for i in xrange(len(self.row_keys))]
+            for grid_row in grid_rows:
+                grid_cell = grid_row.grid_cell(col_key)
+                if grid_cell.is_selected:
+                    selected_cells_in_column.append(grid_cell)
+                else:
+                    unselected_cells_in_column.append(grid_cell)
+                if len(selected_cells_in_column) > half_count:
+                    self.handle_selection(selected_cells_in_column[-1])
+                    handled = True
+                    break
+                if len(unselected_cells_in_column) > half_count:
+                    self.handle_selection(unselected_cells_in_column[-1])
+                    handled = True
+                    break
+            if not handled:
+                if len(selected_cells_in_column) > len(unselected_cells_in_column):
+                    self.handle_selection(selected_cells_in_column[-1])
+                else:
+                    self.handle_selection(unselected_cells_in_column[-1])
 
     def handle_selection(self, view, hold_dispatch=False, *args):
+        selection_removals = []
+
         grid_row = self.get_view(self.row_keys.index(view.row_key))
+
         op = 'select'
-        if ((self.selection_mode in ['single-by-rows', 'multiple-by-rows']
-                and grid_row in self.selection)
-            or (view in self.selection)):
+        if ((self.selection_mode in ['singular-by-rows', 'additive-by-rows']
+                and grid_row in self.selection) or (view in self.selection)):
             op = 'deselect'
+
         if op == 'select':
-            if (len(self.selection) > 0
-                and
-                self.selection_mode in ['none',
-                                        'single-by-rows',
-                                        'single-by-columns',
-                                        'single-by-grid-cells']):
-                for selected_view in self.selection:
-                    self.deselect_item_view(selected_view)
-            if self.selection_mode in ['single-by-rows',
-                                       'multiple-by-rows']:
-                if self.selection_mode == 'multiple-by-rows':
-                    if self.allow_empty_selection:
-                        # If < 0, selection_limit is not active.
-                        if self.selection_limit < 0:
-                            self.select_item_view(grid_row)
+            if len(self.selection) > 0:
+                if self.selection_mode in ['none',
+                                           'singular-by-rows',
+                                           'singular-by-columns',
+                                           'singular-by-grid-cells']:
+                    for selected_view in self.selection:
+
+                        if hasattr(selected_view, 'col_key'):
+                            selection_removals.extend(self.do_selection_op(
+                                'deselect', selected_view))
                         else:
-                            if len(self.selection) < self.selection_limit:
-                                self.select_item_view(grid_row)
+                            # selected_view is a grid row. Here we search for
+                            # the first selected grid cell and call deselect on
+                            # it. We break, because no need to deselect on
+                            # other cells, as the op will get them all.
+                            for grid_cell in selected_view.children:
+                                if grid_cell.is_selected:
+                                    selection_removals.extend(
+                                            self.do_selection_op(
+                                                'deselect', grid_cell))
+                                    break
+
+                            # In this special case, we have a grid row whose
+                            # grid cells were unselected in the loop above,
+                            # and the indices for the grid cells have been
+                            # added to selection_removals. Now add the grid
+                            # row to selection_removals.
+                            selection_removals.append(
+                                    self.selection.index(selected_view))
+
+            if self.selection_mode in ['singular-by-rows',
+                                       'additive-by-rows']:
+                if self.selection_mode == 'additive-by-rows':
+                    # If < 0, selection_limit is not active.
+                    if self.selection_limit < 0:
+                        self.do_selection_op('select', view)
                     else:
-                        self.select_item_view(grid_row)
+                        if len(self.selection) < self.selection_limit:
+                            self.do_selection_op('select', view)
                 else:
-                    self.select_item_view(grid_row)
+                    self.do_selection_op('select', view)
             elif self.selection_mode != 'none':
-                if self.selection_mode in ['multiple-by-columns',
-                                           'multiple-by-grid-cells']:
-                    if self.allow_empty_selection:
-                        # If < 0, selection_limit is not active.
-                        if self.selection_limit < 0:
-                            self.select_item_view(view)
-                        else:
-                            if len(self.selection) < self.selection_limit:
-                                self.select_item_view(view)
+                if self.selection_mode in ['additive-by-columns',
+                                           'additive-by-grid-cells']:
+                    # If < 0, selection_limit is not active.
+                    if self.selection_limit < 0:
+                        self.do_selection_op('select', view)
                     else:
-                        self.select_item_view(view)
+                        if len(self.selection) < self.selection_limit:
+                            self.do_selection_op('select', view)
                 else:
-                    self.select_item_view(view)
+                    self.do_selection_op('select', view)
         else:
-            if self.selection_mode in ['single-by-rows',
-                                       'multiple-by-rows']:
-                self.deselect_item_view(grid_row)
-            else:
-                self.deselect_item_view(view)
-            if self.selection_mode != 'none':
-                # If the deselection makes selection empty, the following call
-                # will check allows_empty_selection, and if False, will
-                # select the first item. If view happens to be the first item,
-                # this will be a reselection, and the user will notice no
-                # change, except perhaps a flicker.
-                #
-                self.check_for_empty_selection()
+            selection_removals.extend(self.do_selection_op('deselect', view))
+
+        if selection_removals:
+            for sel_index in reversed(list(set(selection_removals))):
+                del self.selection[sel_index]
+
+            self.check_for_empty_selection()
 
         if not hold_dispatch:
             self.dispatch('on_selection_change')
@@ -541,36 +602,89 @@ class GridAdapter(Adapter, EventDispatcher):
             else:
                 item.is_selected = value
 
-    def select_item_view(self, view):
-        view.select()
-        view.is_selected = True
-        self.selection.append(view)
+    def do_selection_op(self, op, view):
+        selection_removals = []
 
-        cols = len(self.col_keys)
-        col_key = cols - (view.index % cols) - 1
-        row_key = (view.index - col_key) / cols
+        grid_row = self.get_view(self.row_keys.index(view.row_key))
 
-        if self.selection_mode in ['single-by-columns',
-                                   'multiple-by-columns']:
+        col_key = view.col_key
+        row_key = view.row_key
+
+        # Do op for view, which is always a grid cell.
+        if op == 'select':
+            view.select()
+            view.is_selected = True
+            if view not in self.selection:
+                self.selection.append(view)
+        else:
+            view.deselect()
+            view.is_selected = False
+            if view in self.selection:
+                selection_removals.append(self.selection.index(view))
+
+        # Do op for grid_row.
+        if self.selection_mode in ['singular-by-rows',
+                                   'additive-by-rows']:
+            if op == 'select':
+                grid_row.select()
+                grid_row.is_selected = True
+                if grid_row not in self.selection:
+                    self.selection.append(grid_row)
+
+                for grid_cell in grid_row.children:
+                    if hasattr(grid_cell, 'select'):
+                        grid_cell.select()
+                        grid_cell.is_selected = True
+                        if grid_cell not in self.selection:
+                            self.selection.append(grid_cell)
+            else:
+                grid_row.deselect()
+                grid_row.is_selected = False
+                if grid_row in self.selection:
+                    selection_removals.append(self.selection.index(grid_row))
+
+                for grid_cell in grid_row.children:
+                    if hasattr(grid_cell, 'deselect'):
+                        grid_cell.deselect()
+                        grid_cell.is_selected = False
+                        if grid_cell in self.selection:
+                            selection_removals.append(
+                                    self.selection.index(grid_cell))
+
+        # Do op for column.
+        if self.selection_mode in ['singular-by-columns',
+                                   'additive-by-columns']:
             for i in xrange(len(self.row_keys)):
-                grid_cell = self.get_view(i).children[col_key]
+                grid_cell = self.get_view(i).grid_cell(col_key)
                 if grid_cell != view:
-                    grid_cell.select_from_adapter()
-                    grid_cell.is_selected = True
-                    self.selection.append(grid_cell)
-
-        for child in view.children:
-            if hasattr(child, 'select'):
-                child.select()
+                    if op == 'select':
+                        grid_cell.select()
+                        grid_cell.is_selected = True
+                        if grid_cell not in self.selection:
+                            self.selection.append(grid_cell)
+                    else:
+                        grid_cell.deselect()
+                        grid_cell.is_selected = False
+                        if grid_cell in self.selection:
+                            selection_removals.append(
+                                    self.selection.index(grid_cell))
 
         if self.propagate_selection_to_data:
-            if self.selection_mode == 'single-by-grid-cells':
+            if self.selection_mode == 'singular-by-grid-cells':
                 # Selection will only extend grid-cell-deep.
                 data_item = self.get_data_item_for_grid_cell(col_key, row_key)
-                self.select_data_item(data_item)
-            elif self.selection_mode == 'single-by-rows':
-                data_item = self.get_data_item(view.index)
-                self.select_data_item(data_item)
+                if op == 'select':
+                    self.select_data_item(data_item)
+                else:
+                    self.deselect_data_item(data_item)
+            elif self.selection_mode == 'singular-by-rows':
+                data_item = self.get_data_item(grid_row.index)
+                if op == 'select':
+                    self.select_data_item(data_item)
+                else:
+                    self.deselect_data_item(data_item)
+
+        return selection_removals
 
     def select_list(self, view_list, extend=True):
         '''The select call is made for the items in the provided view_list.
@@ -590,38 +704,6 @@ class GridAdapter(Adapter, EventDispatcher):
 
         self.dispatch('on_selection_change')
 
-    def deselect_item_view(self, view):
-        view.deselect()
-        view.is_selected = False
-        self.selection.remove(view)
-
-        cols = len(self.col_keys)
-        col_key = cols - (view.index % cols) - 1
-        row_key = (view.index - col_key) / cols
-
-        if self.selection_mode in ['single-by-columns',
-                                   'multiple-by-columns']:
-            for i in xrange(len(self.row_keys)):
-                grid_cell = self.get_view(i).children[col_key]
-                if grid_cell != view:
-                    grid_cell.deselect_from_adapter()
-                    grid_cell.is_selected = False
-                    if grid_cell in self.selection:
-                        self.selection.remove(grid_cell)
-
-        for child in view.children:
-            if hasattr(child, 'deselect'):
-                child.deselect()
-
-        if self.propagate_selection_to_data:
-            if self.selection_mode == 'single-by-grid-cells':
-                # Selection will only extend grid-cell-deep.
-                data_item = self.get_data_item_for_grid_cell(col_key, row_key)
-                self.deselect_data_item(data_item)
-            elif self.selection_mode == 'single-by-rows':
-                data_item = self.get_data_item(view.index)
-                self.deselect_data_item(data_item)
-
     def deselect_list(self, l):
         for view in l:
             self.handle_selection(view, hold_dispatch=True)
@@ -629,22 +711,22 @@ class GridAdapter(Adapter, EventDispatcher):
         self.dispatch('on_selection_change')
 
     def select_all(self):
-        if self.selection_mode in ['single-by-rows',
-                                   'multiple-by-rows']:
+        if self.selection_mode in ['singular-by-rows',
+                                   'additive-by-rows']:
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 if not grid_row.is_selected:
                     self.handle_selection(grid_row, hold_dispatch=True)
             self.dispatch('on_selection_change')
-        elif self.selection_mode in ['single-by-columns',
-                                     'multiple-by-columns']:
+        elif self.selection_mode in ['singular-by-columns',
+                                     'additive-by-columns']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if not grid_cell.is_selected:
                     self.handle_selection(grid_cell, hold_dispatch=True)
             self.dispatch('on_selection_change')
-        elif self.selection_mode in ['single-by-grid-cells',
-                                     'multiple-by-grid-cells']:
+        elif self.selection_mode in ['singular-by-grid-cells',
+                                     'additive-by-grid-cells']:
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 for grid_cell in grid_row.children:
@@ -654,22 +736,22 @@ class GridAdapter(Adapter, EventDispatcher):
 
     def deselect_all(self):
         if self.selection_mode in ['none',
-                                   'single-by-rows',
-                                   'multiple-by-rows']:
+                                   'singular-by-rows',
+                                   'additive-by-rows']:
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 if grid_row.is_selected:
                     self.handle_selection(grid_row, hold_dispatch=True)
             self.dispatch('on_selection_change')
-        elif self.selection_mode in ['single-by-columns',
-                                     'multiple-by-columns']:
+        elif self.selection_mode in ['singular-by-columns',
+                                     'additive-by-columns']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if grid_cell.is_selected:
                     self.handle_selection(grid_cell, hold_dispatch=True)
             self.dispatch('on_selection_change')
-        elif self.selection_mode in ['single-by-grid-cells',
-                                     'multiple-by-grid-cells']:
+        elif self.selection_mode in ['singular-by-grid-cells',
+                                     'additive-by-grid-cells']:
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 for grid_cell in grid_row.children:
@@ -687,10 +769,10 @@ class GridAdapter(Adapter, EventDispatcher):
     def check_for_empty_selection(self, *args):
         if not self.allow_empty_selection:
             if len(self.selection) == 0:
-                if self.selection_mode != None:
+                if self.selection_mode != 'none':
                     first_grid_row = self.get_view(0)
                     if first_grid_row is not None:
-                        col_key = len(self.col_keys) - 1
-                        grid_cell = first_grid_row.children[col_key]
+                        col_index = len(self.col_keys) - 1
+                        grid_cell = first_grid_row.children[col_index]
                         if grid_cell:
                             self.handle_selection(grid_cell)

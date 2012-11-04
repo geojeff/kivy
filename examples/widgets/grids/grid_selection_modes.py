@@ -33,13 +33,13 @@ class MainView(BoxLayout):
         spinners_toolbar = BoxLayout(size_hint_y=None, height=35)
 
         selection_modes_spinner = Spinner(
-                text='single-by-rows',
-                values=('single-by-rows',
-                        'multiple-by-rows',
-                        'single-by-columns',
-                        'multiple-by-columns',
-                        'single-by-grid-cells',
-                        'multiple-by-grid-cells',
+                text='singular-by-rows',
+                values=('singular-by-rows',
+                        'additive-by-rows',
+                        'singular-by-columns',
+                        'additive-by-columns',
+                        'singular-by-grid-cells',
+                        'additive-by-grid-cells',
                         'none'))
                 #size_hint=(None, None), size=(100, 44),
                 #pos_hint={'center_x': .5, 'center_y': .5})
@@ -112,7 +112,7 @@ class MainView(BoxLayout):
                                         col_keys=col_keys,
                                         data=data,
                                         args_converter=args_converter,
-                                        selection_mode='single-by-rows',
+                                        selection_mode='singular-by-rows',
                                         allow_empty_selection=True,
                                         cls=GridRow)
 
@@ -149,19 +149,19 @@ class MainView(BoxLayout):
         return data
 
     def data_changed(self, spinner, text):
-        if text == 'Data = Alphabet x 10':
+        if text == 'Alphabet x 10':
             row_keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
             col_keys = [index for index in xrange(10)]
-        elif text == 'Data = Alphabet x Alphabet':
+        elif text == 'Alphabet x Alphabet':
             row_keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
             col_keys = row_keys[:]
-        elif text == 'Data = 100 x 10':
+        elif text == '100 x 10':
             row_keys = [index for index in xrange(100)]
             col_keys = [index for index in xrange(10)]
-        elif text == 'Data = 100 x 100':
+        elif text == '100 x 100':
             row_keys = [index for index in xrange(100)]
             col_keys = [index for index in xrange(100)]
-        elif text == 'Data = 1000 x 100':
+        elif text == '1000 x 100':
             row_keys = [index for index in xrange(1000)]
             col_keys = [index for index in xrange(100)]
 
