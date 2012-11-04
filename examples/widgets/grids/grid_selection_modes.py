@@ -33,13 +33,13 @@ class MainView(BoxLayout):
         spinners_toolbar = BoxLayout(size_hint_y=None, height=35)
 
         selection_modes_spinner = Spinner(
-                text='singular-by-rows',
-                values=('singular-by-rows',
-                        'additive-by-rows',
-                        'singular-by-columns',
-                        'additive-by-columns',
-                        'singular-by-grid-cells',
-                        'additive-by-grid-cells',
+                text='row-single',
+                values=('row-single',
+                        'row-multiple',
+                        'column-single',
+                        'column-multiple',
+                        'cell-single',
+                        'cell-multiple',
                         'none'))
                 #size_hint=(None, None), size=(100, 44),
                 #pos_hint={'center_x': .5, 'center_y': .5})
@@ -112,7 +112,7 @@ class MainView(BoxLayout):
                                         col_keys=col_keys,
                                         data=data,
                                         args_converter=args_converter,
-                                        selection_mode='singular-by-rows',
+                                        selection_mode='row-single',
                                         allow_empty_selection=True,
                                         cls=GridRow)
 

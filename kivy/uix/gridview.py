@@ -492,7 +492,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                                        col_keys=col_keys,
                                        data=data,
                                        args_converter=args_converter,
-                                       selection_mode='singular-by-rows',
+                                       selection_mode='row-single',
                                        allow_empty_selection=True,
                                        cls=GridRow)
 

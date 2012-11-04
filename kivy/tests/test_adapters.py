@@ -1411,7 +1411,7 @@ class AdaptersTestCase(unittest.TestCase):
         grid_adapter = GridAdapter(row_keys=row_keys,
                                    col_keys=col_keys,
                                    data=data,
-                                   selection_mode='additive-by-grid-cells',
+                                   selection_mode='cell-multiple',
                                    allow_empty_selection=True,
                                    args_converter=args_converter,
                                    cls=GridRow)
@@ -1427,8 +1427,8 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(len(grid_adapter.selection), 30)
 
-        # Reset for singular-by-grid-cells selection mode.
-        grid_adapter.selection_mode = 'singular-by-grid-cells'
+        # Reset for cell-single selection mode.
+        grid_adapter.selection_mode = 'cell-single'
 
         self.assertEqual(len(grid_adapter.selection), 30)
 
@@ -1438,7 +1438,7 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(len(grid_adapter.selection), 1)
 
-        grid_adapter.selection_mode = 'additive-by-grid-cells'
+        grid_adapter.selection_mode = 'cell-multiple'
 
         grid_adapter.select_all()
 
@@ -1448,7 +1448,7 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(len(grid_adapter.selection), 1)
 
-        grid_adapter.selection_mode = 'singular-by-grid-cells'
+        grid_adapter.selection_mode = 'cell-single'
 
         grid_adapter.allow_empty_selection = True
 
@@ -1486,7 +1486,7 @@ class AdaptersTestCase(unittest.TestCase):
         grid_adapter = GridAdapter(row_keys=row_keys,
                                    col_keys=col_keys,
                                    data=data,
-                                   selection_mode='singular-by-columns',
+                                   selection_mode='column-single',
                                    args_converter=args_converter,
                                    cls=GridRow)
 
