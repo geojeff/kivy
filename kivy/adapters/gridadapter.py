@@ -359,6 +359,11 @@ class GridAdapter(Adapter, EventDispatcher):
             selected_keys = [sel.text for sel in self.selection]
             self.data = {key: self.data[key] for key in selected_keys}
 
+    def has_selection(self):
+        if self.selection:
+            return True
+        return False
+
     def delete_cache(self, *args):
         self.cached_views = {}
 
@@ -511,6 +516,9 @@ class GridAdapter(Adapter, EventDispatcher):
                     self.handle_selection(unselected_cells_in_column[-1])
 
     def handle_selection(self, view, hold_dispatch=False, *args):
+
+        selection_before = self.selection[:]
+
         selection_removals = []
 
         grid_row = self.get_view(self.row_keys.index(view.row_key))
@@ -569,10 +577,29 @@ class GridAdapter(Adapter, EventDispatcher):
             for sel_index in reversed(list(set(selection_removals))):
                 del self.selection[sel_index]
 
-            self.check_for_empty_selection()
+            self.check_for_empty_selection(hold_dispatch=True)
 
         if not hold_dispatch:
-            self.dispatch('on_selection_change')
+            # [TODO] This block is used elsewhere. Make a method called
+            #        dispatch_if_selection_changed() ?
+            #        or
+            #        check_selection_for_dispatch() ?
+            before_len = len(selection_before)
+            after_len = len(self.selection)
+
+            if after_len == before_len:
+                objects_handled = []
+            elif after_len > before_len:
+                sb = set(selection_before)
+                objects_handled = \
+                        [obj for obj in self.selection if not obj in sb]
+            else:
+                sa = set(self.selection)
+                objects_handled = \
+                        [obj for obj in selection_before if not obj in sa]
+
+            if objects_handled:
+                self.dispatch('on_selection_change', objects_handled)
 
     def select_data_item(self, item):
         self.set_data_item_selection(item, True)
@@ -686,77 +713,108 @@ class GridAdapter(Adapter, EventDispatcher):
 
             extend: boolean for whether or not to extend the existing list
         '''
+        selection_before = self.selection[:]
+
         if not extend:
             self.selection = []
+            selection_before = []
 
         for view in view_list:
             self.handle_selection(view, hold_dispatch=True)
 
-        self.dispatch('on_selection_change')
+        sb = set(selection_before)
+        objects_handled = [obj for obj in self.selection if not obj in sb]
+
+        self.dispatch('on_selection_change', objects_handled)
 
     def deselect_list(self, l):
+        selection_before = self.selection[:]
+
         for view in l:
             self.handle_selection(view, hold_dispatch=True)
 
-        self.dispatch('on_selection_change')
+        sa = set(self.selection)
+        objects_handled = [obj for obj in selection_before if not obj in sa]
+
+        self.dispatch('on_selection_change', objects_handled)
 
     def select_all(self):
+        cells = []
+
         if self.selection_mode in ['row-single',
                                    'row-multiple']:
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 if not grid_row.is_selected:
-                    self.handle_selection(grid_row, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                    cells.append(grid_row.children[0])
         elif self.selection_mode in ['column-single',
                                      'column-multiple']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if not grid_cell.is_selected:
-                    self.handle_selection(grid_cell, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                    cells.append(grid_cell)
         elif self.selection_mode in ['cell-single',
                                      'cell-multiple']:
             for index in xrange(len(self.row_keys)):
                 grid_row = self.get_view(index)
                 for grid_cell in grid_row.children:
                     if not grid_cell.is_selected:
-                        self.handle_selection(grid_cell, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                        cells.append(grid_cell)
+
+        self.select_list(cells)
 
     def deselect_all(self):
+        cells = []
+
         if self.selection_mode in ['none',
                                    'row-single',
                                    'row-multiple']:
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 if grid_row.is_selected:
-                    self.handle_selection(grid_row, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                    cells.append(grid_row.children[0])
         elif self.selection_mode in ['column-single',
                                      'column-multiple']:
             first_grid_row = self.get_view(0)
             for grid_cell in first_grid_row.children:
                 if grid_cell.is_selected:
-                    self.handle_selection(grid_cell, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                    cells.append(grid_cell)
         elif self.selection_mode in ['cell-single',
                                      'cell-multiple']:
             for row_key in self.row_keys:
                 grid_row = self.get_view(row_key)
                 for grid_cell in grid_row.children:
                     if grid_cell.is_selected:
-                        self.handle_selection(grid_cell, hold_dispatch=True)
-            self.dispatch('on_selection_change')
+                        cells.append(grid_cell)
+
+        self.deselect_list(cells)
 
     def initialize_selection(self, *args):
+        selection_before = self.selection[:]
+
         if len(self.selection) > 0:
             self.selection = []
-            self.dispatch('on_selection_change')
 
-        self.check_for_empty_selection()
+        self.check_for_empty_selection(hold_dispatch=True)
 
-    def check_for_empty_selection(self, *args):
+        before_len = len(selection_before)
+        after_len = len(self.selection)
+
+        if after_len == before_len:
+            objects_handled = []
+        elif after_len > before_len:
+            sb = set(selection_before)
+            objects_handled = \
+                    [obj for obj in self.selection if not obj in sb]
+        else:
+            sa = set(self.selection)
+            objects_handled = \
+                    [obj for obj in selection_before if not obj in sa]
+
+        if objects_handled:
+            self.dispatch('on_selection_change', objects_handled)
+
+    def check_for_empty_selection(self, hold_dispatch=False, *args):
         if not self.allow_empty_selection:
             if len(self.selection) == 0:
                 if self.selection_mode != 'none':
@@ -765,4 +823,26 @@ class GridAdapter(Adapter, EventDispatcher):
                         col_index = len(self.col_keys) - 1
                         grid_cell = first_grid_row.children[col_index]
                         if grid_cell:
-                            self.handle_selection(grid_cell)
+                            self.handle_selection(grid_cell,
+                                                  hold_dispatch=hold_dispatch)
+
+    def add_shape(self, shape):
+        # The selection machinery works on the basis of mode, and on whether or
+        # not the clicked or touched cell, the one given to handle_selection(),
+        # is presently selected or not. On this basis, handle_selection()
+        # decides whether the mode is select or deselect, then calls
+        # do_selection_op(). So, since the call to add_shape() comes after the
+        # clicked or touched cell has already been selected, we must remove it
+        # from the shape cells to be selected here.
+        view_list = [cell for cell in shape.cells() if not cell.is_selected]
+
+        self.select_list(view_list, extend=True)
+
+        # We do not add the shape itself to self.selection, only its cells.
+        # Management of shapes is considered the responsibility of the system
+        # using this adapter.
+
+    def remove_shape(self, origin_grid_cell, shape):
+        view_list = [cell for cell in shape.cells() if cell.is_selected]
+
+        self.deselect_list(view_list)

@@ -51,6 +51,8 @@ In its simplest form, we make a gridview with 100 rows and 10 columns::
 
 '''
 
+from math import ceil, floor
+
 from kivy.event import EventDispatcher
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
@@ -61,9 +63,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.abstractview import AbstractView
 from kivy.adapters.gridadapter import GridAdapter
 from kivy.properties import ObjectProperty, DictProperty, \
-        NumericProperty, ListProperty, BooleanProperty, StringProperty
+        NumericProperty, ListProperty, BooleanProperty, StringProperty, \
+        OptionProperty
 from kivy.lang import Builder
-from math import ceil, floor
 
 __all__ = ('GridCell', 'GridRow', 'GridView', )
 
@@ -143,16 +145,16 @@ class GridCell(SelectableGridCellView, Button):
         return self.text
 
 
-class GridRow(SelectableView, BoxLayout):
-    ''':class:`~kivy.uix.gridview.GridRow` mixes
+class GridShapeBase(SelectableGridCellView, BoxLayout):
+    ''':class:`~kivy.uix.gridview.GridShapeBase` mixes
     :class:`~kivy.uix.listview.SelectableView` with :class:`BoxLayout` for a
-    generic container-style list item, to be used in
+    generic container-style item, to be used in
     :class:`~kivy.uix.gridview.GridView`.
     '''
 
     background_color = ListProperty([1, 1, 1, 1])
     '''ListItem sublasses Button, which has background_color, but
-    for a composite list item, we must add this property.
+    for a container-style item, we must add this property.
 
     :data:`background_color` is a :class:`~kivy.properties.ListProperty`,
     default to [1, 1, 1, 1].
@@ -172,86 +174,152 @@ class GridRow(SelectableView, BoxLayout):
 
     representing_cell = ObjectProperty(None)
     '''Which component grid cell view class, if any, should represent for the
-    grid row in __repr__()?
+    grid cell container in __repr__()?
 
     :data:`representing_cell` is an :class:`~kivy.properties.ObjectProperty`,
     default to None.
     '''
 
     adapter = ObjectProperty(None)
-    '''A reference to the managing adapter for this view, which is needed for
-    calling back during selection operations.
+    '''A reference to the managing adapter for this view's parent list-type
+    widget, which is needed for calling back during selection operations.
 
     :data:`adapter` is an :class:`~kivy.properties.ObjectProperty`,
     default to None.
     '''
 
-    col_key_indices = DictProperty({})
-    '''A dictionary of col_keys and indices into the children list, for easier
-    grid_cell lookup.
+    children_dict = DictProperty({})
+    '''A dictionary of grid cell view instances, keyed by row_key and col_key
+    for easier grid cell lookup, e.g., children_dict[row_key][col_key].
 
-    :data:`col_key_indices` is an :class:`~kivy.properties.DictProperty`,
+    For a GridRow (shape = 'row'), grid cells are instantiated here,
+    and this dictionary is created, and used for grid cell lookup into the
+    children list.
+
+    For a GridColumn (shape = 'column'), grid cells are not
+    instantiated here, and must be looked up across other rows in the adapter.
+
+    :data:`key_indices` is an :class:`~kivy.properties.DictProperty`,
     default to {}.
     '''
 
+    cell_keys = ListProperty([])
+    '''This is a list of (row_key, col_key) tuples, for the grid cells
+    contained here.
+
+    :data:`cell_keys` is an :class:`~kivy.properties.ListProperty`,
+    default to [].
+    '''
+
+    shape = OptionProperty('row',
+            options=('row', 'column', 'block', 'diagonal', 'checkerboard',
+                     'border', 'path', 'shape', 'set'))
+    '''The way grid cells are arranged in this container.
+
+    :data:`shape` is an :class:`~kivy.properties.OptionProperty`,
+    default to 'row'.
+    '''
+
+    cell_args = ListProperty([])
+    '''A list of args dicts for grid cells to be instantiated.
+
+    :data:`cell_args` is an :class:`~kivy.properties.ListProperty`,
+    default to [].
+    '''
+
+    origin_grid_cell = ObjectProperty(None)
+    '''What cell was clicked to add this shape?
+
+    :data:`origin_grid_cell` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
+    specific_shape = StringProperty('')
+    '''A shape such as block can have variants suchs as a 2x2 cell block, or
+    a 16x16 block. Each could have specific_shape names, but would in general,
+    just be different sizes of block. This gives flexibility to the different
+    shape types.
+
+    :data:`origin_grid_cell` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
     def __init__(self, **kwargs):
-        super(GridRow, self).__init__(**kwargs)
+        if not 'shape' in kwargs:
+            raise Exception("GridShapeBase: Missing shape argument.")
 
-        # Example data:
-        #
-        #    'cls_dicts': [{'cls': GridCell,
-        #                   'kwargs': {'text': "Left"}},
-        #                   'cls': GridCell,
-        #                   'kwargs': {'text': "Right"}]
+        super(GridShapeBase, self).__init__(**kwargs)
 
-        # There is an index to the data item this grid row view represents. Get
-        # it from kwargs and pass it along to children (cells) in the loop
-        # below.
-        index = kwargs['index']
+        if self.cell_args:
+            # Example cell_args:
+            #
+            #    'cell_args': [{'cls': GridCell,
+            #                   'kwargs': {'text': "Left"}},
+            #                   'cls': GridCell,
+            #                   'kwargs': {'text': "Right"}]
 
-        row_key = self.adapter.row_keys[index]
-        col_keys = self.adapter.col_keys
+            cell_count = 0
+            for cell_args_dict in self.cell_args:
+                if not 'cls' in cell_args_dict:
+                    msg = ("GridShapeBase: Must provide grid cell cls for "
+                           "cell: {0}.").format(cell_count)
+                    raise Exception(msg)
 
-        cols = len(kwargs['cls_dicts'])
+                if not 'index' in cell_args_dict:
+                    msg = ("GridShapeBase: Must provide grid cell index for "
+                           "cell {0}.").format(cell_count)
+                    raise Exception(msg)
 
-        if cols != len(col_keys):
-            msg = "GridRow: # of cls_dicts ({0}) mismatches # of columns ({1})"
-            raise Exception(msg.format(cols, len(col_keys)))
+                if not 'row_key' in cell_args_dict:
+                    msg = ("GridShapeBase: Must provide grid row_key for "
+                           "cell: {0}.").format(cell_count)
+                    raise Exception(msg)
 
-        col_index = 0
-        for cls_dict, col_key in zip(kwargs['cls_dicts'], col_keys):
-            cls = cls_dict['cls']
-            cls_kwargs = cls_dict.get('kwargs', None)
+                if not 'col_key' in cell_args_dict:
+                    msg = ("GridShapeBase: Must provide grid col_key for "
+                           "cell: {0}.").format(cell_count)
+                    raise Exception(msg)
 
-            if cls_kwargs:
-                cls_kwargs['index'] = (index * cols) + col_index
-                cls_kwargs['row_key'] = row_key
-                cls_kwargs['col_key'] = col_key
+                if not 'text' in cell_args_dict:
+                    cell_args_dict['text'] = kwargs['text']
 
-                if 'selection_target' not in cls_kwargs:
-                    cls_kwargs['selection_target'] = self
+                cls = cell_args_dict['cls']
 
-                if 'text' not in cls_kwargs:
-                    cls_kwargs['text'] = kwargs['text']
-
-                if 'is_representing_cell' in cls_kwargs:
+                if 'is_representing_cell' in cell_args_dict:
                     self.representing_cell = cls
 
-                self.add_widget(cls(**cls_kwargs))
-            else:
-                cls_kwargs = {}
-                cls_kwargs['index'] = (index * cols) + col_index
-                cls_kwargs['row_key'] = row_key
-                cls_kwargs['col_key'] = col_key
-                if 'text' in kwargs:
-                    cls_kwargs['text'] = kwargs['text']
-                self.add_widget(cls(**cls_kwargs))
-            self.col_key_indices[col_key] = cols - col_index - 1
-            col_index += 1
+                row_key = cell_args_dict['row_key']
+                col_key = cell_args_dict['col_key']
 
-    def grid_cell(self, col_key):
-        if col_key in self.col_key_indices:
-            return self.children[self.col_key_indices[col_key]]
+                # Copy the args, except for cls.
+                cls_args = {k: cell_args_dict[k]
+                                for k in cell_args_dict if k != 'cls'}
+
+                self.add_widget(cls(**cls_args))
+
+                if not row_key in self.children_dict:
+                    self.children_dict[row_key] = {}
+
+                self.children_dict[row_key][col_key] = self.children[0]
+
+                self.cell_keys.append((row_key, col_key))
+
+                cell_count += 1
+        else:
+            if not 'cell_keys' in kwargs:
+                raise Exception("GridShapeBase: Missing cell_keys list.")
+
+            # The grid cells are stored, at least partially, in other rows in
+            # the adapter.
+            for row_key, col_key in self.cell_keys:
+                if not row_key in self.children_dict:
+                    self.children_dict[row_key] = {}
+
+                self.children_dict[row_key][col_key] = \
+                        self.adapter.grid_cell_view(row_key, col_key)
+
+    def grid_cell(self, row_key, col_key):
+        return self.children_dict[row_key][col_key]
 
     def select(self, *args):
         self.background_color = self.selected_color
@@ -263,7 +331,210 @@ class GridRow(SelectableView, BoxLayout):
         if self.representing_cell is not None:
             return str(self.representing_cell)
         else:
-            return super(GridRow, self).__repr__()
+            return super(GridShapeBase, self).__repr__()
+
+    def cells(self):
+        cells = []
+        for row_key in self.children_dict:
+            for col_key in self.children_dict[row_key]:
+                cells.append(self.children_dict[row_key][col_key])
+        return cells
+
+
+class GridRow(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridRow` is the primary container of grid
+    cells in a grid: grid cells that make up the grid are children of rows.
+    '''
+
+    def __init__(self, **kwargs):
+
+        # GridShapeBase expects a prepared cell_args list, complete with
+        # row_key, col_key, and other cell property settings. We will construct
+        # the cell_args list and and pass it.
+        cell_args = []
+
+        # There is an index to the data item this grid cell container
+        # represents. Get it from kwargs and pass it along to children (cells)
+        # in the loop below.
+        index = kwargs['index']
+
+        row_key = kwargs['adapter'].row_keys[index]
+        col_keys = kwargs['adapter'].col_keys
+        cols = len(kwargs['cls_dicts'])
+
+        if cols != len(col_keys):
+            msg = "GridRow: # of cls_dicts ({0}) mismatches # of columns ({1})"
+            raise Exception(msg.format(cols, len(col_keys)))
+
+        col_index = 0
+        for cls_cell_args, col_key in zip(kwargs['cls_dicts'], col_keys):
+            cls_kwargs = {}
+
+            if 'kwargs' in cls_cell_args:
+                for key in cls_cell_args['kwargs']:
+                    cls_kwargs[key] = cls_cell_args['kwargs'][key]
+
+            cls_kwargs['cls'] = cls_cell_args['cls']
+
+            cls_kwargs['index'] = (index * cols) + col_index
+            cls_kwargs['row_key'] = row_key
+            cls_kwargs['col_key'] = col_key
+
+            if not 'text' in kwargs and not 'text' in cls_kwargs:
+                cls_kwargs['text'] = "{0}{1}".format(row_key, col_key)
+
+            cell_args.append(cls_kwargs)
+
+            col_index += 1
+
+        kwargs['row_key'] = row_key
+        kwargs['cell_args'] = cell_args
+        kwargs['shape'] = 'row'
+
+        super(GridRow, self).__init__(**kwargs)
+
+        for cell in self.children:
+            if (not hasattr(cell, 'selection_target')
+                    or not cell.selection_target):
+                cell.selection_target = self
+
+    # Override, to change API from (row_key, col_key) to just call for col_key.
+    def grid_cell(self, col_key):
+        return self.children_dict[self.row_key][col_key]
+
+
+class GridColumn(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridColumn` is a secondary container of grid
+    cells in a grid: the grid cells are stored across multiple grid rows.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'column'
+        super(GridColumn, self).__init__(**kwargs)
+
+
+class GridBlock(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridBlock` is a secondary container of grid
+    cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A block is a solid rectangular set of grid cells.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'block'
+
+        # [TODO]
+        # Find the min and max, for rows and columns, for the cells, and add
+        # cells if needed. A block can be specified with just two cells in two
+        # opposite corners of the block.
+
+        super(GridBlock, self).__init__(**kwargs)
+
+
+class GridDiagonal(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridDiagonal` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A diagonal may be a diagonal segment, or it may extend corner to corner.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'diagonal'
+
+        # [TODO]
+        # Find the end points, for rows and columns, for the cells and add
+        # cells if needed. A diagonal can be specified with just two cells at
+        # the ends.
+
+        super(GridDiagonal, self).__init__(**kwargs)
+
+
+class GridCheckerboard(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridCheckerboard` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A checkerboard may cover the whole grid or only a rectangular block within
+    it.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'checkerboard'
+
+        # [TODO]
+        # Find the min and max, for rows and columns, for the cells, and add or
+        # remove cells if needed. A checkerboard can be specified with just two
+        # cells in two opposite corners of the checkerboard.
+
+        super(GridCheckerboard, self).__init__(**kwargs)
+
+
+class GridBorder(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridBorderBox` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A border box is a set of cells making a rectangular border one cell wide.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'border'
+
+        # [TODO]
+        # Find the min and max, for rows and columns, for the cells, and add or
+        # remove cells if needed.
+        #
+        # Should there be a width property, or top, bottom, left, right
+        # properties?
+
+        super(GridBorder, self).__init__(**kwargs)
+
+
+class GridCellSet(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridCellSet` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A grid cell set is a patchwork, or otherwise arbitrary set of cells.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'set'
+
+        # [TODO]
+        # A cell set is a patchwork, or otherwise arbitrary set of cells. No
+        # checks needed?
+
+        super(GridCellSet, self).__init__(**kwargs)
+
+
+class GridShape(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridShape` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A grid shape is a solid area of cells making a shape.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'shape'
+
+        # [TODO]
+        # No checks needed?
+
+        super(GridShape, self).__init__(**kwargs)
+
+
+class GridPath(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridPath` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A grid cell path is a set of cells that would be painted for a vector path.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'path'
+
+        # [TODO]
+        # Input could be a path? Do the cell "painting" selection here?
+
+        super(GridPath, self).__init__(**kwargs)
 
 
 Builder.load_string('''
@@ -483,7 +754,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                     {'text': rec['text'],
                      'size_hint_y': None,
                      'height': 25,
-                     'cls_dicts': [
+                     'cell_args': [
                          {'cls': GridCell,
                           'kwargs': {'text': rec[col_key]['text']}}
                          for col_key in rec.keys() if col_key != 'text']}
@@ -682,3 +953,27 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
 
     def on_scroll_complete(self, *args):
         self.scrolling = False
+
+    # The start of a shape factory?
+    def shape(self, origin_grid_cell, shape, specific_shape, cell_keys):
+        if shape == 'row':
+            print 'GridRow shape not yet implemented (as a shape).'
+        elif shape == 'column':
+            print 'GridColumn shape not yet implemented.'
+        elif shape == 'block':
+            return GridBlock(origin_grid_cell=origin_grid_cell,
+                             specific_shape=specific_shape,
+                             adapter=self.adapter,
+                             cell_keys=cell_keys)
+        elif shape == 'diagonal':
+            print 'GridDiagonal shape not yet implemented.'
+        elif shape == 'checkerboard':
+            print 'GridCheckerboard shape not yet implemented.'
+        elif shape == 'border':
+            print 'GridBorder shape not yet implemented.'
+        elif shape == 'path':
+            print 'GridPath shape not yet implemented.'
+        elif shape == 'shape':
+            print 'GridShape shape not yet implemented.'
+        elif shape == 'set':
+            print 'GridCellSet shape not yet implemented.'
