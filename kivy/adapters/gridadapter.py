@@ -825,24 +825,3 @@ class GridAdapter(Adapter, EventDispatcher):
                         if grid_cell:
                             self.handle_selection(grid_cell,
                                                   hold_dispatch=hold_dispatch)
-
-    def add_shape(self, shape):
-        # The selection machinery works on the basis of mode, and on whether or
-        # not the clicked or touched cell, the one given to handle_selection(),
-        # is presently selected or not. On this basis, handle_selection()
-        # decides whether the mode is select or deselect, then calls
-        # do_selection_op(). So, since the call to add_shape() comes after the
-        # clicked or touched cell has already been selected, we must remove it
-        # from the shape cells to be selected here.
-        view_list = [cell for cell in shape.cells() if not cell.is_selected]
-
-        self.select_list(view_list, extend=True)
-
-        # We do not add the shape itself to self.selection, only its cells.
-        # Management of shapes is considered the responsibility of the system
-        # using this adapter.
-
-    def remove_shape(self, origin_grid_cell, shape):
-        view_list = [cell for cell in shape.cells() if cell.is_selected]
-
-        self.deselect_list(view_list)
