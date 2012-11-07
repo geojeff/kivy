@@ -229,7 +229,7 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
     '''
 
     origin_grid_cell = ObjectProperty(None)
-    '''What cell was clicked to add this shape?
+    '''What cell was clicked or touched to add this shape?
 
     :data:`origin_grid_cell` is an :class:`~kivy.properties.ObjectProperty`,
     default to None.
@@ -307,9 +307,6 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
 
                 cell_count += 1
         else:
-            if not 'cell_keys' in kwargs:
-                raise Exception("GridShapeBase: Missing cell_keys list.")
-
             # The grid cells are stored, at least partially, in other rows in
             # the adapter.
             for row_key, col_key in self.cell_keys:
@@ -318,6 +315,18 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
 
                 self.children_dict[row_key][col_key] = \
                         self.adapter.grid_cell_view(row_key, col_key)
+
+        self.bind(cell_keys=self.cell_keys_changed)
+
+    def cell_keys_changed(self, *args):
+        self.children_dict = {}
+
+        for row_key, col_key in self.cell_keys:
+            if not row_key in self.children_dict:
+                self.children_dict[row_key] = {}
+
+            self.children_dict[row_key][col_key] = \
+                    self.adapter.grid_cell_view(row_key, col_key)
 
     def grid_cell(self, row_key, col_key):
         return self.children_dict[row_key][col_key]

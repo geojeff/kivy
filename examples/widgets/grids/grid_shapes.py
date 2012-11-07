@@ -9,7 +9,8 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.spinner import Spinner
 from kivy.uix.label import Label
 from kivy.uix.gridview import GridShapeBase
-from kivy.properties import StringProperty, DictProperty, OptionProperty
+from kivy.properties import StringProperty, DictProperty, OptionProperty, \
+                            NumericProperty
 
 integers_dict = \
         { str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
@@ -32,15 +33,35 @@ class GridBlock(GridShapeBase):
     A block is a solid rectangular set of grid cells.
     '''
 
+    # [TODO]
+    # A block is currently specified by width and height, relative to the
+    # origin_grid_cell. However, for multitouch, an API for cells in two
+    # opposite corners of the block would be a nice addition.
+
+    width = NumericProperty(0)
+    height = NumericProperty(0)
+
     def __init__(self, **kwargs):
         kwargs['shape'] = 'block'
 
-        # [TODO]
-        # Find the min and max, for rows and columns, for the cells, and add
-        # cells if needed. A block can be specified with just two cells in two
-        # opposite corners of the block.
-
         super(GridBlock, self).__init__(**kwargs)
+
+        row_keys = self.adapter.row_keys
+        col_keys = self.adapter.col_keys
+
+        rows = len(row_keys)
+        cols = len(col_keys)
+
+        row_index = row_keys.index(self.origin_grid_cell.row_key)
+        col_index = col_keys.index(self.origin_grid_cell.col_key)
+
+        if row_index <= rows - self.width and col_index <= cols - self.height:
+            cell_keys = []
+            for i in xrange(self.width):
+                for j in xrange(self.height):
+                    cell_keys.append((row_keys[row_index + i],
+                                      col_keys[col_index + j]))
+            self.cell_keys = cell_keys
 
 
 class GridDiagonal(GridShapeBase):
@@ -388,29 +409,6 @@ class MainView(BoxLayout):
 
         self.grid_adapter.data = self.data_dict(row_keys, col_keys)
 
-    def shape(self, origin_grid_cell, shape, specific_shape, cell_keys):
-        if shape == 'row':
-            print 'GridRow shape not yet implemented (as a shape).'
-        elif shape == 'column':
-            print 'GridColumn shape not yet implemented.'
-        elif shape == 'block':
-            return GridBlock(origin_grid_cell=origin_grid_cell,
-                             specific_shape=specific_shape,
-                             adapter=self.grid_adapter,
-                             cell_keys=cell_keys)
-        elif shape == 'diagonal':
-            print 'GridDiagonal shape not yet implemented.'
-        elif shape == 'checkerboard':
-            print 'GridCheckerboard shape not yet implemented.'
-        elif shape == 'border':
-            print 'GridBorder shape not yet implemented.'
-        elif shape == 'path':
-            print 'GridPath shape not yet implemented.'
-        elif shape == 'shape':
-            print 'GridShape shape not yet implemented.'
-        elif shape == 'set':
-            print 'GridCellSet shape not yet implemented.'
-
     def existing_shape(self, specific_shape, origin_grid_cell):
         # selection search:
         #for sel in self.grid_adapter.selection:
@@ -428,74 +426,53 @@ class MainView(BoxLayout):
                 and not self.shape_op == 'none'
                 and self.grid_adapter.has_selection()):
 
-            selection = self.grid_adapter.selection
-
             # Look for a single click/touch on a cell, to add a shape, which
             # in this context triggers a shape action.
             origin_grid_cell = None
             if len(objects_handled) == 1:
                 origin_grid_cell = objects_handled[0]
 
-            if origin_grid_cell and self.shape_op == '4-block':
-                existing_shape = self.existing_shape('4-block', origin_grid_cell)
+            if origin_grid_cell:
+                existing_shape = self.existing_shape(self.shape_op, origin_grid_cell)
                 if existing_shape:
                     self.remove_shape(origin_grid_cell, existing_shape)
-                    del self.shapes[origin_grid_cell]
                 else:
-                    row_key = origin_grid_cell.row_key
-                    col_key = origin_grid_cell.col_key
+                    self.add_shape(origin_grid_cell, self.shape_op)
 
-                    row_keys = self.grid_adapter.row_keys
-                    col_keys = self.grid_adapter.col_keys
+    def add_shape(self, origin_grid_cell, shape_op):
+        shape = None
 
-                    rows = len(row_keys)
-                    cols = len(col_keys)
+        if self.shape_op == '4-block':
+            shape = GridBlock(origin_grid_cell=origin_grid_cell,
+                              specific_shape=shape_op,
+                              adapter=self.grid_adapter,
+                              width=2,
+                              height=2)
+        elif self.shape_op == '16-block':
+            shape = GridBlock(origin_grid_cell=origin_grid_cell,
+                              specific_shape=shape_op,
+                              adapter=self.grid_adapter,
+                              width=4,
+                              height=4)
+        elif self.shape_op == 'diagonal':
+            print 'diagonal'
+        elif self.shape_op == 'nw-se-diagonal':
+            print 'nw-se-diagonal'
+        elif self.shape_op == '10-nw-se-diagonal':
+            print '10-nw-se-diagonal'
+        elif self.shape_op == 'ne-sw-diagonal':
+            print 'ne-sw-diagonal'
+        elif self.shape_op == '10-ne-sw-diagonal':
+            print '10-ne-sw-diagonal'
+        elif self.shape_op == '16-border':
+            print '16-border'
+        elif self.shape_op == 'checkerboard':
+            print 'checkerboard'
+        elif self.shape_op == '16-checkerboard':
+            print '16-checkerboard'
 
-                    row_index = row_keys.index(row_key)
-                    col_index = col_keys.index(col_key)
+        self.shapes[origin_grid_cell] = shape
 
-                    cells = []
-                    cells.append((row_key, col_key))
-
-                    if row_index < rows - 1 and col_index < cols - 1:
-                        upper_right = (row_key,
-                                       col_keys[col_index + 1])
-                        lower_right = (row_keys[row_index + 1],
-                                       col_keys[col_index + 1])
-                        lower_left = (row_keys[row_index + 1],
-                                      col_key)
-                        cells.append(upper_right)
-                        cells.append(lower_right)
-                        cells.append(lower_left)
-
-                        shape = self.shape(origin_grid_cell,
-                                                     'block',
-                                                     '4-block',
-                                                     cells)
-
-                        self.shapes[origin_grid_cell] = shape
-
-                        self.add_shape(shape)
-            elif self.shape_op == '16-block':
-                print '16-block'
-            elif self.shape_op == 'diagonal':
-                print 'diagonal'
-            elif self.shape_op == 'nw-se-diagonal':
-                print 'nw-se-diagonal'
-            elif self.shape_op == '10-nw-se-diagonal':
-                print '10-nw-se-diagonal'
-            elif self.shape_op == 'ne-sw-diagonal':
-                print 'ne-sw-diagonal'
-            elif self.shape_op == '10-ne-sw-diagonal':
-                print '10-ne-sw-diagonal'
-            elif self.shape_op == '16-border':
-                print '16-border'
-            elif self.shape_op == 'checkerboard':
-                print 'checkerboard'
-            elif self.shape_op == '16-checkerboard':
-                print '16-checkerboard'
-
-    def add_shape(self, shape):
         # The selection machinery works on the basis of mode, and on whether or
         # not the clicked or touched cell, the one given to handle_selection(),
         # is presently selected or not. On this basis, handle_selection()
@@ -507,14 +484,12 @@ class MainView(BoxLayout):
 
         self.grid_adapter.select_list(view_list, extend=True)
 
-        # We do not add the shape itself to self.selection, only its cells.
-        # Management of shapes is considered the responsibility of the system
-        # using this adapter.
-
     def remove_shape(self, origin_grid_cell, shape):
         view_list = [cell for cell in shape.cells() if cell.is_selected]
 
         self.grid_adapter.deselect_list(view_list)
+
+        del self.shapes[origin_grid_cell]
 
 
 if __name__ == '__main__':
