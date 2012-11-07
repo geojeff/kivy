@@ -214,7 +214,8 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
     shape = OptionProperty('row',
             options=('row', 'column', 'block', 'diagonal', 'checkerboard',
                      'border', 'path', 'shape', 'set'))
-    '''The way grid cells are arranged in this container.
+    '''The shape property describes the way grid cells are arranged in this
+    container.
 
     :data:`shape` is an :class:`~kivy.properties.OptionProperty`,
     default to 'row'.
@@ -401,140 +402,6 @@ class GridRow(GridShapeBase):
     # Override, to change API from (row_key, col_key) to just call for col_key.
     def grid_cell(self, col_key):
         return self.children_dict[self.row_key][col_key]
-
-
-class GridColumn(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridColumn` is a secondary container of grid
-    cells in a grid: the grid cells are stored across multiple grid rows.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'column'
-        super(GridColumn, self).__init__(**kwargs)
-
-
-class GridBlock(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridBlock` is a secondary container of grid
-    cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A block is a solid rectangular set of grid cells.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'block'
-
-        # [TODO]
-        # Find the min and max, for rows and columns, for the cells, and add
-        # cells if needed. A block can be specified with just two cells in two
-        # opposite corners of the block.
-
-        super(GridBlock, self).__init__(**kwargs)
-
-
-class GridDiagonal(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridDiagonal` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A diagonal may be a diagonal segment, or it may extend corner to corner.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'diagonal'
-
-        # [TODO]
-        # Find the end points, for rows and columns, for the cells and add
-        # cells if needed. A diagonal can be specified with just two cells at
-        # the ends.
-
-        super(GridDiagonal, self).__init__(**kwargs)
-
-
-class GridCheckerboard(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridCheckerboard` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A checkerboard may cover the whole grid or only a rectangular block within
-    it.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'checkerboard'
-
-        # [TODO]
-        # Find the min and max, for rows and columns, for the cells, and add or
-        # remove cells if needed. A checkerboard can be specified with just two
-        # cells in two opposite corners of the checkerboard.
-
-        super(GridCheckerboard, self).__init__(**kwargs)
-
-
-class GridBorder(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridBorderBox` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A border box is a set of cells making a rectangular border one cell wide.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'border'
-
-        # [TODO]
-        # Find the min and max, for rows and columns, for the cells, and add or
-        # remove cells if needed.
-        #
-        # Should there be a width property, or top, bottom, left, right
-        # properties?
-
-        super(GridBorder, self).__init__(**kwargs)
-
-
-class GridCellSet(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridCellSet` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A grid cell set is a patchwork, or otherwise arbitrary set of cells.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'set'
-
-        # [TODO]
-        # A cell set is a patchwork, or otherwise arbitrary set of cells. No
-        # checks needed?
-
-        super(GridCellSet, self).__init__(**kwargs)
-
-
-class GridShape(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridShape` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A grid shape is a solid area of cells making a shape.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'shape'
-
-        # [TODO]
-        # No checks needed?
-
-        super(GridShape, self).__init__(**kwargs)
-
-
-class GridPath(GridShapeBase):
-    ''':class:`~kivy.uix.gridview.GridPath` is a secondary container of
-    grid cells in a grid: the grid cells are stored across multiple grid rows.
-
-    A grid cell path is a set of cells that would be painted for a vector path.
-    '''
-
-    def __init__(self, **kwargs):
-        kwargs['shape'] = 'path'
-
-        # [TODO]
-        # Input could be a path? Do the cell "painting" selection here?
-
-        super(GridPath, self).__init__(**kwargs)
 
 
 Builder.load_string('''
@@ -953,27 +820,3 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
 
     def on_scroll_complete(self, *args):
         self.scrolling = False
-
-    # The start of a shape factory?
-    def shape(self, origin_grid_cell, shape, specific_shape, cell_keys):
-        if shape == 'row':
-            print 'GridRow shape not yet implemented (as a shape).'
-        elif shape == 'column':
-            print 'GridColumn shape not yet implemented.'
-        elif shape == 'block':
-            return GridBlock(origin_grid_cell=origin_grid_cell,
-                             specific_shape=specific_shape,
-                             adapter=self.adapter,
-                             cell_keys=cell_keys)
-        elif shape == 'diagonal':
-            print 'GridDiagonal shape not yet implemented.'
-        elif shape == 'checkerboard':
-            print 'GridCheckerboard shape not yet implemented.'
-        elif shape == 'border':
-            print 'GridBorder shape not yet implemented.'
-        elif shape == 'path':
-            print 'GridPath shape not yet implemented.'
-        elif shape == 'shape':
-            print 'GridShape shape not yet implemented.'
-        elif shape == 'set':
-            print 'GridCellSet shape not yet implemented.'
