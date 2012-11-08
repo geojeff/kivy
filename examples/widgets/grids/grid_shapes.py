@@ -35,7 +35,7 @@ class GridBlock(GridShapeBase):
 
     # [TODO]
     # A block is currently specified by width and height, relative to the
-    # origin_grid_cell. However, for multitouch, an API for cells in two
+    # origin_grid_cells. However, for multitouch, an API for cells in two
     # opposite corners of the block would be a nice addition.
 
     width = NumericProperty(0)
@@ -52,16 +52,114 @@ class GridBlock(GridShapeBase):
         rows = len(row_keys)
         cols = len(col_keys)
 
-        row_index = row_keys.index(self.origin_grid_cell.row_key)
-        col_index = col_keys.index(self.origin_grid_cell.col_key)
+        cell_keys = []
 
-        if row_index <= rows - self.width and col_index <= cols - self.height:
-            cell_keys = []
+        if len(self.origin_grid_cells) == 1:
+            row_index = row_keys.index(self.origin_grid_cells[0].row_key)
+            col_index = col_keys.index(self.origin_grid_cells[0].col_key)
+
+            if row_index <= rows - self.width and col_index <= cols - self.height:
+                for i in xrange(self.width):
+                    for j in xrange(self.height):
+                        cell_keys.append((row_keys[row_index + i],
+                                          col_keys[col_index + j]))
+        elif len(self.origin_grid_cells) > 1:
+            row_indices = []
+            col_indices = []
+            for cell in self.origin_grid_cells:
+                row_indices.append(row_keys.index(cell.row_key))
+                col_indices.append(col_keys.index(cell.col_key))
+            min_row_index = min(row_indices)
+            max_row_index = max(row_indices)
+            min_col_index = min(col_indices)
+            max_col_index = max(col_indices)
+            self.width = max_row_index - min_row_index
+            self.height = max_col_index - min_col_index
             for i in xrange(self.width):
                 for j in xrange(self.height):
-                    cell_keys.append((row_keys[row_index + i],
-                                      col_keys[col_index + j]))
-            self.cell_keys = cell_keys
+                    cell_keys.append((row_keys[min_row_index + i],
+                                      col_keys[min_col_index + j]))
+
+        self.cell_keys = cell_keys
+
+
+def bresenham_line((x,y),(x2,y2)):
+    """Brensenham line algorithm
+
+    Check some lines...
+    >>> bresenham_line((0, 0), (4, 4))
+    [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)]
+    >>> bresenham_line((0, 0), (3, 5))
+    [(0, 0), (1, 1), (1, 2), (2, 3), (2, 4), (3, 5)]
+    >>> bresenham_line((1, 1), (4, 6))
+    [(1, 1), (2, 2), (2, 3), (3, 4), (3, 5), (4, 6)]
+    Test that the same points are generated in the opposite direction.
+    >>> a = line((0, 0), (29, 43))
+    >>> b = line((0, 0), (-29, -43))
+    >>> b = [(-x, -y) for (x, y) in b]
+    >>> a == b
+    True
+    
+    Test that the the same points are generated when the line is mirrored on the x=y line.
+    >>> c = line((0, 0), (43, 29))
+    >>> c = [(y, x) for (x, y) in c]
+    >>> a == c
+    True
+    """
+
+    steep = 0
+    coords = []
+
+    dx = abs(x2 - x)
+    if (x2 - x) > 0:
+        sx = 1
+    else:
+        sx = -1
+
+    dy = abs(y2 - y)
+    if (y2 - y) > 0:
+        sy = 1
+    else:
+        sy = -1
+
+    if dy > dx:
+        steep = 1
+        x,y = y,x
+        dx,dy = dy,dx
+        sx,sy = sy,sx
+
+    d = (2 * dy) - dx
+
+    for i in range(0,dx):
+        if steep: coords.append((y,x))
+        else: coords.append((x,y))
+        while d >= 0:
+            y = y + sy
+            d = d - (2 * dx)
+        x = x + sx
+        d = d + (2 * dy)
+
+    coords.append((x2,y2))
+
+    return coords
+
+
+class GridLine(GridShapeBase):
+    ''':class:`~kivy.uix.gridview.GridLine` is a secondary container of
+    grid cells in a grid: the grid cells are stored across multiple grid rows.
+
+    A line may be a line segment, or it may extend edge to edge.
+    '''
+
+    def __init__(self, **kwargs):
+        kwargs['shape'] = 'diagonal'
+
+        # [TODO]
+        # Find the end points, for rows and columns, for the cells and add
+        # cells if needed. A diagonal can be specified with just two cells at
+        # the ends.
+
+        super(GridDiagonal, self).__init__(**kwargs)
 
 
 class GridDiagonal(GridShapeBase):
@@ -409,47 +507,51 @@ class MainView(BoxLayout):
 
         self.grid_adapter.data = self.data_dict(row_keys, col_keys)
 
-    def existing_shape(self, specific_shape, origin_grid_cell):
+    def existing_shape(self, specific_shape, origin_grid_cells):
+        if type(origin_grid_cells) not in [tuple]:
+            origin_grid_cells = tuple(sorted(origin_grid_cells))
+
+        if origin_grid_cells in self.shapes:
+            if self.shapes[origin_grid_cells].specific_shape == specific_shape:
+                return self.shapes[origin_grid_cells]
+        return None
+
         # selection search:
         #for sel in self.grid_adapter.selection:
         #    if hasattr(sel, 'specific-shape'):
         #        if (sel.specific_shape == '4-block' 
         #                and sel.origin_cell_block == origin_cell_block):
         #            return True
-        if origin_grid_cell in self.shapes:
-            if self.shapes[origin_grid_cell].specific_shape == specific_shape:
-                return self.shapes[origin_grid_cell]
-        return None
 
     def selection_changed(self, grid_adapter, objects_handled, *args):
         if (self.grid_adapter.selection_mode == 'cell-multiple' 
                 and not self.shape_op == 'none'
                 and self.grid_adapter.has_selection()):
 
-            # Look for a single click/touch on a cell, to add a shape, which
-            # in this context triggers a shape action.
-            origin_grid_cell = None
-            if len(objects_handled) == 1:
-                origin_grid_cell = objects_handled[0]
+            # Look for a single click/touch on a cell, or multiple touches, to
+            # add a shape, which in this context triggers a shape action.
+            origin_grid_cells = None
+            if len(objects_handled) >= 1:
+                origin_grid_cells = objects_handled[:]
 
-            if origin_grid_cell:
-                existing_shape = self.existing_shape(self.shape_op, origin_grid_cell)
+            if origin_grid_cells:
+                existing_shape = self.existing_shape(self.shape_op, origin_grid_cells)
                 if existing_shape:
-                    self.remove_shape(origin_grid_cell, existing_shape)
+                    self.remove_shape(tuple(sorted(origin_grid_cells)), existing_shape)
                 else:
-                    self.add_shape(origin_grid_cell, self.shape_op)
+                    self.add_shape(origin_grid_cells, self.shape_op)
 
-    def add_shape(self, origin_grid_cell, shape_op):
+    def add_shape(self, origin_grid_cells, shape_op):
         shape = None
 
         if self.shape_op == '4-block':
-            shape = GridBlock(origin_grid_cell=origin_grid_cell,
+            shape = GridBlock(origin_grid_cells=origin_grid_cells,
                               specific_shape=shape_op,
                               adapter=self.grid_adapter,
                               width=2,
                               height=2)
         elif self.shape_op == '16-block':
-            shape = GridBlock(origin_grid_cell=origin_grid_cell,
+            shape = GridBlock(origin_grid_cells=origin_grid_cells,
                               specific_shape=shape_op,
                               adapter=self.grid_adapter,
                               width=4,
@@ -471,7 +573,7 @@ class MainView(BoxLayout):
         elif self.shape_op == '16-checkerboard':
             print '16-checkerboard'
 
-        self.shapes[origin_grid_cell] = shape
+        self.shapes[tuple(sorted(origin_grid_cells))] = shape
 
         # The selection machinery works on the basis of mode, and on whether or
         # not the clicked or touched cell, the one given to handle_selection(),
@@ -484,12 +586,15 @@ class MainView(BoxLayout):
 
         self.grid_adapter.select_list(view_list, extend=True)
 
-    def remove_shape(self, origin_grid_cell, shape):
+    def remove_shape(self, origin_grid_cells, shape):
         view_list = [cell for cell in shape.cells() if cell.is_selected]
 
-        self.grid_adapter.deselect_list(view_list)
+        if view_list:
+            self.grid_adapter.deselect_list(view_list)
 
-        del self.shapes[origin_grid_cell]
+            key = tuple(sorted(origin_grid_cells))
+            if key in self.shapes:
+                del self.shapes[tuple(sorted(origin_grid_cells))]
 
 
 if __name__ == '__main__':

@@ -144,6 +144,18 @@ class GridCell(SelectableGridCellView, Button):
     def __repr__(self):
         return self.text
 
+# [TODO] Implement a multitouch system for adding shapes.
+#
+#    def on_touch_down(self, touch):
+#        if not self.collide_point(touch.x, touch.y):
+#            return False
+#        if self in touch.ud:
+#            return False
+#        touch.grab(self)
+#        touch.ud[self] = True
+#        print touch.ud
+#        return True
+
 
 class GridShapeBase(SelectableGridCellView, BoxLayout):
     ''':class:`~kivy.uix.gridview.GridShapeBase` mixes
@@ -228,11 +240,14 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
     default to [].
     '''
 
-    origin_grid_cell = ObjectProperty(None)
-    '''What cell was clicked or touched to add this shape?
+    origin_grid_cells = ListProperty([])
+    '''What cell was clicked or touched to add this shape? It would be the
+    first element.
 
-    :data:`origin_grid_cell` is an :class:`~kivy.properties.ObjectProperty`,
-    default to None.
+    What cells were touched to add this shape? That would be the entire list.
+
+    :data:`origin_grid_cells` is an :class:`~kivy.properties.ListProperty`,
+    default to [].
     '''
 
     specific_shape = StringProperty('')
