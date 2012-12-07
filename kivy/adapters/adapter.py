@@ -6,7 +6,7 @@ Adapter
 
 .. warning::
 
-    This widget is still experimental, and his API is subject to change in a
+    This code is still experimental, and its API is subject to change in a
     future version.
 
 :class:`~kivy.adapters.adapter.Adapter` is a bridge between data and
@@ -103,16 +103,17 @@ class Adapter(EventDispatcher):
 
         if 'cls' in kwargs:
             if 'template' in kwargs:
-                raise Exception('adapter: cannot use cls and template at the same time')
+                msg = 'adapter: cannot use cls and template at the same time'
+                raise Exception(msg)
             elif not kwargs['cls']:
                 raise Exception('adapter: a cls or template must be defined')
         else:
             if 'template' in kwargs:
                 if not kwargs['template']:
-                    raise Exception('adapter: a cls or template must be defined')
+                    msg = 'adapter: a cls or template must be defined'
+                    raise Exception(msg)
             else:
                 raise Exception('adapter: a cls or template must be defined')
-
 
         if 'args_converter' in kwargs:
             self.args_converter = kwargs['args_converter']

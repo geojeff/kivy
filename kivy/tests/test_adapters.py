@@ -1264,6 +1264,14 @@ class AdaptersTestCase(unittest.TestCase):
 
         letters = [l for l in alphabet]
 
+        def sorted_keys_ok(letters_dict_adapter):
+            sorted_keys_ok = True
+            for key in letters_dict_adapter.sorted_keys:
+                if not key in letters_dict_adapter.data:
+                    sorted_keys_ok = False
+                    break
+            return sorted_keys_ok
+
         # trim left of sel
 
         letters_dict_adapter = DictAdapter(
@@ -1284,6 +1292,8 @@ class AdaptersTestCase(unittest.TestCase):
 
         letters_dict_adapter.trim_right_of_sel()
         self.assertEqual(len(letters_dict_adapter.data), 1)
+
+        self.assertTrue(sorted_keys_ok(letters_dict_adapter))
 
         # trim right of sel
 
@@ -1306,6 +1316,8 @@ class AdaptersTestCase(unittest.TestCase):
         letters_dict_adapter.trim_left_of_sel()
         self.assertEqual(len(letters_dict_adapter.data), 1)
 
+        self.assertTrue(sorted_keys_ok(letters_dict_adapter))
+
         # trim to sel
 
         letters_dict_adapter = DictAdapter(
@@ -1327,6 +1339,8 @@ class AdaptersTestCase(unittest.TestCase):
 
         letters_dict_adapter.trim_to_sel()
         self.assertEqual(len(letters_dict_adapter.data), 7)
+
+        self.assertTrue(sorted_keys_ok(letters_dict_adapter))
 
         # cut to sel
 
@@ -1515,3 +1529,5 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(sorted(expected_cell_indices),
                          sorted(selected_cell_indices))
+
+        self.assertTrue(sorted_keys_ok(letters_dict_adapter))

@@ -6,7 +6,7 @@ SimpleListAdapter
 
 .. warning::
 
-    This widget is still experimental, and his API is subject to change in a
+    This code is still experimental, and its API is subject to change in a
     future version.
 
 :class:`~kivy.adapters.simplelistadapter.SimpleListAdapter` is for simple
@@ -21,8 +21,9 @@ from kivy.adapters.adapter import Adapter
 from kivy.properties import ListProperty
 from kivy.lang import Builder
 
+
 class SimpleListAdapter(Adapter):
-    ''':class:`~kivy.adapters.simplelistadapter.SimpleListAdapter` is an 
+    ''':class:`~kivy.adapters.simplelistadapter.SimpleListAdapter` is an
     adapter around a simple Python list.
 
     From :class:`~kivy.adapters.adapter.Adapter`,

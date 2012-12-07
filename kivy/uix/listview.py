@@ -6,7 +6,7 @@ List View
 
 .. warning::
 
-    This widget is still experimental, and his API is subject to change in a
+    This code is still experimental, and its API is subject to change in a
     future version.
 
 The :class:`~kivy.uix.listview.ListView` widget provides a scrollable/pannable
@@ -636,6 +636,7 @@ class CompositeListItem(SelectableView, BoxLayout):
                 self.add_widget(cls(**cls_kwargs))
             else:
                 cls_kwargs = {}
+                cls_kwargs['index'] = index
                 if 'text' in kwargs:
                     cls_kwargs['text'] = kwargs['text']
                 self.add_widget(cls(**cls_kwargs))

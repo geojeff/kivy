@@ -42,10 +42,10 @@ Creating a kivy application is as simple as:
 - subclassing the :class:`kivy.app.App` class
 - implementing its :meth:`kivy.app.App.build` method so it returns a
   :class:`kivy.uix.Widget` instance (the root of your widget tree) -
-  instanciating this class, and call its :meth:`kiyv.app.App.run`
+  instantiating this class, and call its :meth:`kiyv.app.App.run`
   method.
 
-here is an example of such a minimum application::
+Here is an example of such a minimal application::
 
     from kivy.app import App
     from kivy.uix.label import Label
@@ -59,6 +59,7 @@ here is an example of such a minimum application::
     if __name__ == '__main__':
         MyApp().run()
 
+You can save this to a text file, `main.py` for example, and run it.
 
 Running the application
 -----------------------
