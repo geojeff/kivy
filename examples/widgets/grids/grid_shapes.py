@@ -13,7 +13,7 @@ from kivy.properties import StringProperty, DictProperty, OptionProperty, \
                             NumericProperty
 
 integers_dict = \
-        { str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
+        {str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
 
 
 class GridColumn(GridShapeBase):
@@ -58,7 +58,8 @@ class GridBlock(GridShapeBase):
             row_index = row_keys.index(self.origin_grid_cells[0].row_key)
             col_index = col_keys.index(self.origin_grid_cells[0].col_key)
 
-            if row_index <= rows - self.width and col_index <= cols - self.height:
+            if row_index <= \
+                    rows - self.width and col_index <= cols - self.height:
                 for i in xrange(self.width):
                     for j in xrange(self.height):
                         cell_keys.append((row_keys[row_index + i],
@@ -83,8 +84,11 @@ class GridBlock(GridShapeBase):
         self.cell_keys = cell_keys
 
 
-def bresenham_line((x,y),(x2,y2)):
+def bresenham_line((x, y), (x2, y2)):
     """Brensenham line algorithm
+
+    Compare:
+    http://www.barricane.com/2009/08/28/bresenhams-line-algorithm-in-python.html
 
     Check some lines...
     >>> bresenham_line((0, 0), (4, 4))
@@ -100,7 +104,8 @@ def bresenham_line((x,y),(x2,y2)):
     >>> a == b
     True
 
-    Test that the the same points are generated when the line is mirrored on the x=y line.
+    Test that the the same points are generated when the line is mirrored on
+    the x=y line.
     >>> c = line((0, 0), (43, 29))
     >>> c = [(y, x) for (x, y) in c]
     >>> a == c
@@ -124,22 +129,24 @@ def bresenham_line((x,y),(x2,y2)):
 
     if dy > dx:
         steep = 1
-        x,y = y,x
-        dx,dy = dy,dx
-        sx,sy = sy,sx
+        x, y = y, x
+        dx, dy = dy, dx
+        sx, sy = sy, sx
 
     d = (2 * dy) - dx
 
-    for i in range(0,dx):
-        if steep: coords.append((y,x))
-        else: coords.append((x,y))
+    for i in range(0, dx):
+        if steep:
+            coords.append((y, x))
+        else:
+            coords.append((x, y))
         while d >= 0:
             y = y + sy
             d = d - (2 * dx)
         x = x + sx
         d = d + (2 * dy)
 
-    coords.append((x2,y2))
+    coords.append((x2, y2))
 
     return coords
 
@@ -159,14 +166,15 @@ class GridLine(GridShapeBase):
         # cells if needed. A diagonal can be specified with just two cells at
         # the ends.
 
-        super(GridDiagonal, self).__init__(**kwargs)
+        super(GridLine, self).__init__(**kwargs)
 
 
 class GridDiagonal(GridShapeBase):
     ''':class:`~kivy.uix.gridview.GridDiagonal` is a secondary container of
     grid cells in a grid: the grid cells are stored across multiple grid rows.
 
-    A diagonal may be a diagonal segment, or it may extend corner to corner.
+    A diagonal may be a diagonal segment, or it may extend corner to corner,
+    or edge to edge.
     '''
 
     def __init__(self, **kwargs):
@@ -282,7 +290,7 @@ class MainView(BoxLayout):
                                                  '10-nw-se-diagonal',
                                                  'ne-sw-diagonal',
                                                  '10-ne-sw-diagonal',
-                                                 '16-border',
+                                                 '16-2-border',
                                                  'checkerboard',
                                                  '16-checkerboard'))
     '''The shape_op is the shape drawing mode, if active. In order for a shape
@@ -348,7 +356,7 @@ class MainView(BoxLayout):
                         '10-nw-se-diagonal',
                         'ne-sw-diagonal',
                         '10-ne-sw-diagonal',
-                        '16-border',
+                        '16-2-border',
                         '16-checkerboard'))
                 #size_hint=(None, None), size=(100, 44),
                 #pos_hint={'center_x': .5, 'center_y': .5})
@@ -364,7 +372,8 @@ class MainView(BoxLayout):
                 #size_hint=(None, None), size=(100, 44),
                 #pos_hint={'center_x': .5, 'center_y': .5})
 
-        allow_empty_selection_spinner.bind(text=self.allow_empty_selection_changed)
+        allow_empty_selection_spinner.bind(
+                text=self.allow_empty_selection_changed)
 
         spinners_toolbar.add_widget(allow_empty_selection_spinner)
 
@@ -446,7 +455,7 @@ class MainView(BoxLayout):
         if text.endswith('block'):
             args_dict['size'] = int(op_args[0])
         elif text.endswith('diagonal'):
-            if len(op_args) == 3:
+            if len(op_args) == 4:
                 args_dict['length'] = int(op_args[0])
                 args_dict['orientation'] = \
                         "{0}-{1}".format(op_args[1], op_args[2])
@@ -535,9 +544,11 @@ class MainView(BoxLayout):
                 origin_grid_cells = objects_handled[:]
 
             if origin_grid_cells:
-                existing_shape = self.existing_shape(self.shape_op, origin_grid_cells)
+                existing_shape = self.existing_shape(
+                        self.shape_op, origin_grid_cells)
                 if existing_shape:
-                    self.remove_shape(tuple(sorted(origin_grid_cells)), existing_shape)
+                    self.remove_shape(
+                            tuple(sorted(origin_grid_cells)), existing_shape)
                 else:
                     self.add_shape(origin_grid_cells, self.shape_op)
 
@@ -557,34 +568,37 @@ class MainView(BoxLayout):
                               width=4,
                               height=4)
         elif self.shape_op == 'diagonal':
-            print 'diagonal'
+            print 'NOT IMPLEMENTED: diagonal'
         elif self.shape_op == 'nw-se-diagonal':
-            print 'nw-se-diagonal'
+            print 'NOT IMPLEMENTED: nw-se-diagonal'
         elif self.shape_op == '10-nw-se-diagonal':
-            print '10-nw-se-diagonal'
+            print 'NOT IMPLEMENTED: 10-nw-se-diagonal'
         elif self.shape_op == 'ne-sw-diagonal':
-            print 'ne-sw-diagonal'
+            print 'NOT IMPLEMENTED: ne-sw-diagonal'
         elif self.shape_op == '10-ne-sw-diagonal':
-            print '10-ne-sw-diagonal'
-        elif self.shape_op == '16-border':
-            print '16-border'
+            print 'NOT IMPLEMENTED: 10-ne-sw-diagonal'
+        elif self.shape_op == '16-2-border':
+            print 'NOT IMPLEMENTED: 16-2-border'
         elif self.shape_op == 'checkerboard':
-            print 'checkerboard'
+            print 'NOT IMPLEMENTED: checkerboard'
         elif self.shape_op == '16-checkerboard':
-            print '16-checkerboard'
+            print 'NOT IMPLEMENTED: 16-checkerboard'
 
-        self.shapes[tuple(sorted(origin_grid_cells))] = shape
+        if shape:
+            self.shapes[tuple(sorted(origin_grid_cells))] = shape
 
-        # The selection machinery works on the basis of mode, and on whether or
-        # not the clicked or touched cell, the one given to handle_selection(),
-        # is presently selected or not. On this basis, handle_selection()
-        # decides whether the mode is select or deselect, then calls
-        # do_selection_op(). So, since the call to add_shape() comes after the
-        # clicked or touched cell has already been selected, we must remove it
-        # from the shape cells to be selected here.
-        view_list = [cell for cell in shape.cells() if not cell.is_selected]
+            # The selection machinery works on the basis of mode, and on
+            # whether or not the clicked or touched cell, the one given to
+            # handle_selection(), is presently selected or not. On this basis,
+            # handle_selection() decides whether the mode is select or
+            # deselect, then calls do_selection_op(). So, since the call to
+            # add_shape() comes after the clicked or touched cell has already
+            # been selected, we must remove it from the shape cells to be
+            # selected here.
+            view_list = \
+                    [cell for cell in shape.cells() if not cell.is_selected]
 
-        self.grid_adapter.select_list(view_list, extend=True)
+            self.grid_adapter.select_list(view_list, extend=True)
 
     def remove_shape(self, origin_grid_cells, shape):
         view_list = [cell for cell in shape.cells() if cell.is_selected]
