@@ -276,6 +276,15 @@ Builder.load_string('''
 ''')
 
 
+def sorted_keys_ok(letters_dict_adapter):
+    sorted_keys_ok = True
+    for key in letters_dict_adapter.sorted_keys:
+        if not key in letters_dict_adapter.data:
+            sorted_keys_ok = False
+            break
+    return sorted_keys_ok
+
+
 class AdaptersTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -1264,14 +1273,6 @@ class AdaptersTestCase(unittest.TestCase):
 
         letters = [l for l in alphabet]
 
-        def sorted_keys_ok(letters_dict_adapter):
-            sorted_keys_ok = True
-            for key in letters_dict_adapter.sorted_keys:
-                if not key in letters_dict_adapter.data:
-                    sorted_keys_ok = False
-                    break
-            return sorted_keys_ok
-
         # trim left of sel
 
         letters_dict_adapter = DictAdapter(
@@ -1381,7 +1382,7 @@ class AdaptersTestCase(unittest.TestCase):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [
+                 'cell_args': [
                      {'cls': GridCell,
                       'kwargs': {'text': rec[col_key]['text']}}
                      for col_key in rec.keys() if col_key != 'text']}
@@ -1417,7 +1418,7 @@ class AdaptersTestCase(unittest.TestCase):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [
+                 'cell_args': [
                      {'cls': GridCell,
                       'kwargs': {'text': rec[col_key]['text']}}
                      for col_key in rec.keys() if col_key != 'text']}
@@ -1492,7 +1493,7 @@ class AdaptersTestCase(unittest.TestCase):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [
+                 'cell_args': [
                      {'cls': GridCell,
                       'kwargs': {'text': rec[col_key]['text']}}
                      for col_key in rec.keys() if col_key != 'text']}
@@ -1529,5 +1530,3 @@ class AdaptersTestCase(unittest.TestCase):
 
         self.assertEqual(sorted(expected_cell_indices),
                          sorted(selected_cell_indices))
-
-        self.assertTrue(sorted_keys_ok(letters_dict_adapter))
