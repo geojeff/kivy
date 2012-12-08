@@ -385,14 +385,14 @@ class GridRow(GridShapeBase):
 
         row_key = kwargs['adapter'].row_keys[index]
         col_keys = kwargs['adapter'].col_keys
-        cols = len(kwargs['cls_dicts'])
+        cols = len(kwargs['cell_args'])
 
         if cols != len(col_keys):
-            msg = "GridRow: # of cls_dicts ({0}) mismatches # of columns ({1})"
+            msg = "GridRow: # of cell_args ({0}) mismatches # of columns ({1})"
             raise Exception(msg.format(cols, len(col_keys)))
 
         col_index = 0
-        for cls_cell_args, col_key in zip(kwargs['cls_dicts'], col_keys):
+        for cls_cell_args, col_key in zip(kwargs['cell_args'], col_keys):
             cls_kwargs = {}
 
             if 'kwargs' in cls_cell_args:
