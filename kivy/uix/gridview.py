@@ -11,7 +11,7 @@ Grid View
 
 The :class:`~kivy.uix.gridview.GridView` widget provides a scrollable/pannable
 viewport that is clipped at the scrollview's bounding box, which contains a
-list of list item view instances.
+grid cell view instances.
 
 :class:`~kivy.uix.gridview.GridView` implements :class:`AbstractView` as a
 vertical scrollable list. :class:`AbstractView` has one property, adapter.
@@ -72,7 +72,7 @@ __all__ = ('GridCell', 'GridRow', 'GridView', )
 
 class SelectableGridCellView(SelectableView):
     '''The :class:`~kivy.uix.gridview.SelectableGridCellView` mixin is used to
-    design GridRow classes that are to be instantiated by an adapter to be used
+    design GridCell classes that are to be instantiated by an adapter to be used
     in a gridview. From :class:`~kivy.uix.listview.SelectableView`,
     :class:`~kivy.uix.gridview.SelectableGridCellView` gets two properties,
     index and is_selected, and two methods, select() and deselect(). select()
@@ -111,7 +111,7 @@ class GridCell(SelectableGridCellView, Button):
     ''':class:`~kivy.uix.listview.GridCell` mixes
     :class:`~kivy.uix.listview.SelectableView` with
     :class:`~kivy.uix.button.Button` to produce a button suitable for use in
-    :class:`~kivy.uix.listview.ListView`.
+    :class:`~kivy.uix.gridview.GridView`.
     '''
 
     selected_color = ListProperty([1., 0., 0., 1])
@@ -206,9 +206,10 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
 
     For a GridRow (shape = 'row'), grid cells are instantiated here,
     and this dictionary is created, and used for grid cell lookup into the
-    children list.
+    children list. The GridRow is used as an intermediate container to
+    facilitate scrolling.
 
-    For a GridColumn (shape = 'column'), grid cells are not
+    For a GridColumn (shape = 'column'), and other shapes, grid cells are not
     instantiated here, and must be looked up across other rows in the adapter.
 
     :data:`key_indices` is an :class:`~kivy.properties.DictProperty`,
@@ -228,6 +229,8 @@ class GridShapeBase(SelectableGridCellView, BoxLayout):
                      'border', 'path', 'shape', 'set'))
     '''The shape property describes the way grid cells are arranged in this
     container.
+
+    **Only row, column, and block have been implemented so far.**
 
     :data:`shape` is an :class:`~kivy.properties.OptionProperty`,
     default to 'row'.
@@ -501,7 +504,11 @@ class HeaderButton(Button):
 
 class GridView(BoxLayout, AbstractView, EventDispatcher):
     ''':class:`~kivy.uix.listview.GridView` is a primary high-level widget,
-    handling the common task of presenting grid rows in a scrolling list.
+    handling the task of presenting grid cell items. The view is row-centric,
+    in the sense that GridRows are intermediate containers, having a list of
+    grid cells, and behaving as selectable rows in a scrolling list. However,
+    GridRow is just one of several possible grid shapes: columns, blocks, etc.
+    are also supported for selection.
 
     The adapter property comes via the mixed in
     :class:`~kivy.uix.abstractview.AbstractView` class.
