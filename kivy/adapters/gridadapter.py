@@ -6,7 +6,7 @@ GridAdapter
 
 .. warning::
 
-    This widget is still experimental, and his API is subject to change in a
+    This code is still experimental, and his API is subject to change in a
     future version.
 
 :class:`~kivy.adapters.gridadapter.GridAdapter` is an adapter around a python
@@ -20,7 +20,7 @@ args_converter properties.
 
 and adds several for selection:
 
-* *selection*, a list of selected items.
+* *selection*, a list of selected grid cells.
 
 * *selection_mode*, 'row-single', 'row-multiple',
                 'column-single', 'column-multiple',
@@ -64,8 +64,9 @@ class GridAdapter(Adapter, EventDispatcher):
 
     row_keys = ListProperty([])
     '''The row_keys list property contains a list of hashable objects (can be
-    strings). A required args_converter will receive the record from a lookup
-    in the data, for instantiation of grid row view class instances.
+    strings). A required args_converter will receive a row record from a lookup
+    in the data, for instantiation of grid cell class instances making up a
+    grid row.
 
     Length of this list is the number of rows.
 
@@ -75,8 +76,9 @@ class GridAdapter(Adapter, EventDispatcher):
 
     col_keys = ListProperty([])
     '''The col_keys list property contains a list of hashable objects (can be
-    strings). A required args_converter will receive the record from a lookup
-    in the data, for instantiation of grid cell view class instances.
+    strings). A required args_converter will receive data for a row, as noted
+    for the row_keys property. As grid cell view class instances are created
+    within a row, the col_keys will be set.
 
     Length of this list is the number of cols.
 
@@ -97,17 +99,12 @@ class GridAdapter(Adapter, EventDispatcher):
     '''
 
     selection = ListProperty([])
-    '''The selection list property is the container for selected items.
+    '''The selection list property is the container for selected grid cells.
 
     :data:`selection` is a :class:`~kivy.properties.ListProperty`, default
     to [].
     '''
 
-    # [TODO] Add these modes?
-    #
-    #            row-single-or-columns?
-    #            row-multiple-or-columns?
-    #
     selection_mode = OptionProperty('cell-single',
             options=('none', 'row-single', 'row-multiple',
                 'column-single', 'column-multiple',
@@ -118,13 +115,6 @@ class GridAdapter(Adapter, EventDispatcher):
        * *none*, use the list as a simple list (no select action). This option
          is here so that selection can be turned off, momentarily or
          permanently, for an existing grid adapter.
-
-       * *singular-*, multi-touch/click ignored. single item selecting only, for
-         variants: row-single, column-single, cell-single.
-
-       * *additive-*, multi-touch / incremental addition to selection allowed;
-         may be limited to a count by selection_limit. Variants include:
-         row-multiple, column-multiple, cell-multiple.
 
     :data:`selection_mode` is an :class:`~kivy.properties.OptionProperty`,
     default to 'cell-single'.
@@ -168,7 +158,7 @@ class GridAdapter(Adapter, EventDispatcher):
 
     allow_empty_selection = BooleanProperty(True)
     '''allow_empty_selection may be used for cascading selection between
-    several list views, or between a list view and an observing view. Such
+    several grid views, or between a grid view and an observing view. Such
     automatic maintainence of selection is important for all but simple
     list displays. Set allow_empty_selection False, so that selection is
     auto-initialized, and always maintained, and so that any observing views
@@ -180,10 +170,10 @@ class GridAdapter(Adapter, EventDispatcher):
     '''
 
     selection_limit = NumericProperty(-1)
-    '''When selection_mode is additive, if selection_limit is non-negative,
+    '''When selection_mode is multiple, if selection_limit is non-negative,
     this number will limit the number of selected items. It can even be 1,
     which is equivalent to singular selection. This is because a program could
-    be programmatically changing selection_limit on the fly, and all possible
+    be programmatically changing selection_limit dynamically, and all possible
     values should be included.
 
     If selection_limit is not set, the default is -1, meaning that no limit
@@ -560,10 +550,6 @@ class GridAdapter(Adapter, EventDispatcher):
             self.check_for_empty_selection(hold_dispatch=True)
 
         if not hold_dispatch:
-            # [TODO] This block is used elsewhere. Make a method called
-            #        dispatch_if_selection_changed() ?
-            #        or
-            #        check_selection_for_dispatch() ?
             before_len = len(selection_before)
             after_len = len(self.selection)
 
