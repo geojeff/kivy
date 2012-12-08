@@ -14,6 +14,7 @@ from kivy.uix.gridview import GridRow
 from kivy.uix.gridview import HeaderButton
 from kivy.uix.gridview import GridView
 
+
 class GridViewTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -24,7 +25,7 @@ class GridViewTestCase(unittest.TestCase):
         grid_view = GridView(rows=100, cols=100)
 
         self.assertEqual(type(grid_view.adapter), GridAdapter)
-        #self.assertFalse(hasattr(grid_view.adapter, 'selection'))
+        self.assertEqual(len(grid_view.adapter.selection), 0)
         self.assertEqual(len(grid_view.adapter.data), 100)
 
     def test_simple_grid_view_explicit_simple_list_adapter(self):
@@ -69,13 +70,13 @@ class GridViewTestCase(unittest.TestCase):
                                    data=data,
                                    args_converter=args_converter,
                                    selection_mode='column-single',
-                                   allow_empty_selection=True,
+                                   allow_empty_selection=False,
                                    cls=GridRow)
 
         # Use the adapter in our GridView:
         grid_view = GridView(adapter=grid_adapter)
 
         self.assertEqual(type(grid_view.adapter), GridAdapter)
-        #self.assertFalse(hasattr(grid_view.adapter, 'selection'))
+        self.assertEqual(len(grid_view.adapter.selection), 26)
         self.assertEqual(len(grid_view.adapter.data), 26)
         self.assertEqual(type(grid_view.adapter.get_view(0)), GridRow)
