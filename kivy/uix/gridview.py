@@ -67,7 +67,8 @@ from kivy.properties import ObjectProperty, DictProperty, \
         OptionProperty
 from kivy.lang import Builder
 
-__all__ = ('GridCell', 'GridRow', 'GridView', )
+__all__ = ('SelectableGridCellView', 'GridCell', 'GridShapeBase', 'GridRow',
+           'HeaderButton', 'GridView', )
 
 
 class SelectableGridCellView(SelectableView):
