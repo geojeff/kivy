@@ -5,7 +5,7 @@ from kivy.uix.gridview import GridView
 from kivy.uix.gridlayout import GridLayout
 
 integers_dict = \
-        { str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
+        {str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
 
 
 class MainView(GridLayout):
@@ -24,7 +24,7 @@ class MainView(GridLayout):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [{'cls': GridCell,
+                 'cell_args': [{'cls': GridCell,
                                 'kwargs': {'text': rec[0]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[1]['text']}},
@@ -42,7 +42,7 @@ class MainView(GridLayout):
                                 'kwargs': {'text': rec[7]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[8]['text']}},
-                               {'cls': GridCell, 
+                               {'cls': GridCell,
                                 'kwargs': {'text': rec[9]['text']}}]}
 
         row_keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')

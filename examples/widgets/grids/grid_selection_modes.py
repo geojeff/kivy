@@ -79,7 +79,7 @@ class MainView(BoxLayout):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [{'cls': GridCell,
+                 'cell_args': [{'cls': GridCell,
                                 'kwargs': {'text': rec[0]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[1]['text']}},
@@ -97,7 +97,7 @@ class MainView(BoxLayout):
                                 'kwargs': {'text': rec[7]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[8]['text']}},
-                               {'cls': GridCell, 
+                               {'cls': GridCell,
                                 'kwargs': {'text': rec[9]['text']}}]}
 
         row_keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -137,7 +137,7 @@ class MainView(BoxLayout):
             'text': rec['text'],
             'size_hint_y': None,
             'height': 25,
-            'cls_dicts': [{'cls': GridCell,
+            'cell_args': [{'cls': GridCell,
                            'kwargs': {'text': rec[col_key]['text']}}
                           for col_key in col_keys]}
 

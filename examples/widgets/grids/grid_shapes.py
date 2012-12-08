@@ -99,7 +99,7 @@ def bresenham_line((x,y),(x2,y2)):
     >>> b = [(-x, -y) for (x, y) in b]
     >>> a == b
     True
-    
+
     Test that the the same points are generated when the line is mirrored on the x=y line.
     >>> c = line((0, 0), (43, 29))
     >>> c = [(y, x) for (x, y) in c]
@@ -387,7 +387,7 @@ class MainView(BoxLayout):
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
-                 'cls_dicts': [{'cls': GridCell,
+                 'cell_args': [{'cls': GridCell,
                                 'kwargs': {'text': rec[0]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[1]['text']}},
@@ -405,7 +405,7 @@ class MainView(BoxLayout):
                                 'kwargs': {'text': rec[7]['text']}},
                                {'cls': GridCell,
                                 'kwargs': {'text': rec[8]['text']}},
-                               {'cls': GridCell, 
+                               {'cls': GridCell,
                                 'kwargs': {'text': rec[9]['text']}}]}
 
         row_keys = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -472,7 +472,7 @@ class MainView(BoxLayout):
             'text': rec['text'],
             'size_hint_y': None,
             'height': 25,
-            'cls_dicts': [{'cls': GridCell,
+            'cell_args': [{'cls': GridCell,
                            'kwargs': {'text': rec[col_key]['text']}}
                           for col_key in col_keys]}
 
@@ -519,12 +519,12 @@ class MainView(BoxLayout):
         # selection search:
         #for sel in self.grid_adapter.selection:
         #    if hasattr(sel, 'specific-shape'):
-        #        if (sel.specific_shape == '4-block' 
+        #        if (sel.specific_shape == '4-block'
         #                and sel.origin_cell_block == origin_cell_block):
         #            return True
 
     def selection_changed(self, grid_adapter, objects_handled, *args):
-        if (self.grid_adapter.selection_mode == 'cell-multiple' 
+        if (self.grid_adapter.selection_mode == 'cell-multiple'
                 and not self.shape_op == 'none'
                 and self.grid_adapter.has_selection()):
 
