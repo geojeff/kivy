@@ -1445,7 +1445,7 @@ class AdaptersTestCase(unittest.TestCase):
         # Reset for cell-single selection mode.
         grid_adapter.selection_mode = 'cell-single'
 
-        self.assertEqual(len(grid_adapter.selection), 30)
+        self.assertEqual(len(grid_adapter.selection), 0)
 
         grid_adapter.allow_empty_selection = False
 

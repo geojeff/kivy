@@ -358,21 +358,21 @@ class GridAdapter(Adapter, EventDispatcher):
         self.cached_views = {}
 
     def selection_mode_changed(self, *args):
-        if self.selection_mode in ['none',
-                                   'row-single',
-                                   'column-single',
-                                   'cell-single']:
-            selection_removals = []
 
-            for selected_view in self.selection:
-                selected_view.deselect()
-                selected_view.is_selected = False
-                selection_removals.append(
-                        self.selection.index(selected_view))
+        # Perhaps pop up a question, Deselect existing selection?
+        # Because, here we do deselect.
 
-            if selection_removals:
-                for sel_index in reversed(list(set(selection_removals))):
-                    del self.selection[sel_index]
+        selection_removals = []
+
+        for selected_view in self.selection:
+            selected_view.deselect()
+            selected_view.is_selected = False
+            selection_removals.append(
+                    self.selection.index(selected_view))
+
+        if selection_removals:
+            for sel_index in reversed(list(set(selection_removals))):
+                del self.selection[sel_index]
 
         self.check_for_empty_selection()
 
@@ -621,34 +621,33 @@ class GridAdapter(Adapter, EventDispatcher):
                     if grid_cell is not view and hasattr(grid_cell, 'select'):
                         grid_cell.select()
                         grid_cell.is_selected = True
-                        if grid_cell not in self.selection:
-                            self.selection.append(grid_cell)
+                        self.selection.append(grid_cell)
             else:
                 for grid_cell in grid_row.children:
                     if grid_cell is not view and hasattr(grid_cell, 'deselect'):
                         grid_cell.deselect()
                         grid_cell.is_selected = False
-                        if grid_cell in self.selection:
-                            selection_removals.append(
-                                    self.selection.index(grid_cell))
+                        selection_removals.append(
+                                self.selection.index(grid_cell))
 
         # Do op for column.
         if self.selection_mode in ['column-single',
                                    'column-multiple']:
-            for i in xrange(len(self.row_keys)):
-                grid_cell = self.get_view(i).grid_cell(col_key)
-                if grid_cell is not view:
-                    if op == 'select':
+            if op == 'select':
+                for i in xrange(len(self.row_keys)):
+                    grid_cell = self.get_view(i).grid_cell(col_key)
+                    if grid_cell is not view and hasattr(grid_cell, 'select'):
                         grid_cell.select()
                         grid_cell.is_selected = True
-                        if grid_cell not in self.selection:
-                            self.selection.append(grid_cell)
-                    else:
+                        self.selection.append(grid_cell)
+            else:
+                for i in xrange(len(self.row_keys)):
+                    grid_cell = self.get_view(i).grid_cell(col_key)
+                    if grid_cell is not view and hasattr(grid_cell, 'deselect'):
                         grid_cell.deselect()
                         grid_cell.is_selected = False
-                        if grid_cell in self.selection:
-                            selection_removals.append(
-                                    self.selection.index(grid_cell))
+                        selection_removals.append(
+                                self.selection.index(grid_cell))
 
         if self.propagate_selection_to_data:
             if self.selection_mode == 'cell-single':
