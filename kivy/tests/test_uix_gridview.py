@@ -80,3 +80,28 @@ class GridViewTestCase(unittest.TestCase):
         self.assertEqual(len(grid_view.adapter.selection), 26)
         self.assertEqual(len(grid_view.adapter.data), 26)
         self.assertEqual(type(grid_view.adapter.get_view(0)), GridRow)
+
+        # Select column with col_key 5.
+        grid_cell_C_5 = grid_view.adapter.grid_cell_view('C', 5)
+        grid_view.adapter.handle_selection(grid_cell_C_5)
+        self.assertEqual(len(grid_view.adapter.selection), 26)
+        self.assertEqual(
+                [5 for i in xrange(26)],
+                [cell.col_key for cell in grid_view.adapter.selection])
+
+        # Unselecting column with col_key 5 should result in auto-selection
+        # of the first column, because allow_empty_selection is False.
+        grid_view.adapter.handle_selection(grid_cell_C_5)
+        self.assertEqual(len(grid_view.adapter.selection), 26)
+        self.assertEqual(
+                [0 for i in xrange(26)],
+                [cell.col_key for cell in grid_view.adapter.selection])
+
+        # Change selection mode to row-single and select row W.
+        # The selected column, the first column, should be unselected,
+        # and row W selected.
+        grid_view.adapter.selection_mode = 'row-single'
+        self.assertEqual(grid_view.adapter.selection_mode, 'row-single')
+        grid_cell_W_1 = grid_view.adapter.grid_cell_view('W', 1)
+        grid_view.adapter.handle_selection(grid_cell_W_1)
+        self.assertEqual(len(grid_view.adapter.selection), 10)
