@@ -555,7 +555,9 @@ class GridAdapter(Adapter, EventDispatcher):
 
         if selection_removals:
             for sel_index in reversed(list(set(selection_removals))):
-                del self.selection[sel_index]
+                # [TODO] Does this if mask bugs?
+                if 0 <= sel_index < len(self.selection):
+                    del self.selection[sel_index]
 
             self.check_for_empty_selection(hold_dispatch=True)
 
@@ -618,13 +620,17 @@ class GridAdapter(Adapter, EventDispatcher):
                                    'row-multiple']:
             if op == 'select':
                 for grid_cell in grid_row.children:
-                    if grid_cell is not view and hasattr(grid_cell, 'select'):
+                    if (grid_cell is not view
+                            and hasattr(grid_cell, 'select')
+                            and grid_cell not in self.selection):
                         grid_cell.select()
                         grid_cell.is_selected = True
                         self.selection.append(grid_cell)
             else:
                 for grid_cell in grid_row.children:
-                    if grid_cell is not view and hasattr(grid_cell, 'deselect'):
+                    if (grid_cell is not view
+                            and hasattr(grid_cell, 'deselect')
+                            and grid_cell in self.selection):
                         grid_cell.deselect()
                         grid_cell.is_selected = False
                         selection_removals.append(
@@ -636,14 +642,18 @@ class GridAdapter(Adapter, EventDispatcher):
             if op == 'select':
                 for i in xrange(len(self.row_keys)):
                     grid_cell = self.get_view(i).grid_cell(col_key)
-                    if grid_cell is not view and hasattr(grid_cell, 'select'):
+                    if (grid_cell is not view
+                            and hasattr(grid_cell, 'select')
+                            and grid_cell not in self.selection):
                         grid_cell.select()
                         grid_cell.is_selected = True
                         self.selection.append(grid_cell)
             else:
                 for i in xrange(len(self.row_keys)):
                     grid_cell = self.get_view(i).grid_cell(col_key)
-                    if grid_cell is not view and hasattr(grid_cell, 'deselect'):
+                    if (grid_cell is not view
+                            and hasattr(grid_cell, 'deselect')
+                            and grid_cell in self.selection):
                         grid_cell.deselect()
                         grid_cell.is_selected = False
                         selection_removals.append(

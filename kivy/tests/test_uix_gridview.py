@@ -4,6 +4,7 @@ GridView tests
 '''
 
 import unittest
+import random
 
 from kivy.uix.label import Label
 from kivy.adapters.gridadapter import GridAdapter
@@ -105,3 +106,10 @@ class GridViewTestCase(unittest.TestCase):
         grid_cell_W_1 = grid_view.adapter.grid_cell_view('W', 1)
         grid_view.adapter.handle_selection(grid_cell_W_1)
         self.assertEqual(len(grid_view.adapter.selection), 10)
+
+        # Change selection mode to column-multiple and do many select and
+        # deselect ops at random.
+        grid_view.adapter.selection_mode = 'column-multiple'
+        for i in xrange(50):
+            grid_view.adapter.handle_selection(
+                grid_view.adapter.grid_cell_view('Z', random.randint(0, 9)))
