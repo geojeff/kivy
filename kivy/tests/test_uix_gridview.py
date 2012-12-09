@@ -31,7 +31,7 @@ class GridViewTestCase(unittest.TestCase):
     def test_simple_grid_view_explicit_simple_list_adapter(self):
 
         args_converter = \
-            lambda rec: \
+            lambda row_index, rec: \
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,

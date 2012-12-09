@@ -396,7 +396,7 @@ class GridAdapter(Adapter, EventDispatcher):
         if item is None:
             return None
 
-        item_args = self.args_converter(item)
+        item_args = self.args_converter(index, item)
 
         item_args['index'] = index
         item_args['adapter'] = self

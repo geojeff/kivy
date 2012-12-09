@@ -20,7 +20,7 @@ class MainView(GridLayout):
         super(MainView, self).__init__(**kwargs)
 
         args_converter = \
-            lambda rec: \
+            lambda row_index, rec: \
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,

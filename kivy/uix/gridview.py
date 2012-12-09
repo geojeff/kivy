@@ -649,7 +649,7 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
                             {'text': "{0},{1}".format(row_key, col_key)}
 
             args_converter = \
-                lambda rec: \
+                lambda row_index, rec: \
                     {'text': rec['text'],
                      'size_hint_y': None,
                      'height': 25,

@@ -75,7 +75,7 @@ class MainView(BoxLayout):
         spinners_toolbar.add_widget(data_spinner)
 
         args_converter = \
-            lambda rec: \
+            lambda row_index, rec: \
                 {'text': rec['text'],
                  'size_hint_y': None,
                  'height': 25,
@@ -132,7 +132,7 @@ class MainView(BoxLayout):
         self.grid_adapter.allow_empty_selection = \
                 True if text.endswith('True') else False
 
-    def args_converter(self, col_keys, rec):
+    def args_converter(self, col_keys, row_index, rec):
         return {
             'text': rec['text'],
             'size_hint_y': None,
