@@ -555,9 +555,9 @@ class GridAdapter(Adapter, EventDispatcher):
 
         if selection_removals:
             for sel_index in reversed(list(set(selection_removals))):
-                # [TODO] Does this if mask bugs?
-                if 0 <= sel_index < len(self.selection):
-                    del self.selection[sel_index]
+                # [TODO] Does this if mask bugs? or does it avoid timing issue?
+                #if 0 <= sel_index < len(self.selection):
+                del self.selection[sel_index]
 
             self.check_for_empty_selection(hold_dispatch=True)
 
