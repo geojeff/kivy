@@ -15,6 +15,21 @@ FileChooser
     You must update all the notation `root.controller.xxx` to
     `root.controller().xxx`.
 
+Simple example
+--------------
+
+main.py
+
+.. include:: ../../examples/RST_Editor/main.py
+    :literal:
+
+editor.kv
+
+.. highlight:: kv
+
+.. include:: ../../examples/RST_Editor/editor.kv
+    :literal:
+
 '''
 
 __all__ = ('FileChooserListView', 'FileChooserIconView',
@@ -326,8 +341,7 @@ class FileChooserController(FloatLayout):
         '''
         if (
             'button' in touch.profile and touch.button in (
-                'scrollup', 'scrolldown')
-        ):
+                'scrollup', 'scrolldown', 'scrollleft', 'scrollright')):
             return False
         if self.multiselect:
             if isdir(entry.path) and touch.is_double_tap:
@@ -352,8 +366,7 @@ class FileChooserController(FloatLayout):
         '''
         if (
             'button' in touch.profile and touch.button in (
-            'scrollup', 'scrolldown')
-        ):
+                'scrollup', 'scrolldown', 'scrollleft', 'scrollright')):
             return False
         if not self.multiselect:
             if isdir(entry.path) and not self.dirselect:
