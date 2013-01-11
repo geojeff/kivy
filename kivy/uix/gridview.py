@@ -831,10 +831,8 @@ class GridView(BoxLayout, AbstractView, EventDispatcher):
             # extrapolate the full size of the container from the size
             # of view instances in the adapter
             if count:
-                container.height = \
-                    real_height / count * self.adapter.get_count()
-                rows_header.height = \
-                    real_height / count * self.adapter.get_count()
+                container.height = real_height
+                rows_header.height = real_height
                 # [TODO] GridView -- row_height default is now 25, so needed?
                 if self.row_height is None:
                     self.row_height = real_height / count
