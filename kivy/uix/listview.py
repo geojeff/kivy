@@ -927,14 +927,17 @@ class ListView(AbstractView, EventDispatcher):
         self.bind(size=self._trigger_populate,
                   pos=self._trigger_populate,
                   item_strings=self.item_strings_changed,
-                  adapter=self._trigger_populate)
+                  adapter=self.adapter_changed)
+                  #adapter=self._trigger_populate)
 
-        # The bindings setup above sets self._trigger_populate() to fire
-        # when the adapter changes, but we also need this binding for when
-        # adapter.data and other possible triggers change for view updating.
-        # We don't know that these are, so we ask the adapter to set up the
-        # bindings back to the view updating function here.
-        self.adapter.bind_triggers_to_view(self._trigger_reset_populate)
+        print 'binding to adapter.data', self.adapter.data
+
+        self.adapter.bind(data=self.data_changed)
+
+    def adapter_changed(self, *args):
+        self.adapter.bind(data=self.data_changed)
+
+        self._trigger_populate()
 
     # Added to set data when item_strings is set in a kv template, but it will
     # be good to have also if item_strings is reset generally.
@@ -1044,5 +1047,83 @@ class ListView(AbstractView, EventDispatcher):
             self.populate()
             self.dispatch('on_scroll_complete')
 
+    def scroll_after_add(self):
+        if not self.scrolling:
+            available_height = self.height
+            index = self._index
+
+            print 'index', index
+            print 'available_height', available_height
+
+            while available_height > 0:
+                item_view = self.adapter.get_view(index)
+                if item_view is None:
+                    break
+                index += 1
+                available_height -= item_view.height
+
+            print 'available_height', available_height
+
+            if available_height <= 0:
+                self._index += 1
+
+            self.scrolling = True
+            self.populate()
+            self.dispatch('on_scroll_complete')
+
     def on_scroll_complete(self, *args):
         self.scrolling = False
+
+    def data_changed(self, *dt):
+
+        print 'data_changed callback', dt
+
+        print self.adapter.data.range_change
+
+        if self.adapter.data.range_change:
+            first_item_view = self.container.children[-1]
+            last_item_view = self.container.children[0]
+
+            data_op, (start_index, end_index) = self.adapter.data.range_change
+
+            change_in_range = False
+
+            if (first_item_view.index <= start_index <= last_item_view.index
+                or
+                first_item_view.index <= end_index <= last_item_view.index):
+                change_in_range = True
+
+            if data_op == 'add':
+                self.scroll_after_add()
+            elif data_op == 'delete':
+                cv = self.adapter.cached_views
+                i = start_index
+                j = end_index + 1
+                slice_length = end_index - start_index
+                deleted_views = []
+                while j in cv and j < len(self.adapter.data) - slice_length:
+                    deleted_views.append(cv[i])
+                    cv[i] = cv[j]
+                    cv[i].index = i
+                    i += 1
+                    j += 1
+                if j in cv:
+                    while j in cv:
+                        del cv[j]
+                        j += 1
+                for deleted_view in deleted_views:
+                    if deleted_view in self.adapter.selection:
+                        self.adapter.selection.remove(deleted_view)
+                    # All this should be pushed down to the adapters, ... e.g.,
+                    # this kind of call especially, should be done in the class
+                    # itself, not operated on from afar.
+                    self.adapter.dispatch('on_selection_change')
+                self.adapter.check_for_empty_selection()
+                if change_in_range:
+                    self.scrolling = True
+                    self.populate()
+                    self.dispatch('on_scroll_complete')
+            elif data_op == 'move':
+                pass
+            elif data_op == 'sort':
+                pass

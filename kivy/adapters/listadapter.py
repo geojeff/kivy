@@ -51,12 +51,85 @@ import inspect
 from kivy.event import EventDispatcher
 from kivy.adapters.adapter import Adapter
 from kivy.adapters.models import SelectableDataItem
+from kivy.properties import ObjectProperty
 from kivy.properties import ListProperty
 from kivy.properties import DictProperty
 from kivy.properties import BooleanProperty
 from kivy.properties import OptionProperty
 from kivy.properties import NumericProperty
+from kivy.properties import ObservableList
 from kivy.lang import Builder
+
+
+class RangeObservingList(ObservableList):
+    '''Adds range-observing intelligence to ObservableList'''
+
+    def __init__(self, *largs):
+        super(RangeObservingList, self).__init__(*largs)
+
+    def __setitem__(self, key, value):
+        self.range_change = None
+        super(RangeObservingList, self).__setitem__(key, value)
+
+    def __delitem__(self, key):
+        index = self.index(key)
+        self.range_change = ('delete', (index, index))
+        super(RangeObservingList, self).__delitem__(key)
+
+    def __setslice__(self, *largs):
+        self.range_change = None
+        super(RangeObservingList, self).__setslice__(*largs)
+
+    def __delslice__(self, *largs):
+        start_index = largs[0]
+        end_index = largs[-1]
+        self.range_change = ('delete', (start_index, end_index))
+        super(RangeObservingList, self).__delslice__(*largs)
+
+    def __iadd__(self, *largs):
+        self.range_change = None
+        super(RangeObservingList, self).__iadd__(*largs)
+
+    def __imul__(self, *largs):
+        self.range_change = None
+        super(RangeObservingList, self).__imul__(*largs)
+
+    def append(self, *largs):
+        index = len(self)
+        self.range_change = ('add', (index, index))
+        super(RangeObservingList, self).append(*largs)
+
+    def remove(self, *largs):
+        index = self.index(largs[0])
+        self.range_change = ('delete', (index, index))
+        super(RangeObservingList, self).remove(*largs)
+
+    def insert(self, *largs):
+        index = self.index(largs[0])
+        self.range_change = ('insert', (index, index))
+        super(RangeObservingList, self).insert(*largs)
+
+    def pop(self, *largs):
+        if largs[0]:
+            index = self.index(largs[0])
+        else:
+            index = len(self) - 1
+        self.range_change = ('remove', (index, index))
+        return super(RangeObservingList, self).pop(*largs)
+
+    def extend(self, *largs):
+        start_index = len(self)
+        end_index = start_index + len(largs) - 1
+        self.range_change = ('add', (start_index, end_index))
+        super(RangeObservingList, self).extend(*largs)
+
+    def sort(self, *largs):
+        self.range_change = ('sort', (0, len(self) - 1))
+        super(RangeObservingList, self).sort(*largs)
+
+    def reverse(self, *largs):
+        self.range_change = ('sort', (0, len(self) - 1))
+        super(RangeObservingList, self).reverse(*largs)
 
 
 class ListAdapter(Adapter, EventDispatcher):
@@ -66,7 +139,7 @@ class ListAdapter(Adapter, EventDispatcher):
     functonality.
     '''
 
-    data = ListProperty([])
+    data = ListProperty([], cls=RangeObservingList)
     '''The data list property is redefined here, overriding its definition as
     an ObjectProperty in the Adapter class. We bind to data so that any
     changes will trigger updates. See also how the
@@ -114,6 +187,8 @@ class ListAdapter(Adapter, EventDispatcher):
     useful for storing selection state in a local database or backend database
     for maintaining state in game play or other similar scenarios. It is a
     convenience function.
+
+    NOTE: This would probably be better named as sync_selection_with_data().
 
     To propagate selection or not?
 
@@ -173,16 +248,16 @@ class ListAdapter(Adapter, EventDispatcher):
     defaults to {}.
     '''
 
-    __events__ = ('on_selection_change', )
+    __events__ = ('on_selection_change',)
 
     def __init__(self, **kwargs):
         super(ListAdapter, self).__init__(**kwargs)
 
         self.bind(selection_mode=self.selection_mode_changed,
-                  allow_empty_selection=self.check_for_empty_selection,
-                  data=self.update_for_new_data)
+                  allow_empty_selection=self.check_for_empty_selection)
 
-        self.update_for_new_data()
+        self.delete_cache()
+        self.initialize_selection()
 
     def delete_cache(self, *args):
         self.cached_views = {}
@@ -380,10 +455,6 @@ class ListAdapter(Adapter, EventDispatcher):
         self.dispatch('on_selection_change')
 
     # [TODO] Could easily add select_all() and deselect_all().
-
-    def update_for_new_data(self, *args):
-        self.delete_cache()
-        self.initialize_selection()
 
     def initialize_selection(self, *args):
         if len(self.selection) > 0:
