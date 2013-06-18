@@ -40,7 +40,6 @@ from kivy.logger import Logger
 from kivy.clock import Clock
 from kivy.cache import Cache
 from kivy.core.image import ImageLoader, Image
-from kivy.compat import PY2
 
 from collections import deque
 from time import sleep
@@ -277,10 +276,7 @@ class LoaderBase(object):
     def _load_urllib(self, filename, kwargs):
         '''(internal) Loading a network file. First download it, save it to a
         temporary file, and pass it to _load_local()'''
-        if PY2:
-            import urllib2 as urllib_request
-        else:
-            import urllib.request as urllib_request
+        import urllib.request, urllib.error, urllib.parse
         proto = filename.split(':', 1)[0]
         if proto == 'smb':
             try:
@@ -301,10 +297,10 @@ class LoaderBase(object):
 
             if proto == 'smb':
                 # read from samba shares
-                fd = urllib_request.build_opener(SMBHandler).open(filename)
+                fd = urllib.request.build_opener(SMBHandler).open(filename)
             else:
                 # read from internet
-                fd = urllib_request.urlopen(filename)
+                fd = urllib.request.urlopen(filename)
             idata = fd.read()
             fd.close()
             fd = None
@@ -375,27 +371,17 @@ class LoaderBase(object):
         self._trigger_update()
 
     def image(self, filename, load_callback=None, post_callback=None, **kwargs):
-        '''Load a image using the Loader. A ProxyImage is returned with a
-        loading image. You can use it as follows::
-            
-            from kivy.app import App
-            from kivy.uix.image import Image
-            from kivy.loader import Loader
+        '''Load a image using loader. A Proxy image is returned with a loading
+        image.
 
-            class TestApp(App):
-                def _image_loaded(self, proxyImage):
-                    if proxyImage.image.texture:
-                        self.image.texture = proxyImage.image.texture
+      ::
+            img = Loader.image(filename)
+            # img will be a ProxyImage.
+            # You'll use it the same as an Image class.
+            # Later, when the image is really loaded,
+            # the loader will change the img.image property
+            # to the new loaded image
 
-                def build(self):
-                    proxyImage = Loader.image("myPic.jpg")
-                    proxyImage.bind(on_load=self._image_loaded)
-                    self.image = Image()
-                    return self.image
-
-            TestApp().run()
-
-        In order to cancel all background loading, call *Loader.stop()*.
         '''
         data = Cache.get('kv.loader', filename)
         if data not in (None, False):

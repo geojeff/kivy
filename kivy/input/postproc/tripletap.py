@@ -9,7 +9,6 @@ Search touch for a triple tap
 
 __all__ = ('InputPostprocTripleTap', )
 
-from time import time
 from kivy.config import Config
 from kivy.vector import Vector
 from kivy.clock import Clock
@@ -83,8 +82,8 @@ class InputPostprocTripleTap(object):
                 if triple_tap:
                     touch.is_double_tap = False
                     touch.is_triple_tap = True
-                    tap_time = touch.time_start - triple_tap.time_start
-                    touch.triple_tap_time = tap_time
+                    time = touch.time_start - triple_tap.time_start
+                    touch.triple_tap_time = time
                     distance = triple_tap.triple_tap_distance
                     touch.triple_tap_distance = distance
 
@@ -92,7 +91,7 @@ class InputPostprocTripleTap(object):
             self.touches[touch.uid] = (etype, touch)
 
         # second, check if up-touch is timeout for triple tap
-        time_current = time()
+        time_current = Clock.get_time()
         to_delete = []
         for touchid in self.touches.keys():
             etype, touch = self.touches[touchid]

@@ -2140,4 +2140,4 @@ if __name__ == '__main__':
             root.add_widget(textinput2)
             return root
 
-    TextInputApp().run()
+    #TextInputApp().run()

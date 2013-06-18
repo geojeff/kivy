@@ -1,6 +1,6 @@
 '''
-Color Picker
-============
+ColorPicker widget
+==================
 
 .. versionadded:: 1.7.0
 
@@ -14,7 +14,7 @@ The ColorPicker widget allows a user to pick a color utilizing from a chromatic
 wheel where pinch/zoom can be used to change available colors or using a slider
 or directly entering the colors in the text boxes.
 
-Usage::
+usage::
 
     clr_picker = ColorPicker()
     parent.add_widget(ColorPicker)
@@ -69,13 +69,6 @@ def rect_to_polar(origin, x, y):
 
 class ColorWheel(Widget):
     '''Chromatic wheel for the ColorPiker.
-
-    .. versionchanged:: 1.7.1
-
-        `font_size`, `font_name`, `foreground_color` have been removed. The
-        sizing is now the same as others widget, based on 'sp'. Orientation is
-        also automatically determined according to the ratio width/height.
-
     '''
 
     r = BoundedNumericProperty(0, min=0, max=1)

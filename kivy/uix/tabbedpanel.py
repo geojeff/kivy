@@ -138,7 +138,6 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.logger import Logger
-from kivy.metrics import dp
 from kivy.properties import ObjectProperty, StringProperty, OptionProperty, \
     ListProperty, NumericProperty, AliasProperty, BooleanProperty
 
@@ -220,38 +219,12 @@ class TabbedPanelItem(TabbedPanelHeader):
 
 class TabbedPanelStrip(GridLayout):
     '''A strip intended to be used as background for Heading/Tab.
-    This does not cover the blank areas in case the tabs don't cover
-    the entire width/height of the TabbedPanel(use StripLayout for that).
     '''
     tabbed_panel = ObjectProperty(None)
     '''link to the panel that tab strip is a part of.
 
     :data:`tabbed_panel` is a :class:`~kivy.properties.ObjectProperty` default
     to None .
-    '''
-
-
-class StripLayout(GridLayout):
-    ''' The main layout that is used to house the entire tabbedpanel strip
-    including the blank areas in case the tabs don't cover the entire
-    width/height.
-
-    .. versionadded:: 1.8.0
-
-    '''
-
-    border = ListProperty([4, 4, 4, 4])
-    '''Border property for the :data:`background_image`.
-
-    :data:`border` is a :class:`~kivy.properties.Listproperty` defaults to
-    [4, 4, 4, 4]
-    '''
-
-    background_image = StringProperty(
-                            'atlas://data/images/defaulttheme/action_view')
-    '''Bckground image to be used for the Strip layout of the TabbedPanel.
-
-    :data:`background_image` defaults to a transparent image.
     '''
 
 
@@ -292,7 +265,7 @@ class TabbedPanel(GridLayout):
     '''
 
     background_disabled_image = StringProperty(
-                            'atlas://data/images/defaulttheme/tab_disabled')
+                                'atlas://data/images/defaulttheme/tab_disabled')
     '''Background image of the main shared content object when disabled.
 
     .. versionadded:: 1.8.0
@@ -300,25 +273,6 @@ class TabbedPanel(GridLayout):
     :data:`background_disabled_image` is a
     :class:`~kivy.properties.StringProperty`, default to
     'atlas://data/images/defaulttheme/tab'.
-    '''
-
-    strip_image = StringProperty(
-                                'atlas://data/images/defaulttheme/action_view')
-    '''Background image of the tabbed strip.
-
-    .. versionadded:: 1.8.0
-
-    :data:`strip_image` is a :class:`~kivy.properties.StringProperty`, default
-    to a empty image.
-    '''
-
-    strip_border = ListProperty([4, 4, 4, 4])
-    '''Border to be used on :data:`strip_image`.
-
-    .. versionadded:: 1.8.0
-
-    :data:`strip_border` is a :class:`~kivy.properties.ListProperty`, default
-    to a [4, 4, 4, 4]
     '''
 
     _current_tab = ObjectProperty(None)
@@ -457,8 +411,7 @@ class TabbedPanel(GridLayout):
     def __init__(self, **kwargs):
         # these variables need to be initialized before the kv lang is
         # processed setup the base layout for the tabbed panel
-        self._childrens = []
-        self._tab_layout = StripLayout(rows=1)
+        self._tab_layout = GridLayout(rows=1)
         self.rows = 1
         self._tab_strip = TabbedPanelStrip(
             tabbed_panel=self,
@@ -520,7 +473,6 @@ class TabbedPanel(GridLayout):
             self.on_tab_width()
         else:
             widget.pos_hint = {'x': 0, 'top': 1}
-            self._childrens.append(widget)
             content.disabled = self.current_tab.disabled
             content.add_widget(widget, index)
 
@@ -542,7 +494,6 @@ class TabbedPanel(GridLayout):
                 Logger.info('TabbedPanel: default tab! can\'t be removed.\n' +
                             'Change `default_tab` to a different tab.')
         else:
-            self._childrens.pop(widget, None)
             if widget in content.children:
                 content.remove_widget(widget)
 
@@ -555,16 +506,6 @@ class TabbedPanel(GridLayout):
         else:
             content.clear_widgets()
 
-    def on_strip_image(self, instance, value):
-        if not self._tab_layout:
-            return
-        self._tab_layout.background_image = value
-
-    def on_strip_border(self, instance, value):
-        if not self._tab_layout:
-            return
-        self._tab_layout.border = value
-        print value
 
     def on_do_default_tab(self, instance, value):
         if not value:
@@ -684,8 +625,7 @@ class TabbedPanel(GridLayout):
             tab_layout.rows = 1
             tab_layout.cols = 3
             tab_layout.size_hint = (1, None)
-            tab_layout.height = tab_height + tab_layout.padding[1] +\
-                                tab_layout.padding[3] + dp(2)
+            tab_layout.height = tab_height
             self_update_scrollview(scrl_v)
 
             if pos_letter == 'b':

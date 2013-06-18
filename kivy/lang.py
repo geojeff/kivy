@@ -282,10 +282,8 @@ declaration in the first place. The syntax of the dynamic classes is similar to
 the Rules, but you need to specify what are the bases classes you want to
 subclasses.
 
-The syntax look like:
+The syntax look like::
 
-.. code-block:: kv
-     
     # Simple inheritance
     <NewWidget@Button>:
         ...
@@ -295,9 +293,7 @@ The syntax look like:
         ...
 
 The `@` character is used to seperate the name from the classes you want to
-subclass. The Python equivalent would have been:
-
-.. code-block:: python
+subclass. The Python equivalent would have been::
 
     # Simple inheritance
     class NewWidget(Button):
@@ -313,9 +309,7 @@ created as an :class:`~kivy.properties.ObjectProperty`.
 
 Let's illustrate the usage of theses dynamic classes with an implementation of a
 basic Image button. We could derivate our classes from the Button, we just need
-to add a property for the image filename:
-
-.. code-block:: kv
+to add a property for the image filename::
 
     <ImageButton@Button>:
         source: None
@@ -335,13 +329,6 @@ to add a property for the image filename:
                 source: 'world.png'
                 on_press: root.do_something_else()
 
-In Python you can create an instance of the dynamic class by:
-
-.. code-block:: python
-
-    from kivy.factory import Factory
-    button_inst = Factory.ImageButton()
-
 
 .. _template_usage:
 
@@ -360,9 +347,7 @@ Using a template in Kivy require 2 things :
     #. a context to pass for the context (will be ctx inside template)
     #. a kv definition of the template
 
-Syntax of a template:
-
-.. code-block:: kv
+Syntax of a template::
 
     # With only one base class
     [ClassName@BaseClass]:
@@ -376,9 +361,7 @@ For example, for a list, you'll need to create a entry with a image on
 the left, and a label on the right. You can create a template for making
 that definition more easy to use.
 So, we'll create a template that require 2 entry in the context: a image
-filename and a title:
-
-.. code-block:: kv
+filename and a title::
 
     [IconItem@BoxLayout]:
         Image:
@@ -386,9 +369,9 @@ filename and a title:
         Label:
             text: ctx.title
 
-Then in Python, you can create instanciate the template with:
+.. highlight:: python
 
-.. code-block:: python
+Then in Python, you can create instanciate the template with::
 
     from kivy.lang import Builder
 
@@ -408,11 +391,11 @@ Then in Python, you can create instanciate the template with:
 Template example
 ~~~~~~~~~~~~~~~~
 
+.. highlight:: kv
+
 Most of time, when you are creating screen into kv lang, you have lot of
 redefinition. In our example, we'll create a Toolbar, based on a BoxLayout, and
-put many Image that will react to on_touch_down:
-
-.. code-block:: kv
+put many Image that will react to on_touch_down::
 
     <MyToolbar>:
         BoxLayout:
@@ -440,9 +423,7 @@ put many Image that will react to on_touch_down:
 We can see that the size and size_hint attribute are exactly the same.
 More than that, the callback in on_touch_down and the image are changing.
 Theses can be the variable part of the template that we can put into a context.
-Let's try to create a template for the Image:
-
-.. code-block:: kv
+Let's try to create a template for the Image::
 
     [ToolbarButton@Image]:
 
@@ -454,9 +435,7 @@ Let's try to create a template for the Image:
         # Now, we are using the ctx for the variable part of the template
         on_touch_down: self.collide_point(*args[1].pos) and self.callback()
 
-The template can be used directly in the MyToolbar rule:
-
-.. code-block:: kv
+The template can be used directly in the MyToolbar rule::
 
     <MyToolbar>:
         BoxLayout:
@@ -478,10 +457,8 @@ Template limitations
 
 When you are creating a context:
 
-    #. you cannot use references other than "root":
+    #. you cannot use references other than "root"::
 
-    .. code-block:: kv
-    
         <MyRule>:
             Widget:
                 id: mywidget
@@ -489,10 +466,8 @@ When you are creating a context:
             Template:
                 ctxkey: mywidget.value # << fail, this reference mywidget id
 
-    #. all the dynamic part will be not understood:
+    #. all the dynamic part will be not understood::
 
-    .. code-block:: kv
-    
         <MyRule>:
             Template:
                 ctxkey: 'value 1' if root.prop1 else 'value2' # << even if
@@ -509,16 +484,12 @@ canvas instructions instead of automatically using the canvas instructions
 inherited from Label. We can achieve this by prepending a dash (-) before
 the class name in the .kv style definition.
 
-In myapp.py:
-
-.. code-block:: python
+In myapp.py::
 
     class MyWidget(Label):
         pass
 
-and in my.kv:
-
-.. code-block:: kv
+and in my.kv::
 
     <-MyWidget>:
         canvas:
@@ -534,9 +505,7 @@ Lang Directives
 ---------------
 
 You can use directive to control part of the lang files. Directive is done with
-a comment line starting with:
-
-.. code-block:: kv
+a comment line starting with::
 
     #:<directivename> <options>
 
@@ -545,15 +514,11 @@ import <package>
 
 .. versionadded:: 1.0.5
 
-Syntax:
-
-.. code-block:: kv
+Syntax::
 
     #:import <alias> <package>
 
-You can import a package by writing:
-
-.. code-block:: kv
+You can import a package by writing::
 
     #:import os os
 
@@ -561,9 +526,7 @@ You can import a package by writing:
         Button:
             text: os.getcwd()
 
-Or more complex:
-
-.. code-block:: kv
+Or more complex::
 
     #:import ut kivy.utils
 
@@ -574,9 +537,7 @@ Or more complex:
 
 .. versionadded:: 1.0.7
 
-You can directly import class from a module:
-
-.. code-block:: kv
+You can directly import class from a module::
 
     #: import Animation kivy.animation.Animation
     <Rule>:
@@ -587,15 +548,11 @@ set <key> <expr>
 
 .. versionadded:: 1.0.6
 
-Syntax:
-
-.. code-block:: kv
+Syntax::
 
     #:set <key> <expr>
 
-Set a key that will be available anywhere in the kv. For example:
-
-.. code-block:: kv
+Set a key that will be available anywhere in the kv. For example::
 
     #:set my_color (.4, .3, .4)
     #:set my_color_hl (.5, .4, .5)
@@ -627,6 +584,7 @@ from kivy.cache import Cache
 from kivy import kivy_data_dir, require
 from kivy.compat import PY2, iteritems, iterkeys
 import kivy.metrics as Metrics
+from weakref import ref
 
 
 trace = Logger.trace
@@ -642,16 +600,11 @@ Cache.register('kv.lang')
 lang_str = re.compile('([\'"][^\'"]*[\'"])')
 lang_key = re.compile('([a-zA-Z_]+)')
 lang_keyvalue = re.compile('([a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z0-9_.]+)')
-lang_tr = re.compile('(_\()')
 
 # delayed calls are canvas expression triggered during an loop
 _delayed_calls = []
 
-# all the widget handlers, used to correctly unbind all the callbacks then the
-# widget is deleted
-_handlers = {}
 
-    
 class ProxyApp(object):
     # proxy app object
     # taken from http://code.activestate.com/recipes/496741-object-proxying/
@@ -796,11 +749,6 @@ class ParserRuleProperty(object):
         wk = list(set(findall(lang_keyvalue, tmp)))
         if len(wk):
             self.watched_keys = [x.split('.') for x in wk]
-        if findall(lang_tr, tmp):
-            if self.watched_keys:
-                self.watched_keys += [['_']]
-            else:
-                self.watched_keys = [['_']]
 
     def __repr__(self):
         return '<ParserRuleProperty name=%r filename=%s:%d ' \
@@ -1225,27 +1173,19 @@ class Parser(object):
 
         return objects, []
 
-def get_proxy(widget):
-    try:
-        return widget.proxy_ref
-    except AttributeError:
-        return widget
 
 def custom_callback(__kvlang__, idmap, *largs, **kwargs):
     idmap['args'] = largs
     exec(__kvlang__.co_value, idmap)
 
+
 def create_handler(iself, element, key, value, rule, idmap, delayed=False):
     locals()['__kvlang__'] = rule
 
     # create an handler
-    uid = iself.uid
-    if uid not in _handlers:
-        _handlers[uid] = []
-
     idmap = copy(idmap)
     idmap.update(global_idmap)
-    idmap['self'] = iself.proxy_ref
+    idmap['self'] = iself
 
     def call_fn(*args):
         if __debug__:
@@ -1271,8 +1211,6 @@ def create_handler(iself, element, key, value, rule, idmap, delayed=False):
                     f = getattr(f, x)
                 if hasattr(f, 'bind'):
                     f.bind(**{k[-1]: fn})
-                    # make sure _handlers doesn't keep widgets alive
-                    _handlers[uid].append([get_proxy(f), k[-1], fn])
             except KeyError:
                 continue
             except AttributeError:
@@ -1464,11 +1402,7 @@ class BuilderBase(object):
             cls = type(name, tuple(rootwidgets), {})
             Cache.append('kv.lang', key, cls)
         widget = cls()
-        # in previous versions, ``ctx`` is passed as is as ``template_ctx``
-        # preventing widgets in it from be collected by the GC. This was
-        # especially relevant to AccordionItem's title_template.
-        proxy_ctx = {k: get_proxy(v) for k, v in ctx.items()}
-        self._apply_rule(widget, rule, rule, template_ctx=proxy_ctx)
+        self._apply_rule(widget, rule, rule, template_ctx=ctx)
         return widget
 
     def apply(self, widget):
@@ -1493,7 +1427,7 @@ class BuilderBase(object):
         # will collect reference to all the id in children
         assert(rule not in self.rulectx)
         self.rulectx[rule] = rctx = {
-            'ids': {'root': widget.proxy_ref},
+            'ids': {'root': widget},
             'set': [], 'hdl': []}
 
         # extract the context of the rootrule (not rule!)
@@ -1508,7 +1442,7 @@ class BuilderBase(object):
         if rule.id:
             # use only the first word as `id` discard the rest.
             rule.id = rule.id.split('#', 1)[0].strip()
-            rctx['ids'][rule.id] = widget.proxy_ref
+            rctx['ids'][rule.id] = widget
             # set id name as a attribute for root widget so one can in python
             # code simply access root_widget.id_name
             _ids = dict(rctx['ids'])
@@ -1518,7 +1452,7 @@ class BuilderBase(object):
                 if _ids[_key] == _root:
                     # skip on self
                     continue
-                _new_ids[_key] = _ids[_key]
+                _new_ids[_key] = ref(_ids[_key])
             _root.ids = _new_ids
 
         # first, ensure that the widget have all the properties used in
@@ -1590,9 +1524,9 @@ class BuilderBase(object):
 
         # append the properties and handlers to our final resolution task
         if rule.properties:
-            rctx['set'].append((widget.proxy_ref, list(rule.properties.values())))
+            rctx['set'].append((widget, list(rule.properties.values())))
         if rule.handlers:
-            rctx['hdl'].append((widget.proxy_ref, rule.handlers))
+            rctx['hdl'].append((widget, rule.handlers))
 
         # if we are applying another rule that the root one, then it's done for
         # us!
@@ -1630,12 +1564,12 @@ class BuilderBase(object):
                         key = key[3:]
                     idmap = copy(global_idmap)
                     idmap.update(rctx['ids'])
-                    idmap['self'] = widget_set.proxy_ref
+                    idmap['self'] = widget_set
                     widget_set.bind(**{key: partial(custom_callback,
                                                     crule, idmap)})
                     #hack for on_parent
                     if crule.name == 'on_parent':
-                        Factory.Widget.parent.dispatch(widget_set.__self__)
+                        Factory.Widget.parent.dispatch(widget_set)
         except Exception as e:
             if crule is not None:
                 raise BuilderException(crule.ctx, crule.line,
@@ -1670,27 +1604,7 @@ class BuilderBase(object):
         l = set(_delayed_calls)
         del _delayed_calls[:]
         for func in l:
-            try:
-                func(None, None)
-            except ReferenceError:
-                continue
-
-    def unbind_widget(self, uid):
-        '''(internal) Unbind all the handlers created by the rules of the
-        widget. The :data:`kivy.uix.widget.Widget.uid` is passed here instead of
-        the widget itself, because we are using it in the widget destructor.
-
-        .. versionadded:: 1.7.2
-        '''
-        if uid not in _handlers:
-            return
-        for f, k, fn in _handlers[uid]:
-            try:
-                f.unbind(**{k: fn})
-            except ReferenceError:
-                # proxy widget is already gone, that's cool :)
-                pass
-        del _handlers[uid]
+            func(None, None)
 
     def _build_canvas(self, canvas, widget, rule, rootrule):
         global Instruction
@@ -1713,7 +1627,7 @@ class BuilderBase(object):
                     value = prule.co_value
                     if type(value) is CodeType:
                         value = create_handler(
-                            widget, instr.proxy_ref, key, value, prule, idmap, True)
+                            widget, instr, key, value, prule, idmap, True)
                     setattr(instr, key, value)
             except Exception as e:
                 raise BuilderException(prule.ctx, prule.line,

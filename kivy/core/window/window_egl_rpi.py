@@ -74,7 +74,7 @@ class WindowEglRpi(WindowBase):
         while not EventLoop.quit and EventLoop.status == 'started':
             try:
                 self._mainloop()
-            except BaseException as inst:
+            except BaseException, inst:
                 raise
                 '''
                 # use exception manager first

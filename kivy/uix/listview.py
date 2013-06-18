@@ -971,8 +971,23 @@ class ListView(AbstractView, EventDispatcher):
             self._wstart = istart
             self._wend = iend + 10
 
+<<<<<<< HEAD
     def _spopulate(self, *args):
         self.populate()
+
+    def _reset_spopulate(self, *args):
+        self._wend = None
+||||||| merged common ancestors
+    def _spopulate(self, *dt):
+=======
+    def _spopulate(self, *args):
+>>>>>>> Added new ObservableDict variant
+        self.populate()
+        # simulate the scroll again, only if we already scrolled before
+        # the position might not be the same, mostly because we don't know the
+        # size of the new item.
+        if hasattr(self, '_scroll_y'):
+            self._scroll(self._scroll_y)
 
     def _reset_spopulate(self, *args):
         self._wend = None
@@ -1076,7 +1091,7 @@ class ListView(AbstractView, EventDispatcher):
 
     def data_changed(self, *dt):
 
-        print 'data_changed callback', dt
+        print 'LISTVIEW data_changed callback', dt
 
         print self.adapter.data.range_change
 
@@ -1094,36 +1109,31 @@ class ListView(AbstractView, EventDispatcher):
                 change_in_range = True
 
             if data_op == 'add':
+
                 self.scroll_after_add()
+
             elif data_op == 'delete':
-                cv = self.adapter.cached_views
-                i = start_index
-                j = end_index + 1
-                slice_length = end_index - start_index
-                deleted_views = []
-                while j in cv and j < len(self.adapter.data) - slice_length:
-                    deleted_views.append(cv[i])
-                    cv[i] = cv[j]
-                    cv[i].index = i
-                    i += 1
-                    j += 1
-                if j in cv:
-                    while j in cv:
-                        del cv[j]
-                        j += 1
-                for deleted_view in deleted_views:
-                    if deleted_view in self.adapter.selection:
-                        self.adapter.selection.remove(deleted_view)
-                    # All this should be pushed down to the adapters, ... e.g.,
-                    # this kind of call especially, should be done in the class
-                    # itself, not operated on from afar.
-                    self.adapter.dispatch('on_selection_change')
-                self.adapter.check_for_empty_selection()
+
+                deleted_indices = range(start_index, end_index + 1)
+                num_deleted = len(deleted_indices)
+
+                for item_view in self.container.children:
+                    if item_view.index in deleted_indices:
+                        self.container.remove_widget(item_view)
+                    elif item_view.index > end_index:
+                        item_view.index -= num_deleted
+
                 if change_in_range:
                     self.scrolling = True
                     self.populate()
                     self.dispatch('on_scroll_complete')
-            elif data_op == 'move':
-                pass
+
+            elif data_op == 'insert':
+
+                self.scroll_after_add()
+
             elif data_op == 'sort':
-                pass
+
+                self.scrolling = True
+                self.populate()
+                self.dispatch('on_scroll_complete')

@@ -7,7 +7,6 @@ Search touch for a double tap
 
 __all__ = ('InputPostprocDoubleTap', )
 
-from time import time
 from kivy.config import Config
 from kivy.vector import Vector
 from kivy.clock import Clock
@@ -78,8 +77,8 @@ class InputPostprocDoubleTap(object):
                 double_tap = self.find_double_tap(touch)
                 if double_tap:
                     touch.is_double_tap = True
-                    tap_time = touch.time_start - double_tap.time_start
-                    touch.double_tap_time = tap_time
+                    time = touch.time_start - double_tap.time_start
+                    touch.double_tap_time = time
                     distance = double_tap.double_tap_distance
                     touch.double_tap_distance = distance
 
@@ -87,7 +86,7 @@ class InputPostprocDoubleTap(object):
             self.touches[touch.uid] = (etype, touch)
 
         # second, check if up-touch is timeout for double tap
-        time_current = time()
+        time_current = Clock.get_time()
         to_delete = []
         for touchid in self.touches.keys():
             etype, touch = self.touches[touchid]
