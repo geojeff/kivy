@@ -78,26 +78,24 @@ class RangeObservingObservableList(ObservableList):
     # affected.
     #
 
-    cached_views_and_data = DictProperty({})
-    '''This is a temporary association used in sorting. It is created when we
-    sort, and destroyed by the adapter in its sort op callback.
-    '''
-
-    cached_views = ObjectProperty(None)
-    '''This is a reference to the containing adapter's cached_views, for use
-    in sorting operations. It is set by the adapter when needed.
+    cached_view_indices_and_data = DictProperty({})
+    '''This has keys as the indices of the containing adapter's cached_views,
+    for use in sorting operations. It is set by the adapter when needed.  In
+    sorting, a temporary association is made to the data items. It is destroyed
+    by the adapter in its sort op callback.
     '''
 
     def __init__(self, *largs):
         super(RangeObservingObservableList, self).__init__(*largs)
 
     def __setitem__(self, key, value):
-        self.range_change = None
+        if key == 'range_change':
+            self.range_change = None
         super(RangeObservingObservableList, self).__setitem__(key, value)
 
     def __delitem__(self, key):
         index = self.index(key)
-        self.range_change = ('delete', (index, index))
+        self.range_change = ('rool_delete', (index, index))
         super(RangeObservingObservableList, self).__delitem__(key)
 
     def __setslice__(self, *largs):
@@ -107,7 +105,7 @@ class RangeObservingObservableList(ObservableList):
     def __delslice__(self, *largs):
         start_index = largs[0]
         end_index = largs[-1]
-        self.range_change = ('delete', (start_index, end_index))
+        self.range_change = ('rool_delete', (start_index, end_index))
         super(RangeObservingObservableList, self).__delslice__(*largs)
 
     def __iadd__(self, *largs):
@@ -120,17 +118,17 @@ class RangeObservingObservableList(ObservableList):
 
     def append(self, *largs):
         index = len(self)
-        self.range_change = ('add', (index, index))
+        self.range_change = ('rool_add', (index, index))
         super(RangeObservingObservableList, self).append(*largs)
 
     def remove(self, *largs):
         index = self.index(largs[0])
-        self.range_change = ('delete', (index, index))
+        self.range_change = ('rool_delete', (index, index))
         super(RangeObservingObservableList, self).remove(*largs)
 
     def insert(self, *largs):
         index = self.index(largs[0])
-        self.range_change = ('insert', (index, index))
+        self.range_change = ('rool_insert', (index, index))
         super(RangeObservingObservableList, self).insert(*largs)
 
     def pop(self, *largs):
@@ -138,26 +136,24 @@ class RangeObservingObservableList(ObservableList):
             index = self.index(largs[0])
         else:
             index = len(self) - 1
-        self.range_change = ('delete', (index, index))
+        self.range_change = ('rool_delete', (index, index))
         return super(RangeObservingObservableList, self).pop(*largs)
 
     def extend(self, *largs):
         start_index = len(self)
         end_index = start_index + len(largs) - 1
-        self.range_change = ('add', (start_index, end_index))
+        self.range_change = ('rool_add', (start_index, end_index))
         super(RangeObservingObservableList, self).extend(*largs)
 
     def sort(self, *largs):
-        if self.cached_views:
-            for item_view in self.cached_views:
-                self.cached_views_and_data[item_view] = \
-                        self.data[item_view.index]
+        for i in self.cached_view_indices_and_data:
+            self.cached_view_indices_and_data[i] = self.data[i]
 
-        self.range_change = ('sort', (0, len(self) - 1))
+        self.range_change = ('rool_sort', (0, len(self) - 1))
         super(RangeObservingObservableList, self).sort(*largs)
 
     def reverse(self, *largs):
-        self.range_change = ('sort', (0, len(self) - 1))
+        self.range_change = ('rool_sort', (0, len(self) - 1))
         super(RangeObservingObservableList, self).reverse(*largs)
 
 
@@ -286,11 +282,13 @@ class ListAdapter(Adapter, EventDispatcher):
                   allow_empty_selection=self.check_for_empty_selection,
                   data=self.data_changed)
 
-        # Set a reference in data (an ObservableList instance) to our so that,
-        # in the case of sorting-related ops, an association can be made
-        # between the item_views in cached_views to the data_items in data,
-        # enabling a post-op update of cached_views indices.
-        self.data.cached_views = self.cached_views
+        # Prepare the dict property cached_view_indices_and_data, in our data
+        # property (an ObservableList instance) so that, in the case of
+        # sorting-related ops, an association can be made between the
+        # item_views in cached_views to the data_items in data, enabling a
+        # post-op update of cached_views indices.
+        self.data.cached_view_indices_and_data = \
+                dict([item_view.index for item_view in self.cached_views])
 
         self.delete_cache()
         self.initialize_selection()
@@ -305,11 +303,11 @@ class ListAdapter(Adapter, EventDispatcher):
 
             data_op, (start_index, end_index) = self.data.range_change
 
-            if data_op == 'add':
+            if data_op == 'rool_add':
                 # The add op is an append, so this shouldn't affect anything.
                 pass
 
-            elif data_op == 'delete':
+            elif data_op == 'rool_delete':
 
                 selection_was_affected = False
 
@@ -343,7 +341,7 @@ class ListAdapter(Adapter, EventDispatcher):
 
                 self.check_for_empty_selection()
 
-            elif data_op == 'insert':
+            elif data_op == 'rool_insert':
 
                 inserted_indices = range(start_index, end_index + 1)
 
@@ -358,13 +356,13 @@ class ListAdapter(Adapter, EventDispatcher):
 
                 self.cached_views = new_cached_views
 
-            elif data_op == 'sort':
+            elif data_op == 'rool_sort':
 
                 for item_view in self.cached_views:
                     item_view.index = self.data.index(
-                            self.data.cached_views_and_data[item_view])
+                            self.data.cached_view_indices_and_data[item_view])
 
-                self.data.cached_views_and_data = {}
+                self.data.cached_view_indices_and_data = {}
 
     def data_will_be_sorted(self, *args):
         self.cached_views_with_data_items = {}
