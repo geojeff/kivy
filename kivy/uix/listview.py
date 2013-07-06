@@ -1108,11 +1108,11 @@ class ListView(AbstractView, EventDispatcher):
                 first_item_view.index <= end_index <= last_item_view.index):
                 change_in_range = True
 
-            if data_op == 'add':
+            if data_op in ['rool_add', 'rood_add']:
 
                 self.scroll_after_add()
 
-            elif data_op == 'delete':
+            elif data_op in ['rool_delete', 'rood_delete']:
 
                 deleted_indices = range(start_index, end_index + 1)
                 num_deleted = len(deleted_indices)
@@ -1120,19 +1120,17 @@ class ListView(AbstractView, EventDispatcher):
                 for item_view in self.container.children:
                     if item_view.index in deleted_indices:
                         self.container.remove_widget(item_view)
-                    elif item_view.index > end_index:
-                        item_view.index -= num_deleted
 
                 if change_in_range:
                     self.scrolling = True
                     self.populate()
                     self.dispatch('on_scroll_complete')
 
-            elif data_op == 'insert':
+            elif data_op in ['rool_insert', 'rood_insert']:
 
                 self.scroll_after_add()
 
-            elif data_op == 'sort':
+            elif data_op in ['rool_sort', 'rood_sort']:
 
                 self.scrolling = True
                 self.populate()

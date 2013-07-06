@@ -61,6 +61,33 @@ from kivy.properties import ObservableList
 from kivy.lang import Builder
 
 
+# TODO: This is an experiment to dispatch from the
+#       RangeObservingObservableList (ROOL), which is not an EventDispatcher
+#       (it seems it cannot be, as the ObservableList is a cython class). This
+#       is currently not used, however -- no callbacks received.
+
+class ROOLDispatcher(EventDispatcher):
+
+    sort_op_starting = BooleanProperty(False)
+
+    __events__ = ('on_range_change', 'on_sort_op_starting',)
+
+    def __init__(self, **kwargs):
+        super(ROOLDispatcher, self).__init__(**kwargs)
+
+    def on_range_change(self, *args):
+        '''on_range_change() is the default handler for the
+        on_range_change event.
+        '''
+        pass
+
+    def on_sort_op_starting(self, *args):
+        '''on_sort_op_starting() is the default handler for the
+        sort_op_starting event.
+        '''
+        pass
+
+
 class RangeObservingObservableList(ObservableList):
     '''Adds range-observing intelligence to ObservableList'''
 
@@ -78,6 +105,8 @@ class RangeObservingObservableList(ObservableList):
     # affected.
     #
 
+    # TODO: Remove cached_view_indices_and_data, or use it to solve sorting.
+
     cached_view_indices_and_data = DictProperty({})
     '''This has keys as the indices of the containing adapter's cached_views,
     for use in sorting operations. It is set by the adapter when needed.  In
@@ -88,15 +117,18 @@ class RangeObservingObservableList(ObservableList):
     def __init__(self, *largs):
         super(RangeObservingObservableList, self).__init__(*largs)
 
+        self.rool_dispatcher = ROOLDispatcher()
+
     def __setitem__(self, key, value):
-        if key == 'range_change':
-            self.range_change = None
+        self.range_change = None
         super(RangeObservingObservableList, self).__setitem__(key, value)
 
     def __delitem__(self, key):
         index = self.index(key)
         self.range_change = ('rool_delete', (index, index))
         super(RangeObservingObservableList, self).__delitem__(key)
+        #self.rool_dispatcher.sort_op_starting = True
+        #self.rool_dispatcher.dispatch('on_sort_op_starting')
 
     def __setslice__(self, *largs):
         self.range_change = None
@@ -146,6 +178,7 @@ class RangeObservingObservableList(ObservableList):
         super(RangeObservingObservableList, self).extend(*largs)
 
     def sort(self, *largs):
+        self.rool_dispatcher.sort_op_starting = True
         for i in self.cached_view_indices_and_data:
             self.cached_view_indices_and_data[i] = self.data[i]
 
@@ -282,20 +315,20 @@ class ListAdapter(Adapter, EventDispatcher):
                   allow_empty_selection=self.check_for_empty_selection,
                   data=self.data_changed)
 
-        # Prepare the dict property cached_view_indices_and_data, in our data
-        # property (an ObservableList instance) so that, in the case of
-        # sorting-related ops, an association can be made between the
-        # item_views in cached_views to the data_items in data, enabling a
-        # post-op update of cached_views indices.
-        self.data.cached_view_indices_and_data = \
-                dict([item_view.index for item_view in self.cached_views])
+        self.data.rool_dispatcher.bind(
+                #on_range_change=self.data_changed,
+                on_sort_op_starting=self.sort_op_starting)
 
         self.delete_cache()
         self.initialize_selection()
 
+    def sort_op_starting(self, *args):
+
+        print 'sort op starting'
+
     def data_changed(self, *dt):
 
-        print 'ADAPTER data_changed callback', dt
+        print 'LIST ADAPTER data_changed callback', dt
 
         print self.data.range_change
 
@@ -313,10 +346,9 @@ class ListAdapter(Adapter, EventDispatcher):
 
                 deleted_indices = range(start_index, end_index + 1)
 
-                # Delete views from cache.
-                print 'cached_views', self.cached_views
-                deleted_indices = range(start_index, end_index + 1)
+                len_cache_before = len(self.cached_views)
 
+                # Delete views from cache.
                 new_cached_views = {}
 
                 i = 0
@@ -328,18 +360,37 @@ class ListAdapter(Adapter, EventDispatcher):
                         i += 1
 
                 self.cached_views = new_cached_views
-                print 'cached_views', self.cached_views
+
+                # Removed deleted_indices from the sorting-related dict in
+                # self.data, a RangeObservingObservableList.
+                #for i in deleted_indices:
+                    #del self.data.cached_view_indices_and_data[i]
 
                 # Remove deleted views from selection.
-                for selected_index in [item.index for item in self.selection]:
-                    if selected_index in deleted_indices:
-                        del self.selection[selected_index]
+                #for selected_index in [item.index for item in self.selection]:
+                for sel in self.selection:
+                    if sel.index in deleted_indices:
+                        self.selection.remove(sel)
                         selection_was_affected = True
 
-                if selection_was_affected:
-                    self.dispatch('on_selection_change')
+                # Do a check_for_empty_selection type step, if data remains.
+                if (len(self.data) > 0
+                        and not self.selection
+                        and not self.allow_empty_selection):
+                    # Find a good index to select, if the deletion results in
+                    # no selection, which is common, as the selected item is
+                    # often the one deleted.
+                    if start_index > 0:
+                        new_sel_index = start_index - 1
+                    elif end_index < len_cache_before - 1:
+                        # Don't forget that the deletion has occurred by now.
+                        new_sel_index = start_index
+                    else:
+                        new_sel_index = 0
 
-                self.check_for_empty_selection()
+                    v = self.get_view(new_sel_index)
+                    if v is not None:
+                        self.handle_selection(v)
 
             elif data_op == 'rool_insert':
 
@@ -364,14 +415,9 @@ class ListAdapter(Adapter, EventDispatcher):
 
                 self.data.cached_view_indices_and_data = {}
 
-    def data_will_be_sorted(self, *args):
-        self.cached_views_with_data_items = {}
-
-        for item_view in self.cached_views:
-            self.cached_views_with_data_items[item_view] = self.data[item_view.index]
-
     def delete_cache(self, *args):
         self.cached_views = {}
+        #self.data.cached_view_indices_and_data = {}
 
     def get_count(self):
         return len(self.data)
@@ -394,6 +440,14 @@ class ListAdapter(Adapter, EventDispatcher):
         item_view = self.create_view(index)
         if item_view:
             self.cached_views[index] = item_view
+
+            # Prepare the dict property cached_view_indices_and_data, in our data
+            # property (an ObservableList instance) so that, in the case of
+            # sorting-related ops, an association can be made between the
+            # item_views in cached_views to the data_items in data, enabling a
+            # post-op update of cached_views indices.
+            #self.data.cached_view_indices_and_data[index] = None
+
         return item_view
 
     def create_view(self, index):
