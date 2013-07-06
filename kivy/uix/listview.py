@@ -628,6 +628,12 @@ class ListItemButton(SelectableView, Button):
     :class:`~kivy.uix.listview.ListView`.
     '''
 
+    # TODO: ListItemButton could have a set of cosmetic (or otherwise, perhaps)
+    #       effects that should happen upon selection / deselection. For
+    #       example, instead of changing the background color, show a bold
+    #       border. Can this be handled by subclassing? Should there be a
+    #       "typical" set of optional effects?
+
     selected_color = ListProperty([1., 0., 0., 1])
     '''
     :data:`selected_color` is a :class:`~kivy.properties.ListProperty`,
@@ -1091,23 +1097,23 @@ class ListView(AbstractView, EventDispatcher):
 
     def data_changed(self, *dt):
 
-        # Note: rool == RangeObservingObservableList
-        #       rood == RangeObservingObservableDict
+        # Note: crol == ChangeRecordingObservableList
+        #       crod == ChangeRecordingObservableDict
         #
         # Callbacks could come here from either, and there could be differences
         # in handling.
 
         print 'LISTVIEW data_changed callback', dt
 
-        print self.adapter.data.range_change
+        print self.adapter.data.change_info
 
-        data_op, (start_index, end_index) = self.adapter.data.range_change
+        data_op, (start_index, end_index) = self.adapter.data.change_info
 
-        if self.adapter.data.range_change:
+        if self.adapter.data.change_info:
 
             if len(self.container.children) == 0:
                 # Delete action(s) have resulted in total deletion of items.
-                if data_op in ['rool_add', 'rool_extend', 'rood_add']:
+                if data_op in ['crol_add', 'crol_extend', 'crod_add']:
                     self.scroll_after_add()
                 return
 
@@ -1124,13 +1130,13 @@ class ListView(AbstractView, EventDispatcher):
                    first_item_view.index <= end_index <= last_item_view.index):
                 change_in_range = True
 
-            if data_op in ['rool_add',
-                           'rool_extend',
-                           'rood_add',
-                           'rood_update']:
+            if data_op in ['crol_add',
+                           'crol_extend',
+                           'crod_add',
+                           'crod_update']:
                 self.scroll_after_add()
 
-            elif data_op in ['rool_delete', 'rood_delete']:
+            elif data_op in ['crol_delete', 'crod_delete']:
 
                 deleted_indices = range(start_index, end_index + 1)
                 num_deleted = len(deleted_indices)
@@ -1144,11 +1150,11 @@ class ListView(AbstractView, EventDispatcher):
                     self.populate()
                     self.dispatch('on_scroll_complete')
 
-            elif data_op in ['rool_insert', 'rood_insert']:
+            elif data_op in ['crol_insert', 'crod_insert']:
 
                 self.scroll_after_add()
 
-            elif data_op in ['rool_sort', 'rood_sort']:
+            elif data_op in ['crol_sort', 'crod_sort']:
 
                 self.scrolling = True
                 self.populate()

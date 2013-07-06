@@ -24,19 +24,22 @@ from kivy.properties import DictProperty
 from kivy.properties import ListProperty
 from kivy.properties import ObservableDict
 from kivy.adapters.listadapter import ListAdapter
-from kivy.adapters.listadapter import RangeObservingObservableList
+from kivy.adapters.listadapter import ChangeRecordingObservableList
 
 
-class RangeObservingObservableDict(ObservableDict):
+class ChangeRecordingObservableDict(ObservableDict):
+    '''Adds range-observing and other intelligence to ObservableDict, storing
+    change_info for use by an observer.
+    '''
 
-    # range_change is a normal python object consisting of the op name and
+    # change_info is a normal python object consisting of the op name and
     # the keys involved:
     #
     #     (data_op, (keys))
     #
-    # If the op does not cause a range change, range_change is set to None.
+    # If the op does not cause a range change, change_info is set to None.
     #
-    # Observers of data changes may consult range_change if needed, for
+    # Observers of data changes may consult change_info if needed, for
     # example, listview needs to know details for scrolling.
     #
     # DictAdapter itself, the owner of data, is the first observer of data
@@ -52,54 +55,54 @@ class RangeObservingObservableDict(ObservableDict):
     #    self.__setitem__(attr, value)
 
     def __setitem__(self, key, value):
-        if isinstance(value, tuple) and key == 'range_change':
+        if isinstance(value, tuple) and key == 'change_info':
             return
         if value is None:
             # ObservableDict will delete the item if value is None, so this is
             # like a delete op.
-            self.range_change = ('rood_delete', (key, ))
+            self.change_info = ('crod_delete', (key, ))
         else:
-            self.range_change = ('rood_add', (key, ))
-        super(RangeObservingObservableDict, self).__setitem__(key, value)
+            self.change_info = ('crod_add', (key, ))
+        super(ChangeRecordingObservableDict, self).__setitem__(key, value)
 
     def __delitem__(self, key):
-        self.range_change = ('rood_delete', (key, ))
-        super(RangeObservingObservableDict, self).__delitem__(key)
+        self.change_info = ('crod_delete', (key, ))
+        super(ChangeRecordingObservableDict, self).__delitem__(key)
 
     def clear(self, *largs):
         # TODO: Should this, and other cases below, be (*largs)?
-        self.range_change = ('rood_delete', largs)
-        super(RangeObservingObservableDict, self).clear(*largs)
+        self.change_info = ('crod_delete', largs)
+        super(ChangeRecordingObservableDict, self).clear(*largs)
 
     def remove(self, *largs):
         # remove(x) is same as del s[s.index(x)]
-        self.range_change = ('rood_delete', largs)
-        super(RangeObservingObservableDict, self).remove(*largs)
+        self.change_info = ('crod_delete', largs)
+        super(ChangeRecordingObservableDict, self).remove(*largs)
 
     def pop(self, *largs):
         # This is pop on a specific key.
         # s.pop([i]) is same as x = s[i]; del s[i]; return x
-        self.range_change = ('rood_delete', largs)
-        return super(RangeObservingObservableDict, self).pop(*largs)
+        self.change_info = ('crod_delete', largs)
+        return super(ChangeRecordingObservableDict, self).pop(*largs)
 
     def popitem(self, *largs):
         # From python docs, "Remove and return an arbitrary (key, value) pair
         # from the dictionary." From other reading, arbitrary here effectively
         # means "random" in the loose sense -- for truely random ops, use the
         # proper random module. Nevertheless, the item is deleted and returned.
-        self.range_change = ('rood_delete', largs)
-        return super(RangeObservingObservableDict, self).popitem(*largs)
+        self.change_info = ('crod_delete', largs)
+        return super(ChangeRecordingObservableDict, self).popitem(*largs)
 
     def setdefault(self, *largs):
-        present_keys = super(RangeObservingObservableDict, self).keys()
+        present_keys = super(ChangeRecordingObservableDict, self).keys()
         if not largs[0] in present_keys:
-            self.range_change = ('rood_add', largs)
-        super(RangeObservingObservableDict, self).setdefault(*largs)
+            self.change_info = ('crod_add', largs)
+        super(ChangeRecordingObservableDict, self).setdefault(*largs)
 
     def update(self, *largs):
-        present_keys = super(RangeObservingObservableDict, self).keys()
-        self.range_change = ('rood_update', list(set(largs) - set(present_keys)))
-        super(RangeObservingObservableDict, self).update(*largs)
+        present_keys = super(ChangeRecordingObservableDict, self).keys()
+        self.change_info = ('crod_update', list(set(largs) - set(present_keys)))
+        super(ChangeRecordingObservableDict, self).update(*largs)
 
 
 class DictAdapter(ListAdapter):
@@ -120,7 +123,7 @@ class DictAdapter(ListAdapter):
     '''
 
     # TODO: This was initialized to None. Problem with setting to {} instead?
-    data = DictProperty({}, cls=RangeObservingObservableDict)
+    data = DictProperty({}, cls=ChangeRecordingObservableDict)
     '''A dict that indexes records by keys that are equivalent to the keys in
     sorted_keys, or they are a superset of the keys in sorted_keys.
 
@@ -158,15 +161,15 @@ class DictAdapter(ListAdapter):
 
         print 'DICT ADAPTER data_changed callback', dt
 
-        print self.data.range_change
+        print self.data.change_info
 
-        if self.adapter.data.range_change:
+        if self.adapter.data.change_info:
 
-            data_op, keys = self.data.range_change
+            data_op, keys = self.data.change_info
 
-            if data_op in ['rood_add', 'rood_update':
+            if data_op in ['crod_add', 'crod_update']:
                 self.sorted_keys.extend(keys)
-            elif data_op == 'rood_delete':
+            elif data_op == 'crod_delete':
 
                 delete_affected_selection = False
 

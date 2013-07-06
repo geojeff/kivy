@@ -62,42 +62,42 @@ from kivy.lang import Builder
 
 
 # TODO: This is an experiment to dispatch from the
-#       RangeObservingObservableList (ROOL), which is not an EventDispatcher
+#       ChangeRecordingObservableList (ROOL), which is not an EventDispatcher
 #       (it seems it cannot be, as the ObservableList is a cython class). This
 #       is currently not used, however -- no callbacks received.
 
-class ROOLDispatcher(EventDispatcher):
+#class ROOLDispatcher(EventDispatcher):
+#
+#    sort_op_starting = BooleanProperty(False)
+#
+#    __events__ = ('on_change_info', 'on_sort_op_starting',)
+#
+#    def __init__(self, **kwargs):
+#        super(ROOLDispatcher, self).__init__(**kwargs)
+#
+#    def on_change_info(self, *args):
+#        '''on_change_info() is the default handler for the
+#        on_change_info event.
+#        '''
+#        pass
+#
+#    def on_sort_op_starting(self, *args):
+#        '''on_sort_op_starting() is the default handler for the
+#        sort_op_starting event.
+#        '''
+#        pass
 
-    sort_op_starting = BooleanProperty(False)
 
-    __events__ = ('on_range_change', 'on_sort_op_starting',)
+class ChangeRecordingObservableList(ObservableList):
+    '''Adds range-observing and other intelligence to ObservableList, storing
+    change_info for use by an observer.
+    '''
 
-    def __init__(self, **kwargs):
-        super(ROOLDispatcher, self).__init__(**kwargs)
-
-    def on_range_change(self, *args):
-        '''on_range_change() is the default handler for the
-        on_range_change event.
-        '''
-        pass
-
-    def on_sort_op_starting(self, *args):
-        '''on_sort_op_starting() is the default handler for the
-        sort_op_starting event.
-        '''
-        pass
-
-
-class RangeObservingObservableList(ObservableList):
-    '''Adds range-observing intelligence to ObservableList'''
-
-    # range_change is a normal python object consisting of:
+    # change_info is a normal python object consisting of:
     #
     #     (data_op, (start_index, end_index)
     #
-    # If the op does not cause a range change, range_change is set to None.
-    #
-    # Observers of data changes may consult range_change if needed, for
+    # Observers of data changes may consult change_info if needed, for
     # example, listview needs to know details for scrolling.
     #
     # ListAdapter itself, the owner of data, is the first observer of data
@@ -116,79 +116,79 @@ class RangeObservingObservableList(ObservableList):
     '''
 
     def __init__(self, *largs):
-        super(RangeObservingObservableList, self).__init__(*largs)
+        super(ChangeRecordingObservableList, self).__init__(*largs)
 
-        self.rool_dispatcher = ROOLDispatcher()
+        #self.crol_dispatcher = ROOLDispatcher()
 
     def __setitem__(self, key, value):
-        self.range_change = None
-        super(RangeObservingObservableList, self).__setitem__(key, value)
+        self.change_info = None
+        super(ChangeRecordingObservableList, self).__setitem__(key, value)
 
     def __delitem__(self, key):
         index = self.index(key)
-        self.range_change = ('rool_delete', (index, index))
-        super(RangeObservingObservableList, self).__delitem__(key)
-        #self.rool_dispatcher.sort_op_starting = True
-        #self.rool_dispatcher.dispatch('on_sort_op_starting')
+        self.change_info = ('crol_delete', (index, index))
+        super(ChangeRecordingObservableList, self).__delitem__(key)
+        #self.crol_dispatcher.sort_op_starting = True
+        #self.crol_dispatcher.dispatch('on_sort_op_starting')
 
     def __setslice__(self, *largs):
-        self.range_change = None
-        super(RangeObservingObservableList, self).__setslice__(*largs)
+        self.change_info = None
+        super(ChangeRecordingObservableList, self).__setslice__(*largs)
 
     def __delslice__(self, *largs):
         start_index = largs[0]
         end_index = largs[-1]
-        self.range_change = ('rool_delete', (start_index, end_index))
-        super(RangeObservingObservableList, self).__delslice__(*largs)
+        self.change_info = ('crol_delete', (start_index, end_index))
+        super(ChangeRecordingObservableList, self).__delslice__(*largs)
 
     def __iadd__(self, *largs):
-        self.range_change = None
-        super(RangeObservingObservableList, self).__iadd__(*largs)
+        self.change_info = None
+        super(ChangeRecordingObservableList, self).__iadd__(*largs)
 
     def __imul__(self, *largs):
-        self.range_change = None
-        super(RangeObservingObservableList, self).__imul__(*largs)
+        self.change_info = None
+        super(ChangeRecordingObservableList, self).__imul__(*largs)
 
     def append(self, *largs):
         index = len(self)
-        self.range_change = ('rool_add', (index, index))
-        super(RangeObservingObservableList, self).append(*largs)
+        self.change_info = ('crol_add', (index, index))
+        super(ChangeRecordingObservableList, self).append(*largs)
 
     def remove(self, *largs):
         index = self.index(largs[0])
-        self.range_change = ('rool_delete', (index, index))
-        super(RangeObservingObservableList, self).remove(*largs)
+        self.change_info = ('crol_delete', (index, index))
+        super(ChangeRecordingObservableList, self).remove(*largs)
 
     def insert(self, *largs):
         index = self.index(largs[0])
-        self.range_change = ('rool_insert', (index, index))
-        super(RangeObservingObservableList, self).insert(*largs)
+        self.change_info = ('crol_insert', (index, index))
+        super(ChangeRecordingObservableList, self).insert(*largs)
 
     def pop(self, *largs):
         if largs[0]:
             index = self.index(largs[0])
         else:
             index = len(self) - 1
-        self.range_change = ('rool_delete', (index, index))
-        return super(RangeObservingObservableList, self).pop(*largs)
+        self.change_info = ('crol_delete', (index, index))
+        return super(ChangeRecordingObservableList, self).pop(*largs)
 
     def extend(self, *largs):
         start_index = len(self)
         end_index = start_index + len(largs) - 1
-        self.range_change = ('rool_extend', (start_index, end_index))
-        super(RangeObservingObservableList, self).extend(*largs)
+        self.change_info = ('crol_extend', (start_index, end_index))
+        super(ChangeRecordingObservableList, self).extend(*largs)
 
     def sort(self, *largs):
-        self.rool_dispatcher.sort_op_starting = True
+        #self.crol_dispatcher.sort_op_starting = True
         for i in self.cached_view_indices_and_data:
             self.cached_view_indices_and_data[i] = self.data[i]
 
-        self.range_change = ('rool_sort', (0, len(self) - 1))
-        super(RangeObservingObservableList, self).sort(*largs)
+        self.change_info = ('crol_sort', (0, len(self) - 1))
+        super(ChangeRecordingObservableList, self).sort(*largs)
 
     def reverse(self, *largs):
-        self.range_change = ('rool_sort', (0, len(self) - 1))
-        super(RangeObservingObservableList, self).reverse(*largs)
+        self.change_info = ('crol_sort', (0, len(self) - 1))
+        super(ChangeRecordingObservableList, self).reverse(*largs)
 
 
 class ListAdapter(Adapter, EventDispatcher):
@@ -198,7 +198,7 @@ class ListAdapter(Adapter, EventDispatcher):
     functonality.
     '''
 
-    data = ListProperty([], cls=RangeObservingObservableList)
+    data = ListProperty([], cls=ChangeRecordingObservableList)
     '''The data list property is redefined here, overriding its definition as
     an ObjectProperty in the Adapter class. We bind to data so that any
     changes will trigger updates. See also how the
@@ -295,6 +295,29 @@ class ListAdapter(Adapter, EventDispatcher):
     defaults to -1 (no limit).
     '''
 
+    bind_selection_to_children = BooleanProperty(True)
+    '''Should the children of selectable list items have their selection follow
+    that of their parent (if they are themselves selectable)?
+
+    :data:`bind_selection_to_children` is a
+    :class:`~kivy.properties.BooleanProperty` and defaults to True (There will
+    be a call to select/deselect children of any list item when that item is
+    itself selected/deselected.).
+    '''
+
+    # TODO: Evaluate the need for this. If this is added, how will the bind
+    #       call work? (on_release here is not a string, but an arg):
+    #
+    #           view_instance.bind(on_release=self.handle_selection)
+    #
+    # selection_triggering_event = StringProperty('on_release')
+    # '''What is the name of the event fired from list items to effect selection?
+    #
+    # :data:`selection_triggering_event` is a
+    # :class:`~kivy.properties.StringProperty` and defaults to the Kivy event
+    # on_release, which is the typical case for buttons.
+    # '''
+
     cached_views = DictProperty({})
     '''View instances for data items are instantiated and managed by the
     adapter. Here we maintain a dictionary containing the view
@@ -316,9 +339,9 @@ class ListAdapter(Adapter, EventDispatcher):
                   allow_empty_selection=self.check_for_empty_selection,
                   data=self.data_changed)
 
-        self.data.rool_dispatcher.bind(
-                #on_range_change=self.data_changed,
-                on_sort_op_starting=self.sort_op_starting)
+        #self.data.crol_dispatcher.bind(
+                #on_change_info=self.data_changed,
+                #on_sort_op_starting=self.sort_op_starting)
 
         self.delete_cache()
         self.initialize_selection()
@@ -331,13 +354,13 @@ class ListAdapter(Adapter, EventDispatcher):
 
         print 'LIST ADAPTER data_changed callback', dt
 
-        print self.data.range_change
+        print self.data.change_info
 
-        if self.data.range_change:
+        if self.data.change_info:
 
-            data_op, (start_index, end_index) = self.data.range_change
+            data_op, (start_index, end_index) = self.data.change_info
 
-            if len(self.data) == 1 and data_op in ['rool_add', 'rool_extend']:
+            if len(self.data) == 1 and data_op in ['crol_add', 'crol_extend']:
                 # Special case: deletion resulted in no data, leading up to the
                 # present op, which adds one or more items. Cached views should
                 # have already been treated.  Call check_for_empty_selection()
@@ -345,13 +368,13 @@ class ListAdapter(Adapter, EventDispatcher):
                 self.check_for_empty_selection()
                 return
 
-            if data_op in ['rool_add', 'rool_extend']:
+            if data_op in ['crol_add', 'crol_extend']:
                 # The add op is an append or extend, so this shouldn't affect
                 # anything here, as cached_views items can be built as needed
                 # through normal get_view() calls to build back up.
                 pass
 
-            elif data_op == 'rool_delete':
+            elif data_op == 'crol_delete':
 
                 selection_was_affected = False
 
@@ -373,7 +396,7 @@ class ListAdapter(Adapter, EventDispatcher):
                 self.cached_views = new_cached_views
 
                 # Removed deleted_indices from the sorting-related dict in
-                # self.data, a RangeObservingObservableList.
+                # self.data, a ChangeRecordingObservableList.
                 #for i in deleted_indices:
                     #del self.data.cached_view_indices_and_data[i]
 
@@ -403,7 +426,7 @@ class ListAdapter(Adapter, EventDispatcher):
                     if v is not None:
                         self.handle_selection(v)
 
-            elif data_op == 'rool_insert':
+            elif data_op == 'crol_insert':
 
                 inserted_indices = range(start_index, end_index + 1)
 
@@ -418,7 +441,7 @@ class ListAdapter(Adapter, EventDispatcher):
 
                 self.cached_views = new_cached_views
 
-            elif data_op == 'rool_sort':
+            elif data_op == 'crol_sort':
 
                 for item_view in self.cached_views:
                     item_view.index = self.data.index(
@@ -509,8 +532,9 @@ class ListAdapter(Adapter, EventDispatcher):
 
         view_instance.bind(on_release=self.handle_selection)
 
-        for child in view_instance.children:
-            child.bind(on_release=self.handle_selection)
+        if self.bind_selection_to_children:
+            for child in view_instance.children:
+                child.bind(on_release=self.handle_selection)
 
         return view_instance
 
@@ -549,6 +573,9 @@ class ListAdapter(Adapter, EventDispatcher):
                 # this will be a reselection, and the user will notice no
                 # change, except perhaps a flicker.
                 #
+                # TODO: Does the above paragraph describe a timing issue that
+                #       is hard to predict? If so, clarify. Otherwise, clarify.
+                #
                 self.check_for_empty_selection()
 
         if not hold_dispatch:
@@ -584,6 +611,10 @@ class ListAdapter(Adapter, EventDispatcher):
                     or inspect.ismethod(view.select)):
                 view.select()
                 has_selection = True
+
+        # TODO: The handling of is_selected is not put here as an else clause,
+        #       so if calling select() has already set an is_selected property
+        #       this will be an unneccessary (redundant) reset.
 
         if hasattr(view, 'is_selected'):
             # TODO: Change this to use callable().
