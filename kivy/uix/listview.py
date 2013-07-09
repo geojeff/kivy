@@ -1245,7 +1245,7 @@ class ListView(AbstractView, EventDispatcher):
                          'crol_extend',
                          'crod_setattr',    # TODO: not scroll_after_add()?
                          'crod_setitem_add',
-                         'crod_add',
+                         'crod_setdefault',
                          'crod_update']:
 
             self.scroll_after_add()
