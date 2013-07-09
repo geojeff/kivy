@@ -1157,7 +1157,6 @@ class ListView(AbstractView, EventDispatcher):
         #                crod_setitem_del - single item
         #                crod_delitem     - single item
         #                crod_clear       - all items deleted
-        #                crod_remove      - single item
         #                crod_pop         - single item
         #                crod_popitem     - single item
 
@@ -1257,7 +1256,6 @@ class ListView(AbstractView, EventDispatcher):
                          'crod_delitem',
                          'crod_setitem_del',
                          'crod_clear',
-                         'crod_remove',
                          'crod_pop',
                          'crod_popitem', ]:
 
