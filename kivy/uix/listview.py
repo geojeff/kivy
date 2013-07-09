@@ -1153,6 +1153,7 @@ class ListView(AbstractView, EventDispatcher):
         #                crod_clear       - all items deleted
         #                crod_pop         - single item
         #                crod_popitem     - single item
+        #                  [NOTE: crod_popitem is performed as crod_delitem]
 
         # Callbacks could come here from either crol or crod, and there could
         # be differences in handling.
@@ -1250,8 +1251,10 @@ class ListView(AbstractView, EventDispatcher):
                          'crod_delitem',
                          'crod_setitem_del',
                          'crod_clear',
-                         'crod_pop',
-                         'crod_popitem', ]:
+                         'crod_pop', ]:
+
+            # NOTE: There is no crod_popitem here, because it is performed as
+            #       a crod_delitem.
 
             deleted_indices = range(start_index, end_index + 1)
 
