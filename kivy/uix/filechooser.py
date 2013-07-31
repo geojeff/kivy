@@ -50,6 +50,7 @@ from os.path import (
     basename, getsize, isdir, join, sep, normpath, expanduser, altsep,
     splitdrive, realpath)
 from fnmatch import fnmatch
+import collections
 
 platform = core_platform()
 filesize_units = ('B', 'KB', 'MB', 'GB', 'TB')
@@ -161,7 +162,7 @@ class FileChooserController(FloatLayout):
     '''
     _ENTRY_TEMPLATE = None
 
-    path = StringProperty(u'/')
+    path = StringProperty('/')
     '''
     :class:`~kivy.properties.StringProperty`, defaults to current working
     directory as unicode string. Specifies the path on the filesystem that
@@ -276,12 +277,10 @@ class FileChooserController(FloatLayout):
     'cp1252']
     '''
 
+    __events__ = ('on_entry_added', 'on_entries_cleared',
+            'on_subentry_to_entry', 'on_remove_subentry', 'on_submit')
+
     def __init__(self, **kwargs):
-        self.register_event_type('on_entry_added')
-        self.register_event_type('on_entries_cleared')
-        self.register_event_type('on_subentry_to_entry')
-        self.register_event_type('on_remove_subentry')
-        self.register_event_type('on_submit')
         self._progress = None
         super(FileChooserController, self).__init__(**kwargs)
 
@@ -302,6 +301,22 @@ class FileChooserController(FloatLayout):
                   filters=self._trigger_update,
                   rootpath=self._trigger_update)
         self._trigger_update()
+
+    def on_touch_down(self, touch):
+        # don't respond to touchs outside self
+        if not self.collide_point(*touch.pos):
+            return
+        if self.disabled:
+            return True
+        return super(FileChooserController, self).on_touch_down(touch)
+
+    def on_touch_up(self, touch):
+        # don't respond to touchs outside self
+        if not self.collide_point(*touch.pos):
+            return True
+        if self.disabled:
+            return True
+        return super(FileChooserController, self).on_touch_up(touch)
 
     def _update_item_selection(self, *args):
         for item in self._items:
@@ -383,14 +398,8 @@ class FileChooserController(FloatLayout):
             # _add_file does, so if it fails here, it would also fail later
             # on. Do the check here to prevent setting path to an invalid
             # directory that we cannot list.
-            try:
-                path = entry.path.decode('utf-8')
-            except UnicodeEncodeError:
-                path = entry.path
-                pass
-            listdir(path)
+            listdir(entry.path)
         except OSError:
-            #Logger.exception(e)
             entry.locked = True
         else:
             self.path = join(self.path, entry.path)
@@ -401,8 +410,8 @@ class FileChooserController(FloatLayout):
             return files
         filtered = []
         for filter in self.filters:
-            if callable(filter):
-                filtered.extend([fn for fn in files if filter(self.path, fn)])
+            if isinstance(filter, collections.Callable):
+                filtered.extend([fn for fn in files if list(filter(self.path, fn))])
             else:
                 filtered.extend([fn for fn in files if fnmatch(fn, filter)])
         if not self.filter_dirs:
@@ -419,7 +428,6 @@ class FileChooserController(FloatLayout):
         try:
             size = getsize(fn)
         except OSError:
-            #Logger.exception(e)
             return '--'
 
         for unit in filesize_units:
@@ -456,7 +464,7 @@ class FileChooserController(FloatLayout):
         index = total = count = 1
         while time() - start < 0.05 or count < 10:
             try:
-                index, total, item = self._gitems_gen.next()
+                index, total, item = next(self._gitems_gen)
                 self._gitems.append(item)
                 count += 1
             except StopIteration:
@@ -482,6 +490,7 @@ class FileChooserController(FloatLayout):
             parent.entries[:] = items
             for entry in items:
                 self.dispatch('on_subentry_to_entry', entry, parent)
+        self.files[:] = [file.path for file in items]
 
         # stop the progression / creation
         self._hide_progress()
@@ -557,6 +566,7 @@ class FileChooserController(FloatLayout):
                 yield index, total, item
         except OSError:
             Logger.exception('Unable to open directory <%s>' % self.path)
+            self.files[:] = []
 
     def _add_files(self, path, parent=None):
         force_unicode = self._force_unicode
@@ -584,6 +594,7 @@ class FileChooserController(FloatLayout):
         is_hidden = self.is_hidden
         if not self.show_hidden:
             files = [x for x in files if not is_hidden(x)]
+        self.files[:] = files
         total = len(files)
         wself = ref(self)
         for index, fn in enumerate(files):
@@ -605,7 +616,7 @@ class FileChooserController(FloatLayout):
     def _force_unicode(self, s):
         # the idea is, whatever is the filename, unicode or str, even if the
         # str can't be directly returned as a unicode, return something.
-        if type(s) is unicode:
+        if type(s) is str:
             return s
         encodings = self.file_encodings
         for encoding in encodings:

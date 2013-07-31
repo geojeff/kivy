@@ -27,7 +27,7 @@ class FruitsListAdapter(ListAdapter):
             return
 
         category = \
-                fruit_categories[str(fruit_categories_adapter.selection[0])]
+                fruit_categories[fruit_categories_adapter.selection[0].text]
 
         # We are responsible with resetting the data. In this example, we are
         # using lists of instances of the classes defined below, CategoryItem
@@ -93,7 +93,6 @@ class CascadingView(GridLayout):
 
     def __init__(self, **kwargs):
         kwargs['cols'] = 3
-        kwargs['size_hint'] = (1.0, 1.0)
         super(CascadingView, self).__init__(**kwargs)
 
         list_item_args_converter = \
@@ -131,7 +130,7 @@ class CascadingView(GridLayout):
         # instantiation of the fruit_list_adapter.
         #
         first_category_fruits = \
-            fruit_categories[fruit_categories.keys()[0]]['fruits']
+            fruit_categories[list(fruit_categories.keys())[0]]['fruits']
 
         first_category_fruit_data_items = \
             [f for f in fruit_data_items if f.name in first_category_fruits]

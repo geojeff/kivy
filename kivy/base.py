@@ -15,10 +15,12 @@ __all__ = (
     'stopTouchApp',
 )
 
+import sys
 from kivy.config import Config
 from kivy.logger import Logger
 from kivy.clock import Clock
 from kivy.event import EventDispatcher
+from kivy.lang import Builder
 
 # private vars
 EventLoop = None
@@ -30,7 +32,7 @@ class ExceptionHandler:
 
         class E(ExceptionHandler):
             def handle_exception(self, inst):
-                Logger.exception(inst)
+                Logger.exception('Exception catched by ExceptionHandler')
                 return ExceptionManager.PASS
 
         ExceptionManager.add_handler(E())
@@ -83,10 +85,9 @@ class EventLoopBase(EventDispatcher):
     '''Main event loop. This loop handle update of input + dispatch event
     '''
 
+    __events__ = ('on_start', 'on_pause', 'on_stop')
+
     def __init__(self):
-        self.register_event_type('on_start')
-        self.register_event_type('on_pause')
-        self.register_event_type('on_stop')
         super(EventLoopBase, self).__init__()
         self.quit = False
         self.input_events = []
@@ -108,6 +109,9 @@ class EventLoopBase(EventDispatcher):
         '''Ensure that we have an window
         '''
         import kivy.core.window
+        if not self.window:
+            Logger.critical('App: Unable to get a Window, abort.')
+            sys.exit(1)
 
     def set_window(self, window):
         '''Set the window used for event loop
@@ -177,7 +181,8 @@ class EventLoopBase(EventDispatcher):
         self.dispatch('on_stop')
 
     def add_postproc_module(self, mod):
-        '''Add a postproc input module (DoubleTap, RetainTouch are default)'''
+        '''Add a postproc input module (DoubleTap, TripleTap, DeJitter
+        RetainTouch are default)'''
         if mod not in self.postproc_modules:
             self.postproc_modules.append(mod)
 
@@ -291,9 +296,17 @@ class EventLoopBase(EventDispatcher):
         # read and dispatch input from providers
         self.dispatch_input()
 
+        # flush all the canvas operation
+        Builder.sync()
+
+        # tick before draw
+        Clock.tick_draw()
+
+        # flush all the canvas operation
+        Builder.sync()
+
         window = self.window
         if window and window.canvas.needs_redraw:
-            Clock.tick_draw()
             window.dispatch('on_draw')
             window.dispatch('on_flip')
 
@@ -344,7 +357,7 @@ def _run_mainloop():
             EventLoop.run()
             stopTouchApp()
             break
-        except BaseException, inst:
+        except BaseException as inst:
             # use exception manager first
             r = ExceptionManager.handle_exception(inst)
             if r == ExceptionManager.RAISE:
@@ -407,7 +420,7 @@ def runTouchApp(widget=None, slave=False):
             EventLoop.add_input_provider(p, True)
 
     # add postproc modules
-    for mod in kivy_postproc_modules.values():
+    for mod in list(kivy_postproc_modules.values()):
         EventLoop.add_postproc_module(mod)
 
     # add main widget

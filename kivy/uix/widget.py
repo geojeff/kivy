@@ -47,8 +47,8 @@ We also have some defaults that you should be aware of:
 * The default size_hint is (1, 1). If the parent is a :class:`Layout`, then the
   widget size will be the parent/layout size.
 
-* All the :meth:`Widget.on_touch_down`, :meth:`Widget.on_touch_move`,
-  :meth:`Widget.on_touch_up` doesn't do any sort of collisions. If you want to
+* :meth:`Widget.on_touch_down`, :meth:`Widget.on_touch_move`,
+  :meth:`Widget.on_touch_up` don't do any sort of collisions. If you want to
   know if the touch is inside your widget, use :meth:`Widget.collide_point`.
 
 Using Properties
@@ -67,7 +67,7 @@ If you want to be notified when the pos attribute changes, i.e., when the
 widget moves, you can bind your own callback function like this::
 
     def callback_pos(instance, value):
-        print 'The widget', instance, 'moved to', value
+        print('The widget', instance, 'moved to', value)
 
     wid = Widget()
     wid.bind(pos=callback_pos)
@@ -80,12 +80,27 @@ __all__ = ('Widget', 'WidgetException')
 
 from kivy.event import EventDispatcher
 from kivy.factory import Factory
-from kivy.properties import NumericProperty, StringProperty, \
-        AliasProperty, ReferenceListProperty, ObjectProperty, \
-        ListProperty
+from kivy.properties import (NumericProperty, StringProperty, AliasProperty,
+                             ReferenceListProperty, ObjectProperty,
+                             ListProperty, DictProperty, BooleanProperty)
 from kivy.graphics import Canvas
 from kivy.base import EventLoop
 from kivy.lang import Builder
+from weakref import proxy
+from functools import partial
+
+
+# references to all the destructors widgets (partial method with widget uid as
+# key.)
+_widget_destructors = {}
+
+
+def _widget_destructor(uid, r):
+    # internal method called when a widget is deleted from memory. the only
+    # thing we remember about it is its uid. Clear all the associated callback
+    # created in kv language.
+    del _widget_destructors[uid]
+    Builder.unbind_widget(uid)
 
 
 class WidgetException(Exception):
@@ -105,7 +120,11 @@ class WidgetMetaclass(type):
         Factory.register(name, cls=mcs)
 
 
-class Widget(EventDispatcher):
+#: Base class used for widget, that inherit from :class:`EventDispatcher`
+WidgetBase = WidgetMetaclass('WidgetBase', (EventDispatcher, ), {})
+
+
+class Widget(WidgetBase):
     '''Widget class. See module documentation for more information.
 
     :Events:
@@ -127,15 +146,13 @@ class Widget(EventDispatcher):
     '''
 
     __metaclass__ = WidgetMetaclass
+    __events__ = ('on_touch_down', 'on_touch_move', 'on_touch_up')
 
     def __init__(self, **kwargs):
+        self._proxy_ref = None
+
         # Before doing anything, ensure the windows exist.
         EventLoop.ensure_window()
-
-        # Register touch events
-        self.register_event_type('on_touch_down')
-        self.register_event_type('on_touch_move')
-        self.register_event_type('on_touch_up')
 
         super(Widget, self).__init__(**kwargs)
 
@@ -157,6 +174,34 @@ class Widget(EventDispatcher):
         for argument in kwargs:
             if argument[:3] == 'on_':
                 self.bind(**{argument: kwargs[argument]})
+
+    @property
+    def proxy_ref(self):
+        '''Return a proxy reference to the widget, ie, without taking a
+        reference of the widget. See `weakref.proxy
+        <http://docs.python.org/2/library/weakref.html?highlight\
+        =proxy#weakref.proxy>`_ for more information about it.
+
+        .. versionadded:: 1.7.2
+        '''
+        _proxy_ref = self._proxy_ref
+        if _proxy_ref is None:
+            f = partial(_widget_destructor, self.uid)
+            self._proxy_ref = _proxy_ref = proxy(self, f)
+            # only f should be enough here, but it appears that is a very
+            # specific case, the proxy destructor is not called if both f and
+            # _proxy_ref are not together in a tuple
+            _widget_destructors[self.uid] = (f, _proxy_ref)
+        return _proxy_ref
+
+    def __eq__(self, other):
+        if not isinstance(other, Widget):
+            return False
+        return self.proxy_ref is other.proxy_ref
+
+    @property
+    def __self__(self):
+        return self
 
     #
     # Collision
@@ -221,6 +266,8 @@ class Widget(EventDispatcher):
         :Returns:
             bool. If True, the dispatching of the touch will stop.
         '''
+        if self.disabled and self.collide_point(*touch.pos):
+            return True
         for child in self.children[:]:
             if child.dispatch('on_touch_down', touch):
                 return True
@@ -230,6 +277,8 @@ class Widget(EventDispatcher):
 
         See :meth:`on_touch_down` for more information
         '''
+        if self.disabled:
+            return
         for child in self.children[:]:
             if child.dispatch('on_touch_move', touch):
                 return True
@@ -239,9 +288,15 @@ class Widget(EventDispatcher):
 
         See :meth:`on_touch_down` for more information
         '''
+        if self.disabled:
+            return
         for child in self.children[:]:
             if child.dispatch('on_touch_up', touch):
                 return True
+
+    def on_disabled(self, instance, value):
+        for child in self.children:
+            child.disabled = value
 
     #
     # Tree management
@@ -261,17 +316,23 @@ class Widget(EventDispatcher):
         >>> slider = Slider()
         >>> root.add_widget(slider)
         '''
-        if widget is self:
-            raise WidgetException('You cannot add yourself in a Widget')
         if not isinstance(widget, Widget):
             raise WidgetException(
                 'add_widget() can be used only with Widget classes.')
+
+        widget = widget.__self__
+        if widget is self:
+            raise WidgetException('You cannot add yourself in a Widget')
         parent = widget.parent
         # check if widget is already a child of another widget
         if parent:
             raise WidgetException('Cannot add %r, it already has a parent %r'
                 % (widget, parent))
-        widget.parent = self
+        widget.parent = parent = self
+        # child will be disabled if added to a disabled parent
+        if parent.disabled:
+            widget.disabled = True
+
         if index == 0 or len(self.children) == 0:
             self.children.insert(0, widget)
             self.canvas.add(widget.canvas)
@@ -290,6 +351,9 @@ class Widget(EventDispatcher):
                     next_index += 1
 
             children.insert(index, widget)
+            # we never want to insert widget _before_ canvas.before.
+            if next_index == 0 and canvas.has_before:
+                next_index = 1
             canvas.insert(next_index, widget.canvas)
 
     def remove_widget(self, widget):
@@ -306,6 +370,7 @@ class Widget(EventDispatcher):
         '''
         if widget not in self.children:
             return
+        parent = widget.parent
         self.children.remove(widget)
         self.canvas.remove(widget.canvas)
         widget.parent = None
@@ -564,6 +629,16 @@ class Widget(EventDispatcher):
     dict.
     '''
 
+    ids = DictProperty({})
+    '''This is a Dictionary of id's defined in your kv language. This will only
+    be populated if you use id's in your kv language code.
+
+    .. versionadded:: 1.7.0
+
+    :data:`ids` is a :class:`~kivy.properties.DictProperty`, defaults to a empty
+    dict {}.
+    '''
+
     opacity = NumericProperty(1.0)
     '''Opacity of the widget and all the children.
 
@@ -604,4 +679,18 @@ class Widget(EventDispatcher):
     follow and extend.
 
     See :class:`~kivy.graphics.Canvas` for more information about the usage.
+    '''
+
+    disabled = BooleanProperty(False)
+    '''Indicates whether this widget can interact with input or not.
+
+    .. Note::
+        1. Child Widgets when added onto a disabled widget will be disabled
+        automatically
+        2. Disabling/enabling a parent disables/enables all it's children.
+
+    .. versionadded:: 1.8.0
+
+    :data:`disabled` is a :class:`~kivy.properties.BooleanProperty`,
+    default to False.
     '''

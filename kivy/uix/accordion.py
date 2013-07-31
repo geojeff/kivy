@@ -198,6 +198,18 @@ class AccordionItem(FloatLayout):
     default to 'atlas://data/images/defaulttheme/button'
     '''
 
+    background_disabled_normal = StringProperty(
+        'atlas://data/images/defaulttheme/button_disabled')
+    '''Background image of the accordion item used for default graphical
+    representation, when the item is collapsed and disabled.
+
+    .. versionadded:: 1.8.0
+
+    :data:`background__disabled_normal` is an
+    :class:`~kivy.properties.StringProperty`, default to
+    'atlas://data/images/defaulttheme/button_disabled'
+    '''
+
     background_selected = StringProperty(
         'atlas://data/images/defaulttheme/button_pressed')
     '''Background image of the accordion item used for default graphical
@@ -205,6 +217,18 @@ class AccordionItem(FloatLayout):
 
     :data:`background_normal` is an :class:`~kivy.properties.StringProperty`,
     default to 'atlas://data/images/defaulttheme/button_pressed'
+    '''
+
+    background_disabled_selected = StringProperty(
+        'atlas://data/images/defaulttheme/button_disabled_pressed')
+    '''Background image of the accordion item used for default graphical
+    representation, when the item is selected (not collapsed) and disabled.
+
+    .. versionadded:: 1.8.0
+
+    :data:`background_disabled_selected` is an
+    :class:`~kivy.properties.StringProperty`, default to
+    'atlas://data/images/defaulttheme/button_disabled_pressed'
     '''
 
     orientation = OptionProperty('vertical', options=(
@@ -272,6 +296,8 @@ class AccordionItem(FloatLayout):
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos):
             return
+        if self.disabled:
+            return True
         if self.collapse:
             self.collapse = False
             return True
@@ -339,6 +365,7 @@ class Accordion(Widget):
             pos=self._trigger_layout,
             min_space=self._trigger_layout)
 
+
     def add_widget(self, widget, *largs):
         if not isinstance(widget, AccordionItem):
             raise AccordionException('Accordion accept only AccordionItem')
@@ -359,7 +386,10 @@ class Accordion(Widget):
 
     def _do_layout(self, dt):
         children = self.children
-        all_collapsed = all(x.collapse for x in children)
+        if children:
+            all_collapsed = all(x.collapse for x in children)
+        else:
+            all_collapsed = False
 
         if all_collapsed:
             children[0].collapse = False
@@ -410,7 +440,7 @@ if __name__ == '__main__':
     from kivy.uix.label import Label
 
     acc = Accordion()
-    for x in xrange(10):
+    for x in range(10):
         item = AccordionItem(title='Title %d' % x)
         if x == 0:
             item.add_widget(Button(text='Content %d' % x))

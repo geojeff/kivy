@@ -14,9 +14,9 @@ Video loading is asynchronous - many properties are not available until
 the video is loaded (when the texture is created)::
 
     def on_position_change(instance, value):
-        print 'The position in the video is', value
+        print('The position in the video is', value)
     def on_duration_change(instance, value):
-        print 'The duration of the video is', video
+        print('The duration of the video is', video)
     video = Video(source='PandaSneezes.avi')
     video.bind(position=on_position_change,
                duration=on_duration_change)
@@ -82,6 +82,15 @@ class Video(Image):
     False.
     '''
 
+    loaded = BooleanProperty(False)
+    '''Boolean, indicates if the video is loaded and ready for playback.
+
+    .. versionadded:: 1.6.0
+
+    :data:`loaded` is a :class:`~kivy.properties.BooleanProperty`, default to
+    False.
+    '''
+
     position = NumericProperty(-1)
     '''Position of the video between 0 and :data:`duration`. The position
     defaults to -1, and is set to a real position when the video is loaded.
@@ -140,6 +149,8 @@ class Video(Image):
         Clock.schedule_once(self._do_video_load, -1)
 
     def _do_video_load(self, *largs):
+        if CoreVideo is None:
+            return
         if self._video:
             self._video.stop()
         if not self.source:
@@ -153,7 +164,7 @@ class Video(Image):
                 filename = resource_find(filename)
             self._video = CoreVideo(filename=filename, **self.options)
             self._video.volume = self.volume
-            self._video.bind(on_load=self._on_video_frame,
+            self._video.bind(on_load=self._on_load,
                              on_frame=self._on_video_frame,
                              on_eos=self._on_eos)
             if self.state == 'play' or self.play:
@@ -189,8 +200,13 @@ class Video(Image):
         self.canvas.ask_update()
 
     def _on_eos(self, *largs):
-        self.state = 'stop'
-        self.eos = True
+        if self._video.eos != 'loop':
+            self.state = 'stop'
+            self.eos = True
+
+    def _on_load(self, *largs):
+        self.loaded = True
+        self._on_video_frame(largs)
 
     def on_volume(self, instance, value):
         if self._video:
@@ -201,7 +217,7 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) != 2:
-        print "usage: %s file" % sys.argv[0]
+        print("usage: %s file" % sys.argv[0])
         sys.exit(1)
 
     class VideoApp(App):

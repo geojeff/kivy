@@ -9,7 +9,7 @@ Tree View
     This widget is still experimental, and his API is subject to change in a
     future version.
 
-:class:`TreeView` is a widget to represent a tree structure. It's currently
+:class:`TreeView` is a widget to represent a tree structure. It is currently
 very basic, supporting a minimal feature set.
 
 Introduction
@@ -48,14 +48,15 @@ to populate the tree view, as with::
 
     def populate_tree_view(tree_view, parent, node):
         if parent is None:
-            tree_node = tree_view.add_node(TreeNodeLabel(text=node['node_id'],
+            tree_node = tree_view.add_node(TreeViewLabel(text=node['node_id'],
                                                          is_open=True))
         else:
-            tree_node = tree_view.add_node(TreeNodeLabel(text=node['node_id'],
+            tree_node = tree_view.add_node(TreeViewLabel(text=node['node_id'],
                                                          is_open=True), parent)
 
         for child_node in node['children']:
-            populate_tree_view(tree_view, tree, child_node)
+            populate_tree_view(tree_view, tree_node, child_node)
+
 
     tree = {'node_id': '1',
             'children': [{'node_id': '1.1',
@@ -69,11 +70,18 @@ to populate the tree view, as with::
                           {'node_id': '1.2',
                            'children': []}]}
 
-    tv = TreeView(root_options=dict(text='Tree One'),
-                  hide_root=False,
-                  indent_level=4)
-    populate_tree_view(tv, None, tree)
-    some_containing_widget.add_widget(tv)
+
+    class TreeWidget(FloatLayout):
+        def __init__(self, **kwargs):
+            super(TreeWidget, self).__init__(**kwargs)
+
+            tv = TreeView(root_options=dict(text='Tree One'),
+                          hide_root=False,
+                          indent_level=4)
+
+            populate_tree_view(tv, None, tree)
+
+            self.add_widget(tv)
 
 The root widget in the tree view is opened by default, and has a text set as
 'Root'. If you want to change that, you can use :data:`TreeView.root_options`
@@ -100,7 +108,7 @@ allocated will be:
     treeview.width - treeview.indent_start - treeview.indent_level * node.level
 
 You might have some trouble with that. It is the developer's responsibility to
-correctly handle adapt the graphical representation nodes, if needed.
+correctly handle adapting the graphical representation nodes, if needed.
 '''
 
 from kivy.clock import Clock
@@ -252,13 +260,13 @@ class TreeView(Widget):
             Fired when a node is being collapsed
     '''
 
+    __events__ = ('on_node_expand', 'on_node_collapse')
+
     def __init__(self, **kwargs):
-        self.register_event_type('on_node_expand')
-        self.register_event_type('on_node_collapse')
         self._trigger_layout = Clock.create_trigger(self._do_layout, -1)
         super(TreeView, self).__init__(**kwargs)
         tvlabel = TreeViewLabel(text='Root', is_open=True, level=0)
-        for key, value in self.root_options.iteritems():
+        for key, value in self.root_options.items():
             setattr(tvlabel, key, value)
         self._root = self.add_node(tvlabel, None)
         self.bind(
@@ -361,7 +369,7 @@ class TreeView(Widget):
             treeview = TreeView()
             # ... add nodes ...
             for node in treeview.iterate_open_nodes():
-                print node
+                print(node)
 
         '''
         if not node:
@@ -412,7 +420,7 @@ class TreeView(Widget):
     def on_root_options(self, instance, value):
         if not self.root:
             return
-        for key, value in value.iteritems():
+        for key, value in value.items():
             setattr(self.root, key, value)
 
     def _do_layout(self, *largs):
@@ -462,6 +470,8 @@ class TreeView(Widget):
     def on_touch_down(self, touch):
         node = self.get_node_at_pos(touch.pos)
         if not node:
+            return
+        if node.disabled:
             return
         # toggle node or selection ?
         if node.x - self.indent_start <= touch.x < node.x:
@@ -604,16 +614,16 @@ if __name__ == '__main__':
             tv = TreeView(hide_root=True)
             add = tv.add_node
             root = add(TreeViewLabel(text='Level 1, entry 1', is_open=True))
-            for x in xrange(5):
+            for x in range(5):
                 add(TreeViewLabel(text='Element %d' % x), root)
             root2 = add(TreeViewLabel(text='Level 1, entry 2', is_open=False))
-            for x in xrange(24):
+            for x in range(24):
                 add(TreeViewLabel(text='Element %d' % x), root2)
-            for x in xrange(5):
+            for x in range(5):
                 add(TreeViewLabel(text='Element %d' % x), root)
             root2 = add(TreeViewLabel(text='Element childs 2', is_open=False),
                         root)
-            for x in xrange(24):
+            for x in range(24):
                 add(TreeViewLabel(text='Element %d' % x), root2)
             return tv
     TestApp().run()

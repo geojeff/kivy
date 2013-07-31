@@ -23,7 +23,7 @@ then, the main button text will display the selection of the dropdown. ::
 
     # create a dropdown with 10 button
     dropdown = DropDown()
-    for index in xrange(10):
+    for index in range(10):
         btn = Button(text='Value %d' % index, size_hint_y=None, height=44)
 
         # for each button, attach a callback that will call the select() method
@@ -152,9 +152,10 @@ class DropDown(ScrollView):
     list, which is a :class:`~kivy.uix.gridlayout.GridLayout` by default.
     '''
 
+    __events__ = ('on_select', )
+
     def __init__(self, **kwargs):
         self._win = None
-        self.register_event_type('on_select')
         super(DropDown, self).__init__(**kwargs)
         self.container.bind(minimum_size=self._container_minimum_size)
         self.bind(size=self._reposition)
@@ -287,7 +288,7 @@ if __name__ == '__main__':
     def show_dropdown(button, *largs):
         dp = DropDown()
         dp.bind(on_select=lambda instance, x: setattr(button, 'text', x))
-        for i in xrange(10):
+        for i in range(10):
             item = Button(text='hello %d' % i, size_hint_y=None, height=44)
             item.bind(on_release=lambda btn: dp.select(btn.text))
             dp.add_widget(item)

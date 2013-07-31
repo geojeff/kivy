@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Code Input
 ==========
@@ -48,16 +47,15 @@ from kivy.utils import get_hex_from_color
 Cache_get = Cache.get
 Cache_append = Cache.append
 
-# TODO: fix empty line rendering
 # TODO: color chooser for keywords/strings/...
 
 
 class CodeInput(TextInput):
-    '''CodeInput class, used for displaying highlited code.
+    '''CodeInput class, used for displaying highlighted code.
     '''
 
     lexer = ObjectProperty(None)
-    '''This holds the selected Lexer used by pygments to highlite the code
+    '''This holds the selected Lexer used by pygments to highlight the code
 
 
     :data:`lexer` is a :class:`~kivy.properties.ObjectProperty` defaults to
@@ -70,7 +68,9 @@ class CodeInput(TextInput):
         self.text_color = '#000000'
         self._label_cached = Label()
         self.use_text_color = True
+
         super(CodeInput, self).__init__(**kwargs)
+
         self._line_options = kw = self._get_line_options()
         self._label_cached = Label(**kw)
         # use text_color as foreground color
@@ -84,11 +84,11 @@ class CodeInput(TextInput):
         if not kwargs.get('background_color'):
             self.background_color = [.9, .92, .92, 1]
 
-    def _create_line_label(self, text):
+    def _create_line_label(self, text, hint=False):
         # Create a label from a text, using line options
-        ntext = text.replace('\n', '').replace('\t', ' ' * self.tab_width)
-        if self.password:
-            ntext = '*' * len(ntext)
+        ntext = text.replace(u'\n', u'').replace(u'\t', u' ' * self.tab_width)
+        if self.password and not hint:  # Don't replace hint_text with *
+            ntext = u'*' * len(ntext)
         ntext = self._get_bbcode(ntext)
         kw = self._get_line_options()
         cid = '%s\0%s' % (ntext, str(kw))
@@ -99,8 +99,8 @@ class CodeInput(TextInput):
             # if we move on "VBO" version as fallback, we won't need to do this.
             # try to found the maximum text we can handle
             label = Label(text=ntext, **kw)
-            if text.find('\n') > 0:
-                label.text = ''
+            if text.find(u'\n') > 0:
+                label.text = u''
             else:
                 label.text = ntext
             try:
@@ -121,21 +121,31 @@ class CodeInput(TextInput):
         kw['codeinput'] = True
         return kw
 
+    def _get_text_width(self, text, tab_width, _label_cached):
+        # Return the width of a text, according to the current line options
+        width = Cache_get('textinput.width', text + u'_' + repr(self.lexer))
+        if width:
+            return width
+        lbl = self._create_line_label(text)
+        width = lbl.width if lbl else 0
+        Cache_append(
+                    'textinput.width',
+                    text + u'_' + repr(self.lexer), width)
+        return width
+
     def _get_bbcode(self, ntext):
         # get bbcoded text for python
         try:
             ntext[0]
             # replace brackets with special chars that aren't highlighted
             # by pygment. can't use &bl; ... cause & is highlighted
-            # if at some time support for braille is added then replace these
-            # characters with something else
-            ntext = ntext.replace('[', u'⣿;').replace(']', u'⣾;')
+            ntext = ntext.replace(u'[', u'\x01;').replace(u']', u'\x02;')
             ntext = highlight(ntext, self.lexer, self.formatter)
-            ntext = ntext.replace(u'⣿;', '&bl;').replace(u'⣾;', '&br;')
+            ntext = ntext.replace(u'\x01;', u'&bl;').replace(u'\x02;', u'&br;')
             # replace special chars with &bl; and &br;
-            ntext = ''.join(('[color=', str(self.text_color), ']',
-                             ntext, '[/color]'))
-            ntext = ntext.replace('\n', '')
+            ntext = ''.join((u'[color=', str(self.text_color), u']',
+                             ntext, u'[/color]'))
+            ntext = ntext.replace(u'\n', u'')
             return ntext
         except IndexError:
             return ''

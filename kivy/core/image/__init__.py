@@ -2,13 +2,13 @@
 Image
 =====
 
-Core classes for loading image and convert them to
+Core classes for loading images and converting them to a
 :class:`~kivy.graphics.texture.Texture`. The raw image data can be keep in
 memory for further access.
 
 .. note::
 
-    Saving image is not yet supported.
+    Saving an image is not yet supported.
 '''
 
 __all__ = ('Image', 'ImageLoader', 'ImageData')
@@ -21,11 +21,12 @@ from kivy.clock import Clock
 from kivy.atlas import Atlas
 from kivy.resources import resource_find
 from kivy.utils import platform
+from kivy.compat import string_types
 import zipfile
 try:
-    import cStringIO as SIO
+    import io as SIO
 except ImportError:
-    import StringIO as SIO
+    import io as SIO
 
 
 # late binding
@@ -38,15 +39,18 @@ Cache.register('kv.atlas')
 
 
 class ImageData(object):
-    '''Container for image and mipmap images.
+    '''Container for images and mipmap images.
     The container will always have at least the mipmap level 0.
     '''
 
     __slots__ = ('fmt', 'mipmaps', 'source', 'flip_vertical')
     _supported_fmts = ('rgb', 'rgba', 'bgr', 'bgra',
-            's3tc_dxt1', 's3tc_dxt3', 's3tc_dxt5')
+            's3tc_dxt1', 's3tc_dxt3', 's3tc_dxt5',
+            'pvrtc_rgb2', 'pvrtc_rgb4', 'pvrtc_rgba2', 'pvrtc_rgba4',
+            'etc1_rgb8')
 
-    def __init__(self, width, height, fmt, data, source=None, flip_vertical=True):
+    def __init__(self, width, height, fmt, data, source=None,
+                 flip_vertical=True):
         assert fmt in ImageData._supported_fmts
 
         #: Decoded image format, one of a available texture format
@@ -64,7 +68,7 @@ class ImageData(object):
 
     def release_data(self):
         mm = self.mipmaps
-        for item in mm.itervalues():
+        for item in mm.values():
             item[2] = None
 
     @property
@@ -114,7 +118,7 @@ class ImageData(object):
         self.mipmaps[level] = [int(width), int(height), data]
 
     def get_mipmap(self, level):
-        '''Get the mipmap image at a specific level if exist
+        '''Get the mipmap image at a specific level if it exists
 
         .. versionadded:: 1.0.7
         '''
@@ -129,7 +133,7 @@ class ImageData(object):
         .. versionadded:: 1.0.7
         '''
         mm = self.mipmaps
-        for x in xrange(len(mm)):
+        for x in range(len(mm)):
             item = mm.get(x, None)
             if item is None:
                 raise Exception('Invalid mipmap level, found empty one')
@@ -154,13 +158,23 @@ class ImageLoaderBase(object):
         '''Load an image'''
         return None
 
+    @staticmethod
+    def can_save():
+        '''Indicate if the loader can save the Image object
+        '''
+        return False
+
+    @staticmethod
+    def save():
+        raise NotImplementedError()
+
     def populate(self):
         self._textures = []
         if __debug__:
             Logger.trace('Image: %r, populate to textures (%d)' %
                     (self.filename, len(self._data)))
 
-        for count in xrange(len(self._data)):
+        for count in range(len(self._data)):
 
             # first, check if a texture with the same name already exist in the
             # cache
@@ -222,9 +236,17 @@ class ImageLoaderBase(object):
             self.populate()
         return self._textures
 
+    @property
+    def nocache(self):
+        '''Indicate if the texture will not be stored in the cache
+
+        .. versionadded:: 1.6.0
+        '''
+        return self._nocache
+
 
 class ImageLoader(object):
-    __slots__ = ('loaders')
+
     loaders = []
 
     @staticmethod
@@ -233,19 +255,21 @@ class ImageLoader(object):
 
         .. versionadded:: 1.0.8
 
-        Returns an Image with a list/array of type ImageData stored in
-        Image._data
+        Returns an Image with a list of type ImageData stored in Image._data
         '''
+        # read zip in menory for faster access
+        _file = SIO.BytesIO(open(filename, 'rb').read())
         # read all images inside the zip
-        z = zipfile.ZipFile(filename, 'r')
+        z = zipfile.ZipFile(_file)
         image_data = []
         # sort filename list
         znamelist = z.namelist()
         znamelist.sort()
+        image = None
         for zfilename in znamelist:
             try:
                 #read file and store it in mem with fileIO struct around it
-                tmpfile = SIO.StringIO(z.read(zfilename))
+                tmpfile = SIO.BytesIO(z.read(zfilename))
                 ext = zfilename.split('.')[-1].lower()
                 im = None
                 for loader in ImageLoader.loaders:
@@ -253,11 +277,16 @@ class ImageLoader(object):
                         continue
                     Logger.debug('Image%s: Load <%s> from <%s>' %
                             (loader.__name__[11:], zfilename, filename))
-                    im = loader(tmpfile, **kwargs)
+                    try:
+                        im = loader(tmpfile, **kwargs)
+                    except:
+                        # Loader failed, continue trying.
+                        continue
                     break
                 if im is not None:
                     # append ImageData to local variable before it's overwritten
                     image_data.append(im._data[0])
+                    image = im
                 #else: if not image file skip to next
             except:
                 Logger.warning('Image: Unable to load image' +
@@ -267,9 +296,9 @@ class ImageLoader(object):
         if len(image_data) == 0:
             raise Exception('no images in zip <%s>' % filename)
         # replace Image.Data with the array of all the images in the zip
-        im._data = image_data
-        im.filename = filename
-        return im
+        image._data = image_data
+        image.filename = filename
+        return image
 
     @staticmethod
     def register(defcls):
@@ -286,7 +315,8 @@ class ImageLoader(object):
             try:
                 rfn, uid = rfn.rsplit('/', 1)
             except ValueError:
-                raise ValueError('Image: Invalid %s name for atlas' % filename)
+                raise ValueError(
+                    'Image: Invalid %s name for atlas' % filename)
 
             # search if we already got the atlas loaded
             atlas = Cache.get('kv.atlas', rfn)
@@ -295,7 +325,6 @@ class ImageLoader(object):
             # because when it's not in use, the texture can be removed from the
             # kv.texture cache.
             if atlas:
-                #print 'ATLAS REUSE', filename
                 texture = atlas[uid]
                 fn = 'atlas://%s/%s' % (rfn, uid)
                 cid = '%s|%s|%s' % (fn, False, 0)
@@ -309,14 +338,12 @@ class ImageLoader(object):
             afn = resource_find(afn)
             if not afn:
                 raise Exception('Unable to found %r atlas' % afn)
-            #print 'ATLAS LOAD', filename
             atlas = Atlas(afn)
             Cache.append('kv.atlas', rfn, atlas)
             # first time, fill our texture cache.
-            for nid, texture in atlas.textures.iteritems():
+            for nid, texture in atlas.textures.items():
                 fn = 'atlas://%s/%s' % (rfn, nid)
                 cid = '%s|%s|%s' % (fn, False, 0)
-                #print 'register', cid
                 Cache.append('kv.texture', cid, texture)
             return Image(atlas[uid])
 
@@ -347,32 +374,32 @@ class ImageLoader(object):
 
 
 class Image(EventDispatcher):
-    '''Load an image, and store the size and texture.
+    '''Load an image and store the size and texture.
 
     .. versionadded::
-        In 1.0.7, mipmap attribute have been added, texture_mipmap and
+        In 1.0.7, the mipmap attribute has been added. The texture_mipmap and
         texture_rectangle have been deleted.
 
     .. versionadded::
-        In 1.0.8, Image widget might change itself the texture. A new event
-        'on_texture' have been introduced. New methods for handling sequenced
-        animation too.
+        In 1.0.8, an Image widget can change its texture. A new event
+        'on_texture' has been introduced. New methods for handling sequenced
+        animation have been added.
 
     :Parameters:
-        `arg` : can be str or Texture or Image object
+        `arg` : can be a string (str), Texture or Image object.
             A string is interpreted as a path to the image to be loaded.
             You can also provide a texture object or an already existing
             image object. In the latter case, a real copy of the given
             image object will be returned.
-        `keep_data` : bool, default to False
-            Keep the image data when texture is created
-        `scale` : float, default to 1.0
-            Scale of the image
-        `mipmap` : bool, default to False
-            Create mipmap for the texture
+        `keep_data` : bool, defaults to False.
+            Keep the image data when the texture is created.
+        `scale` : float, defaults to 1.0
+            Scale of the image.
+        `mipmap` : bool, defaults to False
+            Create mipmap for the texture.
         `anim_delay`: float, default to .25
-            Delay in seconds between each animation frame. Lower means faster
-            animation.
+            Delay in seconds between each animation frame. Lower values means
+            faster animation.
     '''
 
     copy_attributes = ('_size', '_filename', '_texture', '_image',
@@ -409,17 +436,17 @@ class Image(EventDispatcher):
             self._size = self.texture.size
         elif isinstance(arg, ImageLoaderBase):
             self.image = arg
-        elif isinstance(arg, basestring):
+        elif isinstance(arg, string_types):
             self.filename = arg
         else:
-            raise Exception('Unable to load image type %s' % str(type(arg)))
+            raise Exception('Unable to load image type {0!r}'.format(arg))
 
         # check if the image hase sequences for animation in it
         self._img_iterate()
 
     def remove_from_cache(self):
         '''Remove the Image from cache. This facilitates re-loading of
-        image from disk in case of contents having been changed.
+        images from disk in case the image content has changed.
 
         .. versionadded:: 1.3.0
 
@@ -459,7 +486,7 @@ class Image(EventDispatcher):
 
         :Parameters:
             `allow_anim`: bool
-                Indicate if the animation should restart playing or not.
+                Indicate whether the animation should restart playing or not.
 
         Usage::
 
@@ -469,7 +496,7 @@ class Image(EventDispatcher):
             # or stop the animation
             image.anim_reset(False)
 
-        You can change the animation speed in live::
+        You can change the animation speed whilst it is playing::
 
             # Set to 20 FPS
             image.anim_delay = 1 / 20.
@@ -494,14 +521,14 @@ class Image(EventDispatcher):
                 Clock.schedule_interval(self._anim, self._anim_delay)
 
     anim_delay = property(_get_anim_delay, _set_anim_delay)
-    '''Delay betwean each animation frame. Lower means faster animation.
+    '''Delay between each animation frame. A lower value means faster animation.
 
     .. versionadded:: 1.0.8
     '''
 
     @property
     def anim_available(self):
-        '''Return True if this Image instance have animation available.
+        '''Return True if this Image instance has animation available.
 
         .. versionadded:: 1.0.8
         '''
@@ -509,7 +536,7 @@ class Image(EventDispatcher):
 
     @property
     def anim_index(self):
-        '''Return the index number of the image currently in the texture
+        '''Return the index number of the image currently in the texture.
 
         .. versionadded:: 1.0.8
         '''
@@ -526,8 +553,8 @@ class Image(EventDispatcher):
         self._texture = self.image.textures[0]
 
     def on_texture(self, *largs):
-        '''This event is fired when the texture reference or content have been
-        changed. It's actually used for sequenced images.
+        '''This event is fired when the texture reference or content has
+           changed. It is normally used for sequenced images.
 
         .. versionadded:: 1.0.8
         '''
@@ -539,9 +566,9 @@ class Image(EventDispatcher):
 
         :Parameters:
             `filename` : str
-                Filename of the image
+                Filename of the image.
             `keep_data` : bool, default to False
-                Keep the image data when texture is created
+                Keep the image data when the texture is created.
         '''
         kwargs.setdefault('keep_data', False)
         return Image(filename, **kwargs)
@@ -607,7 +634,8 @@ class Image(EventDispatcher):
             self._size = image.size
         else:
             self.image = image
-            Cache.append('kv.image', uid, self.image)
+            if not self._nocache:
+                Cache.append('kv.image', uid, self.image)
 
     filename = property(_get_filename, _set_filename,
             doc='Get/set the filename of image')
@@ -638,12 +666,81 @@ class Image(EventDispatcher):
                 self._img_iterate()
         return self._texture
 
+    @property
+    def nocache(self):
+        '''Indicate whether the texture will not be stored in the cache or not.
+
+        .. versionadded:: 1.6.0
+        '''
+        return self._nocache
+
+    def save(self, filename):
+        '''Save image texture to file.
+
+        The filename should have the '.png' extension because the texture data
+        read from the GPU is in the RGBA format. '.jpg' might work but has not
+        been heavilly tested so some providers might break when using it.
+        Any other extensions are not officially supported.
+
+        Example::
+
+            # Save an core image object
+            from kivy.core.image import Image
+            img = Image('hello.png')
+            img.save('hello2.png')
+
+            # Save a texture
+            texture = Texture.create(...)
+            img = Image(texture)
+            img.save('hello3.png')
+
+        .. versionadded:: 1.7.0
+        '''
+        pixels = None
+        size = None
+        loaders = [x for x in ImageLoader.loaders if x.can_save()]
+        if not loaders:
+            return False
+        loader = loaders[0]
+
+        if self.image:
+            # we might have a ImageData object to use
+            data = self.image._data[0]
+            if data.data is not None:
+                if data.fmt not in ('rgba', 'rgb'):
+                    # fast path, use the "raw" data when keep_data is used
+                    size = data.width, data.height
+                    pixels = data.data
+
+                else:
+                    # the format is not rgba, we need to convert it.
+                    # use texture for that.
+                    self.populate()
+
+        if pixels is None and self._texture:
+            # use the texture pixels
+            size = self._texture.size
+            pixels = self._texture.pixels
+
+        if pixels is None:
+            return False
+
+        l_pixels = len(pixels)
+        if l_pixels == size[0] * size[1] * 3:
+            fmt = 'rgb'
+        elif l_pixels == size[0] * size[1] * 4:
+            fmt = 'rgba'
+        else:
+            raise Exception('Unable to determine the format of the pixels')
+        return loader.save(filename, size[0], size[1], fmt, pixels)
+
     def read_pixel(self, x, y):
-        '''For a given local x/y position, return the color at that position.
+        '''For a given local x/y position, return the pixel color at that
+        position.
 
         .. warning::
-            This function can be used only with images loaded with
-            keep_data=True keyword. For examples::
+            This function can only be used with images loaded with the
+            keep_data=True keyword. For example::
 
                 m = Image.load('image.png', keep_data=True)
                 color = m.read_pixel(150, 150)
@@ -670,7 +767,7 @@ class Image(EventDispatcher):
         size = 3 if data.fmt in ('rgb', 'bgr') else 4
         index = y * data.width * size + x * size
         raw = data.data[index:index + size]
-        color = map(lambda c: ord(c) / 255.0, raw)
+        color = [ord(c) / 255.0 for c in raw]
 
         # conversion for BGR->RGB, BGR->RGBA format
         if data.fmt in ('bgr', 'bgra'):
@@ -689,6 +786,7 @@ image_libs = []
 if platform() in ('macosx', 'ios'):
     image_libs += [('imageio', 'img_imageio')]
 image_libs += [
+    ('tex', 'img_tex'),
     ('dds', 'img_dds'),
     ('pygame', 'img_pygame'),
     ('pil', 'img_pil'),

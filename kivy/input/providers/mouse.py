@@ -96,6 +96,7 @@ class MouseMotionEventProvider(MotionEventProvider):
         # split arguments
         args = args.split(',')
         for arg in args:
+            arg = arg.strip()
             if arg == '':
                 continue
             elif arg == 'disable_on_activity':
@@ -140,7 +141,7 @@ class MouseMotionEventProvider(MotionEventProvider):
 
     def find_touch(self, x, y):
         factor = 10. / EventLoop.window.system_size[0]
-        for t in self.touches.itervalues():
+        for t in self.touches.values():
             if abs(x - t.sx) < factor and abs(y - t.sy) < factor:
                 return t
         return False
@@ -191,8 +192,8 @@ class MouseMotionEventProvider(MotionEventProvider):
             self.current_drag = new_me
         else:
             is_double_tap = 'shift' in modifiers
-            do_graphics = (not self.disable_multitouch and button != 'left' or
-                           ('ctrl' in modifiers))
+            do_graphics = (not self.disable_multitouch) and (
+                    button != 'left' or 'ctrl' in modifiers)
             cur = self.create_touch(rx, ry, is_double_tap, do_graphics, button)
             if 'alt' in modifiers:
                 self.alt_touch = cur
@@ -202,7 +203,7 @@ class MouseMotionEventProvider(MotionEventProvider):
     def on_mouse_release(self, win, x, y, button, modifiers):
         # special case, if button is all, then remove all the current mouses.
         if button == 'all':
-            for cur in self.touches.values()[:]:
+            for cur in list(self.touches.values())[:]:
                 self.remove_touch(cur)
             self.current_drag = None
 

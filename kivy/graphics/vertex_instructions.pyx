@@ -98,7 +98,7 @@ cdef class Bezier(VertexInstruction):
             memset(buf, 255, self._dash_length * 4)
             memset(buf + self._dash_length * 4, 0, self._dash_offset * 4)
 
-            p_str = PyString_FromStringAndSize(buf,  (self._dash_length + self._dash_offset) * 4)
+            p_str = buf[:(self._dash_length + self._dash_offset) * 4]
 
             texture.blit_buffer(p_str, colorfmt='rgba', bufferfmt='ubyte')
             free(buf)
@@ -251,6 +251,7 @@ cdef class Mesh(VertexInstruction):
     '''
     cdef list _vertices
     cdef list _indices
+    cdef VertexFormat vertex_format
 
     def __init__(self, **kwargs):
         VertexInstruction.__init__(self, **kwargs)
@@ -258,21 +259,26 @@ cdef class Mesh(VertexInstruction):
         self.vertices = v if v is not None else []
         v = kwargs.get('indices')
         self.indices = v if v is not None else []
+        fmt = kwargs.get('fmt')
+        if fmt is not None:
+            self.vertex_format = VertexFormat(*fmt)
+            self.batch = VertexBatch(vbo=VBO(self.vertex_format))
         self.mode = kwargs.get('mode') or 'points'
 
     cdef void build(self):
-        cdef int i, vcount = len(self._vertices) / 4
+        cdef int i, vcount = len(self._vertices)
         cdef int icount = len(self._indices)
-        cdef vertex_t *vertices = NULL
+        cdef float *vertices = NULL
         cdef unsigned short *indices = NULL
         cdef list lvertices = self._vertices
         cdef list lindices = self._indices
+        cdef vsize = self.batch.vbo.vertex_format.vsize
 
         if vcount == 0 or icount == 0:
             self.batch.clear_data()
             return
 
-        vertices = <vertex_t *>malloc(vcount * sizeof(vertex_t))
+        vertices = <float *>malloc(vcount * sizeof(float))
         if vertices == NULL:
             raise MemoryError('vertices')
 
@@ -282,15 +288,11 @@ cdef class Mesh(VertexInstruction):
             raise MemoryError('indices')
 
         for i in xrange(vcount):
-            vertices[i].x = lvertices[i * 4]
-            vertices[i].y = lvertices[i * 4 + 1]
-            vertices[i].s0 = lvertices[i * 4 + 2]
-            vertices[i].t0 = lvertices[i * 4 + 3]
-
+            vertices[i] = lvertices[i]
         for i in xrange(icount):
             indices[i] = lindices[i]
 
-        self.batch.set_data(vertices, vcount, indices, icount)
+        self.batch.set_data(vertices, vcount / vsize, indices, icount)
 
         free(vertices)
         free(indices)
@@ -358,11 +360,10 @@ cdef class Point(VertexInstruction):
         self.pointsize = kwargs.get('pointsize') or 1.
 
     cdef void build(self):
-        cdef float t0, t1, t2, t3, t4, t5, t6, t7
         cdef float x, y, ps = self._pointsize
         cdef int i, iv, ii, count = <int>(len(self._points) * 0.5)
         cdef list p = self.points
-        cdef list tc = self._tex_coords
+        cdef float *tc = self._tex_coords
         cdef vertex_t *vertices = NULL
         cdef unsigned short *indices = NULL
 
@@ -380,28 +381,26 @@ cdef class Point(VertexInstruction):
             free(vertices)
             raise MemoryError('indices')
 
-        t0, t1, t2, t3, t4, t5, t6, t7 = tc
-
         for i in xrange(count):
             x = p[i * 2]
             y = p[i * 2 + 1]
             iv = i * 4
             vertices[iv].x = x - ps
             vertices[iv].y = y - ps
-            vertices[iv].s0 = t0
-            vertices[iv].t0 = t1
+            vertices[iv].s0 = tc[0]
+            vertices[iv].t0 = tc[1]
             vertices[iv + 1].x = x + ps
             vertices[iv + 1].y = y - ps
-            vertices[iv + 1].s0 = t2
-            vertices[iv + 1].t0 = t3
+            vertices[iv + 1].s0 = tc[2]
+            vertices[iv + 1].t0 = tc[3]
             vertices[iv + 2].x = x + ps
             vertices[iv + 2].y = y + ps
-            vertices[iv + 2].s0 = t4
-            vertices[iv + 2].t0 = t5
+            vertices[iv + 2].s0 = tc[4]
+            vertices[iv + 2].t0 = tc[5]
             vertices[iv + 3].x = x - ps
             vertices[iv + 3].y = y + ps
-            vertices[iv + 3].s0 = t6
-            vertices[iv + 3].t0 = t7
+            vertices[iv + 3].s0 = tc[6]
+            vertices[iv + 3].t0 = tc[7]
 
             ii = i * 6
             indices[ii] = iv
@@ -424,10 +423,9 @@ cdef class Point(VertexInstruction):
         list will recalculate and reupload the whole buffer into GPU.
         If you use add_point, it will only upload the changes.
         '''
-        cdef float t0, t1, t2, t3, t4, t5, t6, t7
         cdef float ps = self._pointsize
         cdef int iv, count = <int>(len(self._points) * 0.5)
-        cdef list tc = self._tex_coords
+        cdef float *tc = self._tex_coords
         cdef vertex_t vertices[4]
         cdef unsigned short indices[6]
 
@@ -437,23 +435,22 @@ cdef class Point(VertexInstruction):
         self._points.append(x)
         self._points.append(y)
 
-        t0, t1, t2, t3, t4, t5, t6, t7 = tc
         vertices[0].x = x - ps
         vertices[0].y = y - ps
-        vertices[0].s0 = t0
-        vertices[0].t0 = t1
+        vertices[0].s0 = tc[0]
+        vertices[0].t0 = tc[1]
         vertices[1].x = x + ps
         vertices[1].y = y - ps
-        vertices[1].s0 = t2
-        vertices[1].t0 = t3
+        vertices[1].s0 = tc[2]
+        vertices[1].t0 = tc[3]
         vertices[2].x = x + ps
         vertices[2].y = y + ps
-        vertices[2].s0 = t4
-        vertices[2].t0 = t5
+        vertices[2].s0 = tc[4]
+        vertices[2].t0 = tc[5]
         vertices[3].x = x - ps
         vertices[3].y = y + ps
-        vertices[3].s0 = t6
-        vertices[3].t0 = t7
+        vertices[3].s0 = tc[6]
+        vertices[3].t0 = tc[7]
 
         iv = count * 4
         indices[0] = iv
@@ -511,7 +508,8 @@ cdef class Triangle(VertexInstruction):
         self.points = v if v is not None else (0.0,0.0, 100.0,0.0, 50.0,100.0)
 
     cdef void build(self):
-        cdef list vc, tc
+        cdef list vc
+        cdef float *tc
         cdef vertex_t vertices[3]
         cdef unsigned short *indices = [0, 1, 2]
 
@@ -560,7 +558,8 @@ cdef class Quad(VertexInstruction):
                 100.0,  50.0,   50.0, 100.0 )
 
     cdef void build(self):
-        cdef list vc, tc
+        cdef list vc
+        cdef float *tc
         cdef vertex_t vertices[4]
         cdef unsigned short *indices = [0, 1, 2, 2, 3, 0]
 
@@ -620,7 +619,7 @@ cdef class Rectangle(VertexInstruction):
 
     cdef void build(self):
         cdef float x, y, w, h
-        cdef list tc = self._tex_coords
+        cdef float *tc = self._tex_coords
         cdef vertex_t vertices[4]
         cdef unsigned short *indices = [0, 1, 2, 2, 3, 0]
 
@@ -706,7 +705,7 @@ cdef class BorderImage(Rectangle):
 
         # width and heigth of texture in pixels, and tex coord space
         cdef float tw, th, tcw, tch
-        cdef list tc = self._tex_coords
+        cdef float *tc = self._tex_coords
         cdef float tc0, tc1, tc2, tc7
         tc0 = tc[0]
         tc1 = tc[1]
@@ -827,7 +826,7 @@ cdef class Ellipse(Rectangle):
         self._angle_end = kwargs.get('angle_end') or 360
 
     cdef void build(self):
-        cdef list tc = self.tex_coords
+        cdef float *tc = self._tex_coords
         cdef int i, angle_dir
         cdef float angle_start, angle_end, angle_range
         cdef float x, y, angle, rx, ry, ttx, tty, tx, ty, tw, th
@@ -853,7 +852,7 @@ cdef class Ellipse(Rectangle):
             raise MemoryError('indices')
 
         # calculate the start/end angle in radians, and adapt the range
-        if self.angle_end > self.angle_start:
+        if self._angle_end > self._angle_start:
             angle_dir = 1
         else:
             angle_dir = -1

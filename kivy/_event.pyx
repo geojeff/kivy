@@ -17,19 +17,40 @@ __all__ = ('EventDispatcher', )
 
 from functools import partial
 from kivy.weakmethod import WeakMethod
-from kivy.properties cimport Property, ObjectProperty
+from kivy.properties cimport Property, PropertyStorage, ObjectProperty
 
 cdef int widget_uid = 0
 cdef dict cache_properties = {}
+cdef dict cache_events = {}
+cdef dict cache_events_handlers = {}
 
-cdef class EventDispatcher(object):
+def _get_bases(cls):
+    for base in cls.__bases__:
+        if base.__name__ == 'object':
+            break
+        yield base
+        for cbase in _get_bases(base):
+            yield cbase
+
+cdef class ObjectWithUid(object):
+    def __cinit__(self):
+        global widget_uid
+
+        # XXX for the moment, we need to create a uniq id for properties.
+        # Properties need a identifier to the class instance. hash() and id()
+        # are longer than using a custom __uid. I hope we can figure out a way
+        # of doing that without require any python code. :)
+        widget_uid += 1
+        self.uid = widget_uid
+
+cdef class EventDispatcher(ObjectWithUid):
     '''Generic event dispatcher interface
 
     See the module docstring for usage.
     '''
 
     def __cinit__(self, *largs, **kwargs):
-        global widget_uid, cache_properties
+        global cache_properties
         cdef dict cp = cache_properties
         cdef dict attrs_found
         cdef list attrs
@@ -40,13 +61,6 @@ cdef class EventDispatcher(object):
         self.__storage = {}
 
         __cls__ = self.__class__
-
-        # XXX for the moment, we need to create a uniq id for properties.
-        # Properties need a identifier to the class instance. hash() and id()
-        # are longer than using a custom __uid. I hope we can figure out a way
-        # of doing that without require any python code. :)
-        widget_uid += 1
-        self.uid = widget_uid
 
         if __cls__ not in cp:
             attrs_found = cp[__cls__] = {}
@@ -73,19 +87,66 @@ cdef class EventDispatcher(object):
 
         self.__properties = attrs_found
 
+        # Automatic registration of event types (instead of calling
+        # self.register_event_type)
+
+        # If not done yet, discover __events__ on all the baseclasses
+        cdef dict ce = cache_events
+        cdef list events
+        cdef str event
+        if __cls__ not in ce:
+            classes = [__cls__] + list(_get_bases(self.__class__))
+            events = []
+            for cls in classes:
+                if not hasattr(cls, '__events__'):
+                    continue
+                for event in cls.__events__:
+                    if event in events:
+                        continue
+
+                    if event[:3] != 'on_':
+                        raise Exception('{} is not an event name in {}'.format(
+                            event, __cls__.__name__))
+
+                    # Ensure the user have at least declare the default handler
+                    if not hasattr(self, event):
+                        raise Exception(
+                            'Missing default handler <%s> in <%s>' % (
+                            event, __cls__.__name__))
+
+                    events.append(event)
+            ce[__cls__] = events
+        else:
+            events = ce[__cls__]
+
+        # then auto register
+        for event in events:
+            self.__event_stack[event] = []
+
+
     def __init__(self, **kwargs):
         cdef str func, name, key
         cdef dict properties
-        super(EventDispatcher, self).__init__(**kwargs)
+        # object.__init__ takes no parameters as of 2.6; passing kwargs
+        # triggers a DeprecationWarning or worse
+        super(EventDispatcher, self).__init__()
 
         # Auto bind on own handler if exist
         properties = self.properties()
-        for func in dir(self):
-            if not func.startswith('on_'):
-                continue
-            name = func[3:]
-            if name in properties:
-                self.bind(**{name: getattr(self, func)})
+        __cls__ = self.__class__
+        if __cls__ not in cache_events_handlers:
+            event_handlers = []
+            for func in dir(self):
+                if func[:3] != 'on_':
+                    continue
+                name = func[3:]
+                if name in properties:
+                    event_handlers.append(func)
+            cache_events_handlers[__cls__] = event_handlers
+        else:
+            event_handlers = cache_events_handlers[__cls__]
+        for func in event_handlers:
+            self.bind(**{func[3:]: getattr(self, func)})
 
         # Apply the existing arguments to our widget
         for key, value in kwargs.iteritems():
@@ -113,12 +174,12 @@ cdef class EventDispatcher(object):
                     pass
 
             def on_swipe_callback(*largs):
-                print 'my swipe is called', largs
+                print('my swipe is called', largs)
             w = MyWidget()
             w.dispatch('on_swipe')
         '''
 
-        if not event_type.startswith('on_'):
+        if event_type[:3] != 'on_':
             raise Exception('A new event must start with "on_"')
 
         # Ensure the user have at least declare the default handler
@@ -128,7 +189,7 @@ cdef class EventDispatcher(object):
                 event_type, self.__class__.__name__))
 
         # Add the event type to the stack
-        if not event_type in self.__event_stack:
+        if event_type not in self.__event_stack:
             self.__event_stack[event_type] = []
 
     def unregister_event_types(self, str event_type):
@@ -151,9 +212,9 @@ cdef class EventDispatcher(object):
 
             # With properties
             def my_x_callback(obj, value):
-                print 'on object', obj, 'x changed to', value
+                print('on object', obj, 'x changed to', value)
             def my_width_callback(obj, value):
-                print 'on object', obj, 'width changed to', value
+                print('on object', obj, 'width changed to', value)
             self.bind(x=my_x_callback, width=my_width_callback)
 
             # With event
@@ -170,7 +231,7 @@ cdef class EventDispatcher(object):
                     self.add_widget(btn)
 
                 def my_callback(self, obj):
-                    print 'press on button', obj
+                    print('press on button', obj)
 
         '''
         cdef Property prop
@@ -204,6 +265,28 @@ cdef class EventDispatcher(object):
             else:
                 prop = self.__properties[key]
                 prop.unbind(self, value)
+
+    def get_property_observers(self, name):
+        ''' Returns a list of methods that are bound to the property/event.
+        passed as the argument::
+
+            widget_instance.get_property_observers('on_release')
+
+        .. versionadded:: 1.8.0
+
+        '''
+        if name[:3] == 'on_':
+            return self.__event_stack[name]
+        cdef PropertyStorage ps = self.__storage[name]
+        return ps.observers
+
+    def events(EventDispatcher self):
+        '''Return all the events in that class. Can be used for introspection.
+
+        .. versionadded:: 1.8.0
+
+        '''
+        return self.__event_stack.keys()
 
     def dispatch(self, str event_type, *largs):
         '''Dispatch an event across all the handler added in bind().
@@ -271,6 +354,11 @@ cdef class EventDispatcher(object):
 
         .. versionadded:: 1.0.9
         '''
+        # fast path, use the cache first
+        __cls__ = self.__class__
+        if __cls__ in cache_properties:
+            return cache_properties[__cls__]
+
         cdef dict ret, p
         ret = {}
         p = self.__properties
@@ -300,7 +388,7 @@ cdef class EventDispatcher(object):
         >>> mywidget = Widget()
         >>> mywidget.create_property('custom')
         >>> mywidget.custom = True
-        >>> print mywidget.custom
+        >>> print(mywidget.custom)
         True
         '''
         prop = ObjectProperty(None)

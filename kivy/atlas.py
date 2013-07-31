@@ -75,9 +75,17 @@ As you can see, we got 2 new files: ``myatlas.atlas`` and ``myatlas-0.png``.
 
 .. note::
 
-    When using this script, the ids referenced in the atlas is the basename of
-    the image, without the extension. So if you are going to give a filename
+    When using this script, the ids referenced in the atlas is the base name of
+    the image, without the extension. So if you are going to give a file name
     ``../images/button.png``, the id for this image will be ``button``.
+
+    If you need path information included, you must include ``use_path`` like
+    this::
+
+        $ python -m kivy.atlas use_path myatlas 256 *.png
+
+    In which case the id for ``../images/button.png`` will be ``images_button``
+
 
 How to use an atlas
 -------------------
@@ -110,9 +118,9 @@ Manual usage of the Atlas
 
     >>> from kivy.atlas import Atlas
     >>> atlas = Atlas('path/to/myatlas.atlas')
-    >>> print atlas.textures.keys()
+    >>> print(atlas.textures.keys())
     ['bubble', 'bubble-red', 'button', 'button-down']
-    >>> print atlas['button']
+    >>> print(atlas['button'])
     <kivy.graphics.texture.TextureRegion object at 0x2404d10>
 '''
 
@@ -176,7 +184,7 @@ class Atlas(EventDispatcher):
         Logger.debug('Atlas: Need to load %d images' % len(meta))
         d = dirname(filename)
         textures = {}
-        for subfilename, ids in meta.iteritems():
+        for subfilename, ids in meta.items():
             subfilename = join(d, subfilename)
             Logger.debug('Atlas: Load <%s>' % subfilename)
 
@@ -185,14 +193,14 @@ class Atlas(EventDispatcher):
 
             # for all the uid, load the image, get the region, and put it in our
             # dict.
-            for meta_id, meta_coords in ids.iteritems():
+            for meta_id, meta_coords in ids.items():
                 x, y, w, h = meta_coords
                 textures[meta_id] = ci.texture.get_region(*meta_coords)
 
         self.textures = textures
 
     @staticmethod
-    def create(outname, filenames, size, padding=2):
+    def create(outname, filenames, size, padding=2, use_path=False):
         '''This method can be used to create manually an atlas from a set of
         images.
 
@@ -215,12 +223,23 @@ class Atlas(EventDispatcher):
                 "border" of 1px of your image, around the image. If you look at
                 the result, don't be scared if the image inside it are not
                 exactly the same as yours :).
+            `use_path`: bool, if true, the relative path of the source png
+                file names will be included in their atlas ids, rather
+                that just the file name. Leading dots and slashes will be
+                excluded and all other slashes in the path will be replaced
+                with underscores, so for example, if the path and file name is
+                ``../data/tiles/green_grass.png`` then the id will be
+                ``green_grass`` if use_path is False, and it will be
+                ``data_tiles_green_grass`` if use_path is True
+
+            .. versionchanged:: 1.8.0
+                Parameter use_path added
         '''
         # Thanks to
         # omnisaurusgames.com/2011/06/texture-atlas-generation-using-python/
         # for its initial implementation.
         try:
-            import Image
+            from PIL import Image
         except ImportError:
             Logger.critical('Atlas: Imaging/PIL are missing')
             raise
@@ -306,7 +325,6 @@ class Atlas(EventDispatcher):
                 out.paste(fb[0].crop((0, 0, 1, h)), (x - 1, y))
                 out.paste(fb[0].crop((w - 1, 0, w, h)), (x + w, y))
 
-
         # save the output images
         for idx, outimage in enumerate(outimages):
             outimage.save('%s-%d.png' % (outname, idx))
@@ -320,9 +338,21 @@ class Atlas(EventDispatcher):
             else:
                 d = meta[fn]
 
-            # fb[6] contain the filename aka '../apok.png'. just get only 'apok'
-            # as the uniq id.
-            uid = splitext(basename(fb[6]))[0]
+            # fb[6] contain the filename
+            if use_path:
+                # use the path with separators replaced by _
+                # example '../data/tiles/green_grass.png' becomes
+                # 'data_tiles_green_grass'
+                uid = splitext(fb[6])[0]
+                # remove leading dots and slashes
+                uid = uid.lstrip('./\\')
+                # replace remaining slashes with _
+                uid = uid.replace('/', '_').replace('\\', '_')
+            else:
+                # for example, '../data/tiles/green_grass.png'
+                # just get only 'green_grass' as the uniq id.
+                uid = splitext(basename(fb[6]))[0]
+
             x, y, w, h = fb[2:6]
             d[uid] = x, size - y - h, w, h
 
@@ -337,25 +367,31 @@ if __name__ == '__main__':
     import sys
     argv = sys.argv[1:]
     if len(argv) < 3:
-        print 'Usage: python -m kivy.atlas <outname> <size> <img1.png>' \
-              '[<img2.png>, ...]'
+        print('Usage: python -m kivy.atlas [use_path] <outname>' +
+            ' <size> <img1.png> [<img2.png>, ...]')
         sys.exit(1)
+
+    if argv[0] == 'use_path':
+        argv = argv[1:]
+        use_path = True
+    else:
+        use_path = False
 
     outname = argv[0]
     try:
         size = int(argv[1])
     except ValueError:
-        print 'Error: size must be an integer'
+        print('Error: size must be an integer')
         sys.exit(1)
 
     filenames = argv[2:]
-    ret = Atlas.create(outname, filenames, size)
+    ret = Atlas.create(outname, filenames, size, use_path=use_path)
     if not ret:
-        print 'Error while creating atlas!'
+        print('Error while creating atlas!')
         sys.exit(1)
 
     fn, meta = ret
-    print 'Atlas created at', fn
-    print '%d image%s have been created' % (len(meta),
-            's' if len(meta) > 1 else '')
+    print('Atlas created at', fn)
+    print('%d image%s have been created' % (len(meta),
+            's' if len(meta) > 1 else ''))
 

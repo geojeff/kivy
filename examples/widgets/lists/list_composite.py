@@ -15,7 +15,6 @@ class MainView(GridLayout):
 
     def __init__(self, **kwargs):
         kwargs['cols'] = 2
-        kwargs['size_hint'] = (1.0, 1.0)
         super(MainView, self).__init__(**kwargs)
 
         # This is quite an involved args_converter, so we should go through the
@@ -37,7 +36,7 @@ class MainView(GridLayout):
                                {'cls': ListItemButton,
                                 'kwargs': {'text': rec['text']}}]}
 
-        item_strings = ["{0}".format(index) for index in xrange(100)]
+        item_strings = ["{0}".format(index) for index in range(100)]
 
         dict_adapter = DictAdapter(sorted_keys=item_strings,
                                    data=integers_dict,

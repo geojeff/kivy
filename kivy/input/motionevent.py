@@ -58,7 +58,7 @@ angle          2D angle. Use property `a`
 button         Mouse button (left, right, middle, scrollup, scrolldown)
                Use property `button`
 markerid       Marker or Fiducial ID. Use property `fid`
-pos            2D position. Use properties `x`, `y`
+pos            2D position. Use properties `x`, `y` or `pos``
 pos3d          3D position. Use properties `x`, `y`, `z`
 pressure       Pressure of the contact. Use property `pressure`
 shape          Contact shape. Use property `shape`
@@ -68,7 +68,7 @@ If yo want to know if the current :class:`MotionEvent` have an angle::
 
     def on_touch_move(self, touch):
         if 'angle' in touch.profile:
-            print 'The touch angle is', touch.a
+            print('The touch angle is', touch.a)
 
 If you want to select only the fiducials::
 
@@ -112,7 +112,10 @@ class MotionEventMetaclass(type):
         return super(MotionEventMetaclass, mcs).__new__(mcs, name, bases, attrs)
 
 
-class MotionEvent(object):
+MotionEventBase = MotionEventMetaclass('MotionEvent', (object, ), {})
+
+
+class MotionEvent(MotionEventBase):
     '''Abstract class to represent a touch and no-touch object.
 
     :Parameters:
@@ -121,8 +124,6 @@ class MotionEvent(object):
         `args` : list
             list of parameters, passed to depack() function
     '''
-
-    __metaclass__ = MotionEventMetaclass
     __uniq_id = 0
     __attrs__ = \
         ('device', 'push_attrs', 'push_attrs_stack',
@@ -143,8 +144,10 @@ class MotionEvent(object):
          'px', 'py', 'pz',
          # delta from the last position and current one, in screen range
          'dx', 'dy', 'dz',
-         'time_start', 'is_double_tap',
-         'double_tap_time', 'ud')
+         'time_start',
+         'is_double_tap', 'double_tap_time',
+         'is_triple_tap', 'triple_tap_time',
+         'ud')
 
     def __init__(self, device, id, args):
         if self.__class__ == MotionEvent:
@@ -173,7 +176,7 @@ class MotionEvent(object):
         self.grab_exclusive_class = None
         self.grab_state = False
 
-        #: Used to determine which widget the touch is beeing dispatched.
+        #: Used to determine which widget the touch is being dispatched.
         #: Check :func:`grab` function for more information.
         self.grab_current = None
 
@@ -253,9 +256,19 @@ class MotionEvent(object):
         #: Indicate if the touch is a double tap or not
         self.is_double_tap = False
 
+        #: Indicate if the touch is a triple tap or not
+        #:
+        #: .. versionadded:: 1.7.0
+        self.is_triple_tap = False
+
         #: If the touch is a :attr:`is_double_tap`, this is the time between the
         #: previous tap and the current touch.
         self.double_tap_time = 0
+
+        #: If the touch is a :attr:`is_triple_tap`, this is the time between the
+        #: first tap and the current touch.
+        #: .. versionadded:: 1.7.0
+        self.triple_tap_time = 0
 
         #: User data dictionnary. Use this dictionnary to save your own data on
         #: the touch.
@@ -373,7 +386,7 @@ class MotionEvent(object):
         '''Pop attributes values from the stack
         '''
         attrs, values = self.push_attrs_stack.pop()
-        for i in xrange(len(attrs)):
+        for i in range(len(attrs)):
             setattr(self, attrs[i], values[i])
 
     def apply_transform_2d(self, transform):
@@ -442,3 +455,10 @@ class MotionEvent(object):
             self.__class__.__name__,
             ' '.join(out))
 
+    @property
+    def is_mouse_scrolling(self, *args):
+        '''Returns True if the touch is a mousewheel scrolling
+
+        .. versionadded:: 1.6.0
+        '''
+        return 'button' in self.profile and 'scroll' in self.button

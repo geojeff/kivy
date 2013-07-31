@@ -17,13 +17,23 @@ Read a configuration token from a particular section::
 
 Change the configuration and save it::
 
-    >>> Config.set('kivy', 'retain_time', 50)
+    >>> Config.set('kivy', 'retain_time', '50')
     >>> Config.write()
+
+.. versionchanged:: 1.7.1
+
+    The ConfigParser should work correctly with utf-8 now. The values are
+    converted from ascii to unicode only when needed. The method get() returns
+    utf-8 strings.
 
 Available configuration tokens
 ------------------------------
 
 :kivy:
+    `desktop`: (0, 1)
+        Enable/disable specific features if True/False. For example enabling
+        drag-able scroll-bar in scroll views, disabling of bubbles in
+        TextInput...  True etc.
 
     `log_level`: (debug, info, warning, error, critical)
         Set the minimum log level to use
@@ -40,6 +50,9 @@ Available configuration tokens
         'multi' (one virtual keyboard everytime a widget ask for.)
     `keyboard_layout`: string
         Identifier of the layout to use
+    `window_icon`: string
+        Path of the window icon. Use this if you want to replace the default
+        pygame icon.
 
 :postproc:
 
@@ -47,6 +60,11 @@ Available configuration tokens
         Time allowed for the detection of double tap, in milliseconds
     `double_tap_distance`: float
         Maximum distance allowed for a double tap, normalized inside the range
+        0 - 1000
+    `triple_tap_time`: int
+        Time allowed for the detection of triple tap, in milliseconds
+    `triple_tap_distance`: float
+        Maximum distance allowed for a triple tap, normalized inside the range
         0 - 1000
     `retain_time`: int
         Time allowed for a retain touch, in milliseconds
@@ -95,9 +113,6 @@ Available configuration tokens
         Top position of the :class:`~kivy.core.window.Window`
     `left`: int
         Left position of the :class:`~kivy.core.window.Window`
-    `window_icon`: string
-        Path of the window icon. Use this if you want to replace the default
-        pygame icon.
     `rotation`: (0, 90, 180, 270)
         Rotation of the :class:`~kivy.core.window.Window`
     `resizable`: (0, 1)
@@ -175,16 +190,23 @@ Available configuration tokens
 
 __all__ = ('Config', 'ConfigParser')
 
-from ConfigParser import ConfigParser as PythonConfigParser
+try:
+    from ConfigParser import ConfigParser as PythonConfigParser
+except ImportError:
+    from configparser import RawConfigParser as PythonConfigParser
 from sys import platform
 from os import environ
 from os.path import exists
 from kivy import kivy_config_fn
 from kivy.logger import Logger, logger_config_update
-from kivy.utils import OrderedDict
+from collections import OrderedDict
+from kivy.utils import platform
+from kivy.compat import PY2
+
+_is_rpi = exists('/opt/vc/include/bcm_host.h')
 
 # Version number of current configuration format
-KIVY_CONFIG_VERSION = 7
+KIVY_CONFIG_VERSION = 9
 
 #: Kivy configuration object
 Config = None
@@ -229,24 +251,48 @@ class ConfigParser(PythonConfigParser):
         Python, this one is able to read only one file at a time. The latest
         read file will be used for the :meth:`write` method.
         '''
-        if type(filename) not in (str, unicode):
+        if type(filename) not in (str, str):
             raise Exception('Only one filename is accepted (str or unicode)')
         self.filename = filename
+        # If we try to open directly the configuration file in utf-8,
+        # we correctly get the unicode value by default.
+        # But, when we try to save it again, all the values we didn't changed
+        # are still unicode, and then the PythonConfigParser internal do a str()
+        # conversion -> fail.
+        # Instead we currently to the conversion to utf-8 when value are
+        # "get()", but we internally store them in ascii.
+        #with codecs.open(filename, 'r', encoding='utf-8') as f:
+        #    self.readfp(f)
         PythonConfigParser.read(self, filename)
 
     def set(self, section, option, value):
         '''Functions similarly to PythonConfigParser's set method, except that
         the value is implicitly converted to a string.
         '''
-        ret = PythonConfigParser.set(self, section, option, str(value))
-        self._do_callbacks(section, option, str(value))
+        e_value = value
+        if PY2:
+            if not isinstance(value, basestring):
+                # might be boolean, int, etc.
+                e_value = str(value)
+            else:
+                if isinstance(value, unicode):
+                    e_value = value.encode('utf-8')
+        ret = PythonConfigParser.set(self, section, option, e_value)
+        self._do_callbacks(section, option, value)
         return ret
+
+    def get(self, section, option, **kwargs):
+        value = PythonConfigParser.get(self, section, option, **kwargs)
+        if PY2:
+            if type(value) is str:
+                return value.decode('utf-8')
+        return value
 
     def setdefaults(self, section, keyvalues):
         '''Set a lot of keys/values in one section at the same time
         '''
         self.adddefaultsection(section)
-        for key, value in keyvalues.iteritems():
+        for key, value in keyvalues.items():
             self.setdefault(section, key, value)
 
     def setdefault(self, section, option, value):
@@ -263,7 +309,15 @@ class ConfigParser(PythonConfigParser):
             return defaultvalue
         if not self.has_option(section, option):
             return defaultvalue
-        return self.getint(section, option)
+        return self.get(section, option)
+
+    def getdefaultint(self, section, option, defaultvalue):
+        '''Get an option. If not found, it will return the default value.
+        The return value will be always converted as an integer.
+
+        .. versionadded:: 1.6.0
+        '''
+        return int(self.getdefault(section, option, defaultvalue))
 
     def adddefaultsection(self, section):
         '''Add a section if the section is missing.
@@ -306,11 +360,11 @@ if not environ.get('KIVY_DOC_INCLUDE'):
         'KIVY_NO_CONFIG' not in environ:
         try:
             Config.read(kivy_config_fn)
-        except Exception, e:
+        except Exception as e:
             Logger.exception('Core: error while reading local'
                              'configuration')
 
-    version = Config.getdefault('kivy', 'config_version', 0)
+    version = Config.getdefaultint('kivy', 'config_version', 0)
 
     # Add defaults section
     Config.adddefaultsection('kivy')
@@ -324,7 +378,7 @@ if not environ.get('KIVY_DOC_INCLUDE'):
     need_save = False
     if version != KIVY_CONFIG_VERSION and 'KIVY_NO_CONFIG' not in environ:
         Logger.warning('Config: Older configuration version detected'
-                       ' (%d instead of %d)' % (
+                       ' ({0} instead of {1})'.format(
                            version, KIVY_CONFIG_VERSION))
         Logger.warning('Config: Upgrading configuration in progress.')
         need_save = True
@@ -363,11 +417,14 @@ if not environ.get('KIVY_DOC_INCLUDE'):
             # activate native input provider in configuration
             # from 1.0.9, don't activate mactouch by default, or app are
             # unusable.
-            if platform == 'win32':
+            if platform() == 'win':
                 Config.setdefault('input', 'wm_touch', 'wm_touch')
                 Config.setdefault('input', 'wm_pen', 'wm_pen')
-            elif platform == 'linux2':
-                Config.setdefault('input', '%(name)s', 'probesysfs')
+            elif platform() == 'linux':
+                probesysfs = 'probesysfs'
+                if _is_rpi:
+                    probesysfs += ',provider=hidinput'
+                Config.setdefault('input', '%(name)s', probesysfs)
 
             # input postprocessing configuration
             Config.setdefault('postproc', 'double_tap_distance', '20')
@@ -420,10 +477,19 @@ if not environ.get('KIVY_DOC_INCLUDE'):
 
         elif version == 6:
             # if the timeout is still the default value, change it
-            if Config.getint('widgets', 'scroll_timeout') == 250:
-                Config.set('widgets', 'scroll_timeout', '55')
             Config.setdefault('widgets', 'scroll_stoptime', '300')
             Config.setdefault('widgets', 'scroll_moves', '5')
+
+        elif version == 7:
+            # desktop bool indicating whether to use desktop specific features
+            is_desktop = int(platform() in ('win', 'macosx', 'linux'))
+            Config.setdefault('kivy', 'desktop', is_desktop)
+            Config.setdefault('postproc', 'triple_tap_distance', '20')
+            Config.setdefault('postproc', 'triple_tap_time', '375')
+
+        elif version == 8:
+            if Config.getint('widgets', 'scroll_timeout') == 55:
+                Config.set('widgets', 'scroll_timeout', '250')
 
         #elif version == 1:
         #   # add here the command for upgrading from configuration 0 to 1
@@ -447,6 +513,6 @@ if not environ.get('KIVY_DOC_INCLUDE'):
         try:
             Config.filename = kivy_config_fn
             Config.write()
-        except Exception, e:
+        except Exception as e:
             Logger.exception('Core: Error while saving default config file')
 

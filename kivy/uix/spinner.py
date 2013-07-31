@@ -28,7 +28,7 @@ Example::
         pos_hint={'center_x': .5, 'center_y': .5})
 
     def show_selected_value(spinner, text):
-        print 'The spinner', spinner, 'have text', text
+        print('The spinner', spinner, 'have text', text)
 
     spinner.bind(text=show_selected_value)
 
@@ -41,18 +41,6 @@ __all__ = ('Spinner', 'SpinnerOption')
 from kivy.properties import ListProperty, ObjectProperty, BooleanProperty
 from kivy.uix.button import Button
 from kivy.uix.dropdown import DropDown
-from kivy.lang import Builder
-
-
-Builder.load_string('''
-<SpinnerOption>:
-    size_hint_y: None
-    height: 44
-
-<Spinner>:
-    background_normal: 'atlas://data/images/defaulttheme/spinner'
-    background_down: 'atlas://data/images/defaulttheme/spinner_pressed'
-''')
 
 
 class SpinnerOption(Button):

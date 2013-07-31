@@ -4,6 +4,7 @@ Text Pygame: Draw text with pygame
 
 __all__ = ('LabelPygame', )
 
+from kivy.compat import PY2
 from kivy.core.text import LabelBase
 from kivy.core.image import ImageData
 
@@ -22,8 +23,14 @@ pygame.font.init()
 class LabelPygame(LabelBase):
 
     def _get_font_id(self):
-        return '|'.join([unicode(self.options[x]) for x
-            in ('font_size', 'font_name_r', 'bold', 'italic')])
+        if PY2:
+            try:
+                return '|'.join([unicode(self.options[x]) for x in
+                                 ('font_size', 'font_name_r', 'bold', 'italic')])
+            except UnicodeDecodeError:
+                pass
+        return '|'.join([str(self.options[x]) for x in
+                         ('font_size', 'font_name_r', 'bold', 'italic')])
 
     def _get_font(self):
         fontid = self._get_font_id()
@@ -57,6 +64,12 @@ class LabelPygame(LabelBase):
             del pygame_cache[popid]
 
         return pygame_cache[fontid]
+
+    def get_ascent(self):
+        return self._get_font().get_ascent()
+
+    def get_descent(self):
+        return self._get_font().get_descent()
 
     def get_extents(self, text):
         return self._get_font().size(text)

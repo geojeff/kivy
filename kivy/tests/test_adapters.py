@@ -25,6 +25,7 @@ from kivy.properties import StringProperty
 
 from kivy.factory import Factory
 from kivy.lang import Builder
+from kivy.compat import string_types
 
 from nose.tools import raises
 
@@ -37,7 +38,7 @@ from nose.tools import raises
 # A dictionary of dicts, with only the minimum required is_selected attribute,
 # for use with examples using a simple list of integers in a list view.
 integers_dict = \
-        {str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
+        {str(i): {'text': str(i), 'is_selected': False} for i in range(100)}
 
 
 # ----------------------------------------------------------------------------
@@ -190,7 +191,7 @@ fruit_data_attribute_units = ['(g)',
                               '(%DV)']
 
 attributes_and_units = \
-        dict(zip(fruit_data_attributes, fruit_data_attribute_units))
+        dict(list(zip(fruit_data_attributes, fruit_data_attribute_units)))
 
 fruit_data = {}
 for fruit_record in fruit_data_list_of_dicts:
@@ -199,7 +200,7 @@ for fruit_record in fruit_data_list_of_dicts:
             dict({'name': fruit_record['name'],
                   'Serving Size': fruit_record['Serving Size'],
                   'is_selected': fruit_record['is_selected']},
-            **dict(zip(attributes_and_units.keys(), fruit_record['data'])))
+            **dict(list(zip(list(attributes_and_units.keys()), fruit_record['data']))))
 
 
 class CategoryItem(SelectableDataItem):
@@ -293,7 +294,7 @@ class AdaptersTestCase(unittest.TestCase):
                                                       'height': 25}
 
         self.integers_dict = \
-         {str(i): {'text': str(i), 'is_selected': False} for i in xrange(100)}
+         {str(i): {'text': str(i), 'is_selected': False} for i in range(100)}
 
         # The third of the four cls_dict items has no kwargs nor text, so
         # rec['text'] will be set for it. Likewise, the fifth item has kwargs,
@@ -502,7 +503,7 @@ class AdaptersTestCase(unittest.TestCase):
 
         cat_data_item = list_adapter.get_data_item(0)
         self.assertEqual(cat_data_item, 'cat')
-        self.assertTrue(isinstance(cat_data_item, str))
+        self.assertTrue(isinstance(cat_data_item, string_types))
 
         view = list_adapter.get_view(0)
         self.assertTrue(isinstance(view, ListItemButton))
@@ -682,7 +683,7 @@ class AdaptersTestCase(unittest.TestCase):
 
         cat_data_item = list_adapter.get_data_item(0)
         self.assertEqual(cat_data_item, 'cat')
-        self.assertTrue(isinstance(cat_data_item, str))
+        self.assertTrue(isinstance(cat_data_item, string_types))
 
         view = list_adapter.get_view(0)
         self.assertTrue(isinstance(view, ListItemButton))
@@ -765,7 +766,7 @@ class AdaptersTestCase(unittest.TestCase):
 
     def test_list_adapter_with_dicts_as_data(self):
         bare_minimum_dicts = \
-            [{'text': str(i), 'is_selected': False} for i in xrange(100)]
+            [{'text': str(i), 'is_selected': False} for i in range(100)]
 
         args_converter = lambda row_index, rec: {'text': rec['text'],
                                                  'size_hint_y': None,
@@ -778,7 +779,7 @@ class AdaptersTestCase(unittest.TestCase):
                                    cls=ListItemButton)
 
         self.assertEqual([rec['text'] for rec in list_adapter.data],
-            [str(i) for i in xrange(100)])
+            [str(i) for i in range(100)])
 
         self.assertEqual(list_adapter.cls, ListItemButton)
         self.assertEqual(list_adapter.args_converter, args_converter)
@@ -796,7 +797,7 @@ class AdaptersTestCase(unittest.TestCase):
 
     def test_list_adapter_with_dicts_as_data_multiple_selection(self):
         bare_minimum_dicts = \
-            [{'text': str(i), 'is_selected': False} for i in xrange(100)]
+            [{'text': str(i), 'is_selected': False} for i in range(100)]
 
         args_converter = lambda row_index, rec: {'text': rec['text'],
                                                  'size_hint_y': None,
@@ -809,7 +810,7 @@ class AdaptersTestCase(unittest.TestCase):
                                    cls=ListItemButton)
 
         self.assertEqual([rec['text'] for rec in list_adapter.data],
-            [str(i) for i in xrange(100)])
+            [str(i) for i in range(100)])
 
         self.assertEqual(list_adapter.cls, ListItemButton)
         self.assertEqual(list_adapter.args_converter, args_converter)
@@ -840,7 +841,7 @@ class AdaptersTestCase(unittest.TestCase):
                         cls=ListItemButton)
 
         first_category_fruits = \
-            fruit_categories[fruit_categories.keys()[0]]['fruits']
+            fruit_categories[list(fruit_categories.keys())[0]]['fruits']
 
         first_category_fruit_data_items = \
             [f for f in fruit_data_items if f.name in first_category_fruits]
@@ -1015,8 +1016,45 @@ class AdaptersTestCase(unittest.TestCase):
         alphabet_adapter.cut_to_sel()
         self.assertEqual(len(alphabet_adapter.data), 2)
 
+    def test_list_adapter_reset_data(self):
+        class PetListener(object):
+            def __init__(self, pet):
+                self.current_pet = pet
+
+            # This should happen as a result of data changing.
+            def callback(self, *args):
+                self.current_pet = args[1]
+
+        pet_listener = PetListener('cat')
+
+        list_item_args_converter = \
+                lambda row_index, rec: {'text': rec['text'],
+                                        'size_hint_y': None,
+                                        'height': 25}
+
+        list_adapter = ListAdapter(
+                        data=['cat'],
+                        args_converter=list_item_args_converter,
+                        selection_mode='multiple',
+                        selection_limit=1000,
+                        allow_empty_selection=True,
+                        cls=ListItemButton)
+
+        list_adapter.bind_triggers_to_view(pet_listener.callback)
+
+        self.assertEqual(pet_listener.current_pet, 'cat')
+        dog_data = ['dog']
+        list_adapter.data = dog_data
+        self.assertEqual(list_adapter.data, ['dog'])
+        self.assertEqual(pet_listener.current_pet, dog_data)
+
+        # Now just change an item.
+        list_adapter.data[0] = 'cat'
+        self.assertEqual(list_adapter.data, ['cat'])
+        self.assertEqual(pet_listener.current_pet, ['cat'])
+
     def test_dict_adapter_composite(self):
-        item_strings = ["{0}".format(index) for index in xrange(100)]
+        item_strings = ["{0}".format(index) for index in range(100)]
 
         # And now the list adapter, constructed with the item_strings as
         # the data, a dict to add the required is_selected boolean onto

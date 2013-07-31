@@ -18,8 +18,10 @@ include "opcodes.pxi"
 from c_opengl cimport *
 IF USE_OPENGL_DEBUG == 1:
     from c_opengl_debug cimport *
+from kivy.compat import PY2
 from kivy.logger import Logger
-from kivy.graphics.context cimport get_context
+from kivy.graphics.context cimport get_context, Context
+from weakref import proxy
 
 
 cdef int _need_reset_gl = 1
@@ -37,11 +39,12 @@ cdef void reset_gl_context():
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
 
-cdef class Instruction:
+cdef class Instruction(ObjectWithUid):
     '''Represents the smallest instruction available. This class is for internal
     usage only, don't use it directly.
     '''
     def __cinit__(self):
+        self.__proxy_ref = None
         self.flags = 0
         self.parent = None
 
@@ -92,6 +95,19 @@ cdef class Instruction:
             if (self.flags & GI_NEEDS_UPDATE) > 0:
                 return True
             return False
+
+    property proxy_ref:
+        '''Return a proxy reference to the Instruction, ie, without taking a
+        reference of the widget. See `weakref.proxy
+        <http://docs.python.org/2/library/weakref.html?highlight=proxy#weakref.proxy>`_
+        for more information about it.
+
+        .. versionadded:: 1.7.2
+        '''
+        def __get__(self):
+            if self.__proxy_ref is None:
+                self.__proxy_ref = proxy(self)
+            return self.__proxy_ref
 
 
 cdef class InstructionGroup(Instruction):
@@ -239,7 +255,9 @@ cdef class VertexInstruction(Instruction):
         # this instruction before the actual vertex instruction
         self.texture_binding = BindTexture(noadd=True, **kwargs)
         self.texture = self.texture_binding.texture #auto compute tex coords
-        self.tex_coords = kwargs.get('tex_coords', self._tex_coords)
+        tex_coords = kwargs.get('tex_coords')
+        if tex_coords:
+            self.tex_coords = tex_coords
 
         Instruction.__init__(self, **kwargs)
         self.flags = GI_VERTEX_DATA & GI_NEEDS_UPDATE
@@ -341,9 +359,19 @@ cdef class VertexInstruction(Instruction):
 
         '''
         def __get__(self):
-            return self._tex_coords
+            return (
+                self._tex_coords[0],
+                self._tex_coords[1],
+                self._tex_coords[2],
+                self._tex_coords[3],
+                self._tex_coords[4],
+                self._tex_coords[5],
+                self._tex_coords[6],
+                self._tex_coords[7])
         def __set__(self, tc):
-            self._tex_coords = list(tc)
+            cdef int index
+            for index in xrange(8):
+                self._tex_coords[index] = tc[index]
             self.flag_update()
 
     cdef void build(self):
@@ -371,7 +399,7 @@ cdef class Callback(Instruction):
     The definition of the callback must be::
 
         def my_callback(self, instr):
-            print 'I have been called!'
+            print('I have been called!')
 
     .. warning::
 
@@ -416,7 +444,8 @@ cdef class Callback(Instruction):
         self.flag_update()
 
     cdef void apply(self):
-        cdef RenderContext context
+        cdef RenderContext rcx
+        cdef Context ctx
         cdef Shader shader
         cdef int i
 
@@ -444,13 +473,20 @@ cdef class Callback(Instruction):
                 glBindBuffer(GL_ARRAY_BUFFER, 0)
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
+            # reset all the vertexformat in all shaders
+            ctx = get_context()
+            for obj in ctx.l_shader:
+                shader = obj()
+                if not shader:
+                    continue
+                shader.bind_vertex_format(None)
+
             # force binding again all our textures.
-            context = getActiveContext()
-            shader = context._shader
-            context.enter()
-            shader.bind_attrib_locations()
-            for index, texture in context.bind_texture.iteritems():
-                context.set_texture(index, texture)
+            rcx = getActiveContext()
+            shader = rcx._shader
+            rcx.enter()
+            for index, texture in rcx.bind_texture.iteritems():
+                rcx.set_texture(index, texture)
 
             reset_gl_context()
 
@@ -587,6 +623,23 @@ cdef class Canvas(CanvasBase):
                 self._after = c
             return self._after
 
+    property has_before:
+        '''Property to see if the canvas.before is already created
+
+        .. versionadded:: 1.7.0
+        '''
+        def __get__(self):
+            return self._before is not None
+
+    property has_after:
+        '''Property to see if the canvas.after is already created
+
+        .. versionadded:: 1.7.0
+        '''
+        def __get__(self):
+            return self._after is not None
+
+
     property opacity:
         '''Property for get/set the opacity value of the canvas.
 
@@ -654,9 +707,12 @@ cdef class RenderContext(Canvas):
     - The default texture
     - The state stack (color, texture, matrix...)
     '''
-    def __init__(self, *args, **kwargs):
-        cdef str key
+    def __cinit__(self, *args, **kwargs):
+        self._use_parent_projection = 0
+        self._use_parent_modelview = 0
         self.bind_texture = dict()
+
+    def __init__(self, *args, **kwargs):
         Canvas.__init__(self, **kwargs)
         vs_src = kwargs.get('vs', None)
         fs_src = kwargs.get('fs', None)
@@ -678,14 +734,20 @@ cdef class RenderContext(Canvas):
             'modelview_mat' : [Matrix()],
         }
 
+        cdef str key
         self._shader.use()
         for key, stack in self.state_stacks.iteritems():
             self.set_state(key, stack[0])
 
-    cdef void set_state(self, str name, value):
+        if 'use_parent_projection' in kwargs:
+            self._use_parent_projection = bool(int(kwargs['use_parent_projection']))
+        if 'use_parent_modelview' in kwargs:
+            self._use_parent_modelview = bool(int(kwargs['use_parent_modelview']))
+
+    cdef void set_state(self, str name, value, int apply_now=0):
         # Upload the uniform value to the shader
         cdef list d
-        if not name in self.state_stacks:
+        if name not in self.state_stacks:
             self.state_stacks[name] = [value]
             self.flag_update()
         else:
@@ -737,7 +799,7 @@ cdef class RenderContext(Canvas):
         if _active_texture != index:
             _active_texture = index
             glActiveTexture(GL_TEXTURE0 + index)
-        glBindTexture(texture._target, texture._id)
+        texture.bind()
         self.flag_update()
 
     cdef void enter(self):
@@ -747,7 +809,19 @@ cdef class RenderContext(Canvas):
         self._shader.stop()
 
     cdef void apply(self):
-        cdef list keys = self.state_stacks.keys()
+        cdef list keys
+        if PY2:
+            keys = self.state_stacks.keys()
+        else:
+            keys = list(self.state_stacks.keys())
+
+        cdef RenderContext active_context = getActiveContext()
+        if self._use_parent_projection:
+            self.set_state('projection_mat',
+                    active_context.get_state('projection_mat'), 0)
+        if self._use_parent_modelview:
+            self.set_state('modelview_mat',
+                    active_context.get_state('modelview_mat'), 0)
         pushActiveContext(self)
         if _need_reset_gl:
             reset_gl_context()
@@ -770,8 +844,52 @@ cdef class RenderContext(Canvas):
         return self._shader.uniform_values[key]
 
     property shader:
+        '''Return the shader attached to the render context.
+        '''
         def __get__(self):
             return self._shader
+
+    property use_parent_projection:
+        '''If True, the parent projection matrix will be used.
+
+        .. versionadded:: 1.7.0
+
+        Before::
+
+            rc['projection_mat'] = Window.render_context['projection_mat']
+
+        Now::
+
+            rc = RenderContext(use_parent_projection=True)
+        '''
+        def __get__(self):
+            return bool(self._use_parent_projection)
+        def __set__(self, value):
+            cdef cvalue = int(bool(value))
+            if self._use_parent_projection != cvalue:
+                self._use_parent_projection = cvalue
+                self.flag_update()
+
+    property use_parent_modelview:
+        '''If True, the parent modelview matrix will be used.
+
+        .. versionadded:: 1.7.0
+
+        Before::
+
+            rc['modelview_mat'] = Window.render_context['modelview_mat']
+
+        Now::
+
+            rc = RenderContext(use_parent_modelview=True)
+        '''
+        def __get__(self):
+            return bool(self._use_parent_modelview)
+        def __set__(self, value):
+            cdef cvalue = int(bool(value))
+            if self._use_parent_modelview != cvalue:
+                self._use_parent_modelview = cvalue
+                self.flag_update()
 
 
 cdef RenderContext ACTIVE_CONTEXT = None

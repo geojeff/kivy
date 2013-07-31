@@ -64,7 +64,7 @@ There are two events available: `on_open` when the popup is opening, and
 popup from closing by explictly returning True from your callback::
 
     def my_callback(instance):
-        print 'Popup', instance, 'is being dismissed, but is prevented!'
+        print('Popup', instance, 'is being dismissed, but is prevented!')
         return True
     popup = Popup(content=Label(text='Hello world'))
     popup.bind(on_dismiss=my_callback)
@@ -102,6 +102,15 @@ class Popup(ModalView):
 
     :data:`title` is a :class:`~kivy.properties.StringProperty`, default to 'No
     title'.
+    '''
+
+    title_size = NumericProperty('14sp')
+    '''Represents the font size of the popup title.
+
+    .. versionadded:: 1.6.0
+
+    :data:`title_size` is a :class:`~kivy.properties.NumericProperty`, default
+    to '14sp'.
     '''
 
     content = ObjectProperty(None)
@@ -156,6 +165,11 @@ class Popup(ModalView):
         self._container.clear_widgets()
         self._container.add_widget(self.content)
 
+    def on_touch_down(self, touch):
+        if self.disabled and self.collide_point(*touch.pos):
+            return True
+        return super(Popup, self).on_touch_down(touch)
+
 
 if __name__ == '__main__':
     from kivy.base import runTouchApp
@@ -171,11 +185,11 @@ if __name__ == '__main__':
     content.add_widget(content_cancel)
     popup = Popup(title='Test popup',
                   size_hint=(None, None), size=(256, 256),
-                  content=content)
+                  content=content, disabled=True)
     content_cancel.bind(on_release=popup.dismiss)
 
     layout = GridLayout(cols=3)
-    for x in xrange(9):
+    for x in range(9):
         btn = Button(text=str(x))
         btn.bind(on_release=popup.open)
         layout.add_widget(btn)

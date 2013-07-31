@@ -40,9 +40,10 @@ class FruitDetailView(GridLayout):
             if type(selected_object) is str:
                 self.fruit_name = selected_object
             else:
-                self.fruit_name = str(selected_object)
+                self.fruit_name = selected_object.text
 
         self.redraw()
+
 
 class FruitObserverDetailView(GridLayout):
     fruit_name = StringProperty('')
@@ -67,7 +68,6 @@ class FruitObserverDetailView(GridLayout):
                         text=str(fruit_data[self.fruit_name][attribute])))
 
     def update(self, object_adapter, *args):
-        print 'updating fodv', object_adapter, object_adapter.obj
         if object_adapter.obj is None:
             return
 
@@ -77,6 +77,7 @@ class FruitObserverDetailView(GridLayout):
             self.fruit_name = str(object_adapter.obj)
 
         self.redraw()
+
 
 # Used in list_cascade_images.py example.
 #
@@ -104,7 +105,6 @@ class FruitImageDetailView(BoxLayout):
             for attribute in fruit_data_attributes:
                 container.add_widget(Label(text="{0}:".format(attribute),
                                       halign='right'))
-                print 'fruit_name', self.fruit_name
                 container.add_widget(
                         Label(text=str(fruit_data[self.fruit_name][attribute])))
             self.add_widget(container)

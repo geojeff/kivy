@@ -56,6 +56,10 @@ The following tags are available:
 ``[anchor=<str>]``
     Put an anchor in the text. You can get the position of your anchor within
     the text with :data:`Label.anchors`
+``[sub][/sub]``
+    Display the text at a subscript position relative to the text before it.
+``[sup][/sup]``
+    Display the text at a superscript position relative to the text before it.
 
 If you want to render the markup text with a character [ or ] or &, you need to
 escape them. We created a simple syntax::
@@ -82,7 +86,7 @@ happens on it, the function ``print_it`` will be called with the name of the
 reference::
 
     def print_it(instance, value):
-        print 'User clicked on', value
+        print('User clicked on', value)
     widget = Label(text='Hello [ref=world]World[/ref]', markup=True)
     widget.bind(on_ref_press=print_it)
 
@@ -148,7 +152,7 @@ class Label(Widget):
            (not markup and cls is not CoreLabel):
             # markup have change, we need to change our rendering method.
             d = Label._font_properties
-            dkw = dict(zip(d, [getattr(self, x) for x in d]))
+            dkw = dict(list(zip(d, [getattr(self, x) for x in d])))
             if markup:
                 self._label = CoreMarkupLabel(**dkw)
             else:
@@ -186,6 +190,9 @@ class Label(Widget):
                                             get_hex_from_color(self.color), ']',
                                             text, '[/color]'))
                 self._label.refresh()
+                # force the rendering to get the references
+                if self._label.texture:
+                    self._label.texture.bind()
                 self._label.text = text
                 self.refs = self._label.refs
                 self.anchors = self._label.anchors
@@ -205,7 +212,7 @@ class Label(Widget):
         tx -= self.center_x - self.texture_size[0] / 2.
         ty -= self.center_y - self.texture_size[1] / 2.
         ty = self.texture_size[1] - ty
-        for uid, zones in self.refs.iteritems():
+        for uid, zones in self.refs.items():
             for zone in zones:
                 x, y, w, h = zone
                 if x <= tx <= w and y <= ty <= h:
@@ -219,6 +226,16 @@ class Label(Widget):
     #
     # Properties
     #
+
+    disabled_color = ListProperty([1, 1, 1, .3])
+    '''Text color, in the format (r, g, b, a)
+
+    .. versionadded:: 1.8.0
+
+    :data:`disabled_color` is a :class:`~kivy.properties.ListProperty`, default to [1, 1,
+    1, .5].
+    '''
+
     text = StringProperty('')
     '''Text of the label.
 
@@ -288,8 +305,8 @@ class Label(Widget):
     '''Line Height for the text. e.g. line_height = 2 will cause the spacing
     between lines to be twice the size.
 
-    :data:`line_height` is a :class:`~kivy.properties.NumericProperty`, default to
-    1.0.
+    :data:`line_height` is a :class:`~kivy.properties.NumericProperty`, default
+    to 1.0.
 
     .. versionadded:: 1.5.0
     '''
@@ -339,11 +356,12 @@ class Label(Widget):
     (:data:`padding_x`, :data:`padding_y`) properties.
     '''
 
-    halign = OptionProperty('left', options=['left', 'center', 'right'])
+    halign = OptionProperty('left', options=['left', 'center', 'right',
+                            'justify'])
     '''Horizontal alignment of the text.
 
     :data:`halign` is a :class:`~kivy.properties.OptionProperty`, default to
-    'left'. Available options are : left, center and right.
+    'left'. Available options are : left, center, right and justified.
 
     .. warning::
 
@@ -351,6 +369,11 @@ class Label(Widget):
         (centered), only the position of the text in this texture. You probably
         want to bind the size of the Label to the :data:`texture_size` or set a
         :data:`text_size`.
+
+    .. versionchanged:: 1.6.0
+
+        Starting version 1.6.0 a new option was added to :data:`halign`
+        namely `justify`
     '''
 
     valign = OptionProperty('bottom', options=['bottom', 'middle', 'top'])
@@ -467,7 +490,7 @@ class Label(Widget):
     You can bind a ref event like this::
 
         def print_it(instance, value):
-            print 'User click on', value
+            print('User click on', value)
         widget = Label(text='Hello [ref=world]World[/ref]', markup=True)
         widget.on_ref_press(print_it)
 

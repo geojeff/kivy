@@ -226,6 +226,16 @@ class VKeyboard(Scatter):
     :file:`atlas://data/images/defaulttheme/vkeyboard_background`.
     '''
 
+    background_disabled = StringProperty(
+        'atlas://data/images/defaulttheme/vkeyboard_disabled_background')
+    '''Filename of the background image when vkeyboard is disabled.
+
+    .. versionadded:: 1.8.0
+
+    :data:`background_disabled` a :class:`~kivy.properties.StringProperty`, default to
+    :file:`atlas://data/images/defaulttheme/vkeyboard__disabled_background`.
+    '''
+
     key_background_color = ListProperty([1, 1, 1, 1])
     '''Key background color, in the format (r, g, b, a). If a key background is
     set, the color will be combined with the key background texture.
@@ -241,6 +251,17 @@ class VKeyboard(Scatter):
 
     :data:`key_background_normal` a :class:`~kivy.properties.StringProperty`,
     default to :file:`atlas://data/images/defaulttheme/vkeyboard_key_normal`.
+    '''
+
+    key_disabled_background_normal = StringProperty(
+            'atlas://data/images/defaulttheme/vkeyboard_key_normal')
+    '''Filename of the key background image for use when no touches are active
+    on the widget and vkeyboard is disabled.
+
+    ..versionadded:: 1.8.0
+
+    :data:`key_disabled_background_normal` a :class:`~kivy.properties.StringProperty`,
+    default to :file:`atlas://data/images/defaulttheme/vkeyboard_disabled_key_normal`.
     '''
 
     key_background_down = StringProperty(
@@ -279,6 +300,8 @@ class VKeyboard(Scatter):
     font_size = NumericProperty('20dp')
     font_name = StringProperty('data/fonts/DejaVuSans.ttf')
 
+    __events__ = ('on_key_down', 'on_key_up')
+
     def __init__(self, **kwargs):
         # XXX move to style.kv
         kwargs.setdefault('size_hint', (None, None))
@@ -298,8 +321,6 @@ class VKeyboard(Scatter):
             have_capslock=self._trigger_update_layout_mode,
             layout_path=self._trigger_load_layouts,
             layout=self._trigger_load_layout)
-        self.register_event_type('on_key_down')
-        self.register_event_type('on_key_up')
         super(VKeyboard, self).__init__(**kwargs)
 
         # load all the layouts found in the layout_path directory
@@ -327,6 +348,9 @@ class VKeyboard(Scatter):
 
         # prepare layout widget
         self.refresh_keys_hint()
+        self.refresh_keys()
+
+    def on_disabled(self, intance, value):
         self.refresh_keys()
 
     def _update_layout_mode(self, *l):
@@ -372,7 +396,7 @@ class VKeyboard(Scatter):
         * If :data:`docked` is True, it will call :meth:`setup_mode_dock`
         * If :data:`docked` is False, it will call :meth:`setup_mode_free`
 
-        Fell free to overload theses methods to create a new
+        Feel free to overload theses methods to create a new
         positioning behavior.
         '''
         if self.docked:
@@ -476,7 +500,7 @@ class VKeyboard(Scatter):
 
         with self.active_keys_layer:
             Color(1, 1, 1)
-            for line_nb, index in active_keys.itervalues():
+            for line_nb, index in active_keys.values():
                 pos, size = layout_geometry['LINE_%d' % line_nb][index]
                 BorderImage(texture=texture, pos=pos, size=size,
                         border=self.key_border)
@@ -501,7 +525,7 @@ class VKeyboard(Scatter):
 
         # calculate individual key RELATIVE surface and pos (without key margin)
         current_y_hint = ey_hint + eh_hint
-        for line_nb in xrange(1, layout_rows + 1):
+        for line_nb in range(1, layout_rows + 1):
             current_y_hint -= uh_hint
             # get line_name
             line_name = '%s_%d' % (self.layout_mode, line_nb)
@@ -526,7 +550,7 @@ class VKeyboard(Scatter):
         kmtop, kmright, kmbottom, kmleft = self.key_margin
         uw_hint, uh_hint = layout_geometry['U_HINT']
 
-        for line_nb in xrange(1, layout_rows + 1):
+        for line_nb in range(1, layout_rows + 1):
             llg = layout_geometry['LINE_%d' % line_nb] = []
             llg_append = llg.append
             for key in layout_geometry['LINE_HINT_%d' % line_nb]:
@@ -559,7 +583,9 @@ class VKeyboard(Scatter):
         # draw background
         w, h = self.size
 
-        background = resource_find(self.background)
+        background = resource_find(self.background_disabled
+                                   if self.disabled else
+                                   self.background)
         texture = Image(background, mipmap=True).texture
         self.background_key_layer.clear()
         with self.background_key_layer:
@@ -571,10 +597,12 @@ class VKeyboard(Scatter):
         # XXX reloading the texture each time
 
         # first draw keys without the font
-        key_normal = resource_find(self.key_background_normal)
+        key_normal = resource_find(self.key_background_disabled_normal
+                                   if self.disabled else
+                                   self.key_background_normal)
         texture = Image(key_normal, mipmap=True).texture
         with self.background_key_layer:
-            for line_nb in xrange(1, layout_rows + 1):
+            for line_nb in range(1, layout_rows + 1):
                 for pos, size in layout_geometry['LINE_%d' % line_nb]:
                         BorderImage(texture=texture, pos=pos, size=size,
                                 border=self.key_border)
@@ -583,7 +611,7 @@ class VKeyboard(Scatter):
         # calculate font_size
         font_size = int(w) / 46
         # draw
-        for line_nb in xrange(1, layout_rows + 1):
+        for line_nb in range(1, layout_rows + 1):
             key_nb = 0
             for pos, size in layout_geometry['LINE_%d' % line_nb]:
                 # retrieve the relative text
@@ -719,11 +747,13 @@ class VKeyboard(Scatter):
         x, y = touch.pos
         if not self.collide_point(x, y):
             return
+        if self.disabled:
+            return True
 
         x, y = self.to_local(x, y)
         if not self.collide_margin(x, y):
             self.process_key_on(touch)
-            touch.grab(self)
+            touch.grab(self, exclusive=True)
         else:
             super(VKeyboard, self).on_touch_down(touch)
         return True

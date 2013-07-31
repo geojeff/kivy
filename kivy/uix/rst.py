@@ -27,7 +27,7 @@ Usage with Text
     This is an **emphased text**, some ``interpreted text``.
     And this is a reference to top_::
 
-        $ print "Hello world"
+        $ print("Hello world")
 
     """
     document = RstDocument(text=text)
@@ -58,10 +58,12 @@ __all__ = ('RstDocument', )
 import os
 from os.path import dirname, join, exists
 from kivy.clock import Clock
+from kivy.compat import PY2
 from kivy.properties import ObjectProperty, NumericProperty, \
         DictProperty, ListProperty, StringProperty, \
-        BooleanProperty
+        BooleanProperty, OptionProperty, AliasProperty
 from kivy.lang import Builder
+from kivy.utils import get_hex_from_color, get_color_from_hex
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
@@ -71,7 +73,6 @@ from kivy.uix.videoplayer import VideoPlayer
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.animation import Animation
 from kivy.logger import Logger
-
 from docutils.parsers import rst
 from docutils.parsers.rst import roles
 from docutils import nodes, frontend, utils
@@ -106,7 +107,7 @@ if 'KIVY_DOC' not in os.environ:
     generic_docroles = {
         'doc': role_doc}
 
-    for rolename, nodeclass in generic_docroles.iteritems():
+    for rolename, nodeclass in generic_docroles.items():
         generic = roles.GenericRole(rolename, nodeclass)
         role = roles.CustomRole(rolename, generic, {'classes': [rolename]})
         roles.register_local_role(rolename, role)
@@ -116,13 +117,15 @@ if 'KIVY_DOC' not in os.environ:
 Builder.load_string('''
 #:import parse_color kivy.parser.parse_color
 
+
+
 <RstDocument>:
     content: content
     scatter: scatter
     do_scroll_x: False
     canvas:
         Color:
-            rgb: .9, .905, .910
+            rgba: parse_color(root.colors['background'])
         Rectangle:
             pos: self.pos
             size: self.size
@@ -381,12 +384,32 @@ class RstDocument(ScrollView):
     '''Base widget used to store an Rst document. See module documentation for
     more information.
     '''
-
     source = StringProperty(None)
     '''Filename of the RST document.
 
     :data:`source` is a :class:`~kivy.properties.StringProperty`, default to
     None.
+    '''
+
+    source_encoding = StringProperty('utf-8')
+    '''encoding to be used for the :data:`source` file.
+
+    :data:`source_encoding` is a :class:`~kivy.properties.StringProperty`,
+    default to `utf-8`.
+
+    .. Note::
+        it's your responsibility to ensure that the value provided is a
+        valid codec supported by python.
+    '''
+
+    source_error = OptionProperty('strict',
+                                  options=('strict', 'ignore', 'replace',
+                                    'xmlcharrefreplace', 'backslashreplac'))
+    '''error handling to be used while encoding the :data:`source` file.
+
+    :data:`source_eerror` is a :class:`~kivy.properties.OptionProperty`,
+    default to `strict`. Can be one of 'strict', 'ignore', 'replace',
+    'xmlcharrefreplace', 'backslashreplac'
     '''
 
     text = StringProperty(None)
@@ -410,11 +433,27 @@ class RstDocument(ScrollView):
     to False
     '''
 
+    def _get_bgc(self):
+        return get_color_from_hex(self.colors.background)
+
+    def _set_bgc(self, value):
+        self.colors.background = get_hex_from_color(value)[1:]
+
+    background_color = AliasProperty(_get_bgc, _set_bgc, bind=('colors',))
+    '''Indicates the background_color to be used for the RstDocument
+
+    .. versionadded:: 1.8.0
+
+    :data:`background_color` is a :class:`~kivy.properties.AliasProeprty`.
+    This is a alias for colors['background']
+    '''
+
     colors = DictProperty({
-        'link': 'ce5c00',
-        'paragraph': '202020',
-        'title': '204a87',
-        'bullet': '000000'})
+        'background': 'e5e6e9ff',
+        'link': 'ce5c00ff',
+        'paragraph': '202020ff',
+        'title': '204a87ff',
+        'bullet': '000000ff'})
     '''Dictionary of all the colors used in the RST rendering.
 
     .. warning::
@@ -478,7 +517,7 @@ class RstDocument(ScrollView):
             return filename
         return join(self.document_root, filename)
 
-    def preload(self, filename):
+    def preload(self, filename, encoding='utf-8', errors='strict'):
         '''Preload a rst file to get its toctree, and its title.
 
         The result will be stored in :data:`toctrees` with the ``filename`` as
@@ -489,8 +528,8 @@ class RstDocument(ScrollView):
         if not exists(filename):
             return
 
-        with open(filename) as fd:
-            text = fd.read()
+        with open(filename, 'rb') as fd:
+            text = fd.read().decode(encoding, errors)
         # parse the source
         document = utils.new_document('Document', self._settings)
         self._parser.parse(text, document)
@@ -498,12 +537,13 @@ class RstDocument(ScrollView):
         visitor = _ToctreeVisitor(document)
         document.walkabout(visitor)
         self.toctrees[filename] = visitor.toctree
+        return text
 
     def _load_from_source(self):
         filename = self.resolve_path(self.source)
-        self.preload(filename)
-        with open(filename) as fd:
-            self.text = fd.read()
+        self.text = self.preload(filename,
+                                 self.source_encoding,
+                                 self.source_error)
 
     def _load_from_text(self, *largs):
         try:
@@ -514,7 +554,10 @@ class RstDocument(ScrollView):
 
             # parse the source
             document = utils.new_document('Document', self._settings)
-            self._parser.parse(self.text, document)
+            text = self.text
+            if PY2 and type(text) is str:
+                text = text.decode('utf-8')
+            self._parser.parse(text, document)
 
             # fill the current document node
             visitor = _Visitor(self, document)
@@ -714,7 +757,6 @@ class _ToctreeVisitor(nodes.NodeVisitor):
 
     def dispatch_visit(self, node):
         cls = node.__class__
-        #print '>>>', cls, node.attlist() if hasattr(node, 'attlist') else ''
         if cls is nodes.section:
             section = {
                 'ids': node['ids'],
@@ -733,7 +775,6 @@ class _ToctreeVisitor(nodes.NodeVisitor):
 
     def dispatch_departure(self, node):
         cls = node.__class__
-        #print '<--', cls, node.attlist() if hasattr(node, 'attlist') else ''
         if cls is nodes.section:
             self.pop()
         elif cls is nodes.title:
@@ -763,7 +804,6 @@ class _Visitor(nodes.NodeVisitor):
 
     def dispatch_visit(self, node):
         cls = node.__class__
-        #print '>>>', cls, node.attlist() if hasattr(node, 'attlist') else ''
         if cls is nodes.document:
             self.push(self.root.content)
 
@@ -948,7 +988,6 @@ class _Visitor(nodes.NodeVisitor):
 
     def dispatch_departure(self, node):
         cls = node.__class__
-        #print '<--', cls
         if cls is nodes.document:
             self.pop()
 

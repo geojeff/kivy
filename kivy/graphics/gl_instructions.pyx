@@ -23,10 +23,10 @@ __all__ = ('ClearColor', 'ClearBuffers')
 include "config.pxi"
 include "opcodes.pxi"
 
-from c_opengl cimport *
+from kivy.graphics.c_opengl cimport *
 IF USE_OPENGL_DEBUG == 1:
     from c_opengl_debug cimport *
-from instructions cimport Instruction
+from kivy.graphics.instructions cimport Instruction
 
 
 cdef class ClearColor(Instruction):
@@ -59,7 +59,7 @@ cdef class ClearColor(Instruction):
         def __get__(self):
             return [self.r, self.b, self.g, self.a]
         def __set__(self, rgba):
-            cdef list clear_color =  map(float, rgba)
+            cdef list clear_color = [float(x) for x in rgba]
             self.r = clear_color[0]
             self.g = clear_color[1]
             self.b = clear_color[2]
@@ -72,7 +72,7 @@ cdef class ClearColor(Instruction):
         def __get__(self):
             return [self.r, self.g, self.b]
         def __set__(self, rgb):
-            cdef list clear_color =  map(float, rgb)
+            cdef list clear_color = [float(x) for x in rgb]
             self.r = clear_color[0]
             self.g = clear_color[1]
             self.b = clear_color[2]
@@ -131,9 +131,9 @@ cdef class ClearBuffers(Instruction):
 
     def __init__(self, *args, **kwargs):
         Instruction.__init__(self, *args, **kwargs)
-        self.clear_color = 1
-        self.clear_stencil = 0
-        self.clear_depth = 0
+        self.clear_color = int(kwargs.get('clear_color', 1))
+        self.clear_stencil = int(kwargs.get('clear_stencil', 0))
+        self.clear_depth = int(kwargs.get('clear_depth', 0))
 
     cdef void apply(self):
         cdef GLbitfield mask = 0

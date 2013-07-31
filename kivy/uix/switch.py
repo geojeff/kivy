@@ -18,7 +18,7 @@ switch. The user can swipe to the left/right to activate/deactivate it::
 To attach a callback that listens to activation state::
 
     def callback(instance, value):
-        print 'the switch', instance, 'is', value
+        print('the switch', instance, 'is', value)
 
     switch = Switch()
     switch.bind(active=callback)
@@ -45,7 +45,6 @@ from kivy.properties import BooleanProperty, ObjectProperty, NumericProperty
 class Switch(Widget):
     '''Switch class. See module documentation for more information.
     '''
-
     active = BooleanProperty(False)
     '''Indicate if the switch is active or inactive.
 
@@ -78,7 +77,7 @@ class Switch(Widget):
     '''
 
     def on_touch_down(self, touch):
-        if self.touch_control is not None:
+        if self.disabled or self.touch_control is not None:
             return
         if not self.collide_point(*touch.pos):
             return

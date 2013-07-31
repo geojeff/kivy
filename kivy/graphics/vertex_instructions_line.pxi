@@ -218,7 +218,7 @@ cdef class Line(VertexInstruction):
             buf = <char *>malloc(4 * (self._dash_length + self._dash_offset))
             memset(buf, 255, self._dash_length * 4)
             memset(buf + self._dash_length * 4, 0, self._dash_offset * 4)
-            p_str = PyString_FromStringAndSize(buf,  (self._dash_length + self._dash_offset) * 4)
+            p_str = buf[:(self._dash_length + self._dash_offset) * 4]
 
             self.texture.blit_buffer(p_str, colorfmt='rgba', bufferfmt='ubyte')
             free(buf)
@@ -629,9 +629,6 @@ cdef class Line(VertexInstruction):
             indices[ii + 2] = piv + 2
             ii += 3
 
-        #print 'ii=', ii, 'indices_count=', indices_count
-        #print 'iv=', iv, 'vertices_count', vertices_count
-
         # compute bbox
         for i in xrange(vertices_count):
             if vertices[i].x < self._bxmin:
@@ -869,16 +866,18 @@ cdef class Line(VertexInstruction):
             angle_dir = -1
         if segments == 0:
             segments = int(abs(angle_end - angle_start) / 2) + 3
+            if segments % 2 == 1:
+                segments += 1
         # rad = deg * (pi / 180), where pi/180 = 0.0174...
         angle_start = angle_start * 0.017453292519943295
         angle_end = angle_end * 0.017453292519943295
         angle_range = abs(angle_end - angle_start) / (segments - 2)
 
-        cdef list points = [0, 0] * segments
+        cdef list points = [0, ] * segments
         cdef double angle
         cdef double rx = w * 0.5
         cdef double ry = h * 0.5
-        for i in xrange(0, segments * 2, 2):
+        for i in xrange(0, segments, 2):
             angle = angle_start + (angle_dir * (i - 1) * angle_range)
             points[i] = (x + rx) + (rx * sin(angle))
             points[i + 1] = (y + ry) + (ry * cos(angle))
@@ -949,14 +948,16 @@ cdef class Line(VertexInstruction):
             angle_dir = -1
         if segments == 0:
             segments = int(abs(angle_end - angle_start) / 2) + 3
+            if segments % 2 == 1:
+                segments += 1
         # rad = deg * (pi / 180), where pi/180 = 0.0174...
         angle_start = angle_start * 0.017453292519943295
         angle_end = angle_end * 0.017453292519943295
         angle_range = abs(angle_end - angle_start) / (segments - 2)
 
-        cdef list points = [0, 0] * segments
+        cdef list points = [0, ] * segments
         cdef double angle
-        for i in xrange(0, segments * 2, 2):
+        for i in xrange(0, segments, 2):
             angle = angle_start + (angle_dir * (i - 1) * angle_range)
             points[i] = x + (r * sin(angle))
             points[i + 1] = y + (r * cos(angle))
