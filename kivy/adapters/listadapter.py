@@ -62,18 +62,18 @@ from kivy.lang import Builder
 
 
 # TODO: This is an experiment to dispatch from the
-#       ChangeRecordingObservableList (ROOL), which is not an EventDispatcher
+#       ChangeRecordingObservableList (CROL), which is not an EventDispatcher
 #       (it seems it cannot be, as the ObservableList is a cython class). This
 #       is currently not used, however -- no callbacks received.
 
-#class ROOLDispatcher(EventDispatcher):
+#class CROLDispatcher(EventDispatcher):
 #
 #    sort_op_starting = BooleanProperty(False)
 #
 #    __events__ = ('on_change_info', 'on_sort_op_starting',)
 #
 #    def __init__(self, **kwargs):
-#        super(ROOLDispatcher, self).__init__(**kwargs)
+#        super(CROLDispatcher, self).__init__(**kwargs)
 #
 #    def on_change_info(self, *args):
 #        '''on_change_info() is the default handler for the
@@ -93,6 +93,15 @@ class ChangeRecordingObservableList(ObservableList):
     change_info for use by an observer.
     '''
 
+    # TODO: For running test apps, it is ok to have change_info commented out,
+    #       but tests will not run, because change_info is not seen as as
+    #       property. Conversely, if it is present, test apps will not run,
+    #       because it expects an EventDispatcher for the set.
+    #
+    #           in self.data.change_info,
+    #           (the self obj is not an EventDispatcher)
+    #
+    #change_info = ObjectProperty(None)
     # change_info is a normal python object consisting of:
     #
     #     (data_op, (start_index, end_index)
@@ -109,72 +118,95 @@ class ChangeRecordingObservableList(ObservableList):
     #       and move ops, or remove it if a better way is found.
 
     cached_view_indices_and_data = DictProperty({})
-    '''This has keys as the indices of the containing adapter's cached_views,
+    '''This has keys as the indices of the cached_views in the parent adapter,
     for use in sorting operations. It is set by the adapter when needed.  In
     sorting, a temporary association is made to the data items. It is destroyed
     by the adapter in its sort op callback.
     '''
 
+    # TODO: ObservableList has the benefit of normal args checking on the call,
+    #       but here we pluck them out of the air on the way, so there should
+    #       be args checking.
+
     def __init__(self, *largs):
         super(ChangeRecordingObservableList, self).__init__(*largs)
 
-        #self.crol_dispatcher = ROOLDispatcher()
+        #self.crol_dispatcher = CROLDispatcher()
 
     def __setitem__(self, key, value):
-        self.change_info = None
+        self.change_info = ('crol_setitem', (key, key))
         super(ChangeRecordingObservableList, self).__setitem__(key, value)
 
     def __delitem__(self, key):
-        index = self.index(key)
-        self.change_info = ('crol_delete', (index, index))
+        self.change_info = ('crol_delitem', (key, key))
         super(ChangeRecordingObservableList, self).__delitem__(key)
         #self.crol_dispatcher.sort_op_starting = True
         #self.crol_dispatcher.dispatch('on_sort_op_starting')
 
     def __setslice__(self, *largs):
-        self.change_info = None
+        #
+        # Python docs:
+        #
+        #     operator.__setslice__(a, b, c, v)
+        #
+        #     Set the slice of a from index b to index c-1 to the sequence v.
+        #
+        #     Deprecated since version 2.6: This function is removed in Python
+        #     3.x. Use setitem() with a slice index.
+        #
+        start_index = largs[0]
+        end_index = largs[1] - 1
+        self.change_info = ('crol_setslice', (start_index, end_index))
         super(ChangeRecordingObservableList, self).__setslice__(*largs)
 
     def __delslice__(self, *largs):
+        # Delete the slice of a from index b to index c-1. del a[b:c],
+        # where the args here are b and c.
+        # Also deprecated.
         start_index = largs[0]
-        end_index = largs[-1]
-        self.change_info = ('crol_delete', (start_index, end_index))
+        end_index = largs[1] - 1
+        self.change_info = ('crol_delslice', (start_index, end_index))
         super(ChangeRecordingObservableList, self).__delslice__(*largs)
 
     def __iadd__(self, *largs):
-        self.change_info = None
+        start_index = len(self)
+        end_index = start_index + len(largs) - 1
+        self.change_info = ('crol_iadd', (start_index, end_index))
         super(ChangeRecordingObservableList, self).__iadd__(*largs)
 
     def __imul__(self, *largs):
-        self.change_info = None
+        num = largs[0]
+        start_index = len(self)
+        end_index = start_index + (len(self) * num)
+        self.change_info = ('crol_imul', (start_index, end_index))
         super(ChangeRecordingObservableList, self).__imul__(*largs)
 
     def append(self, *largs):
         index = len(self)
-        self.change_info = ('crol_add', (index, index))
+        self.change_info = ('crol_append', (index, index))
         super(ChangeRecordingObservableList, self).append(*largs)
 
     def remove(self, *largs):
         index = self.index(largs[0])
-        self.change_info = ('crol_delete', (index, index))
+        self.change_info = ('crol_remove', (index, index))
         super(ChangeRecordingObservableList, self).remove(*largs)
 
     def insert(self, *largs):
-        index = self.index(largs[0])
+        index = largs[0]
         self.change_info = ('crol_insert', (index, index))
         super(ChangeRecordingObservableList, self).insert(*largs)
 
     def pop(self, *largs):
-        if largs[0]:
-            index = self.index(largs[0])
+        if largs:
+            index = largs[0]
         else:
             index = len(self) - 1
-        self.change_info = ('crol_delete', (index, index))
+        self.change_info = ('crol_pop', (index, index))
         return super(ChangeRecordingObservableList, self).pop(*largs)
 
     def extend(self, *largs):
         start_index = len(self)
-        end_index = start_index + len(largs) - 1
+        end_index = start_index + len(largs[0]) - 1
         self.change_info = ('crol_extend', (start_index, end_index))
         super(ChangeRecordingObservableList, self).extend(*largs)
 
@@ -187,7 +219,7 @@ class ChangeRecordingObservableList(ObservableList):
         super(ChangeRecordingObservableList, self).sort(*largs)
 
     def reverse(self, *largs):
-        self.change_info = ('crol_sort', (0, len(self) - 1))
+        self.change_info = ('crol_reverse', (0, len(self) - 1))
         super(ChangeRecordingObservableList, self).reverse(*largs)
 
 
@@ -350,104 +382,177 @@ class ListAdapter(Adapter, EventDispatcher):
 
         print 'sort op starting'
 
-    def data_changed(self, *dt):
+    def data_changed(self, *args):
 
-        print 'LIST ADAPTER data_changed callback', dt
+        # crol_setitem
+        # crol_delitem
+        # crol_setslice
+        # crol_delslice
+        # crol_iadd
+        # crol_imul
+        # crol_append
+        # crol_remove
+        # crol_insert
+        # crol_pop
+        # crol_extend
+        # crol_sort
+        # crol_reverse
+
+        print 'LIST ADAPTER data_changed callback', args
 
         print self.data.change_info
 
-        if self.data.change_info:
+        data_op, (start_index, end_index) = self.data.change_info
 
-            data_op, (start_index, end_index) = self.data.change_info
+        if len(self.data) == 1 and data_op in ['crol_append',
+                                               'crol_insert',
+                                               'crol_extend']:
+            # Special case: deletion resulted in no data, leading up to the
+            # present op, which adds one or more items. Cached views should
+            # have already been treated.  Call check_for_empty_selection()
+            # to re-establish selection if needed.
+            self.check_for_empty_selection()
+            return
 
-            if len(self.data) == 1 and data_op in ['crol_add', 'crol_extend']:
-                # Special case: deletion resulted in no data, leading up to the
-                # present op, which adds one or more items. Cached views should
-                # have already been treated.  Call check_for_empty_selection()
-                # to re-establish selection if needed.
-                self.check_for_empty_selection()
-                return
+        if data_op in ['crol_iadd',
+                       'crol_imul',
+                       'crol_append',
+                       'crol_extend']:
+            # This shouldn't affect anything here, as cached_views items
+            # can be built as needed through normal get_view() calls to
+            # build views for the added items.
+            pass
 
-            if data_op in ['crol_add', 'crol_extend']:
-                # The add op is an append or extend, so this shouldn't affect
-                # anything here, as cached_views items can be built as needed
-                # through normal get_view() calls to build back up.
-                pass
+        elif data_op in ['crol_setitem']:
 
-            elif data_op == 'crol_delete':
+            # Force a rebuild of the view for which data item has changed.
+            # If the item was selected before, maintain the seletion.
 
-                selection_was_affected = False
+            is_selected = False
+            if hasattr(self.cached_views[start_index], 'is_selected'):
+                is_selected = self.cached_views[start_index].is_selected
 
-                deleted_indices = range(start_index, end_index + 1)
+            del self.cached_views[start_index]
+            item_view = self.get_view(start_index)
+            if is_selected:
+                self.handle_selection(item_view)
 
-                len_cache_before = len(self.cached_views)
+        elif data_op in ['crol_setslice']:
 
-                # Delete views from cache.
-                new_cached_views = {}
+            # Force a rebuild of views for which data items have changed.
+            # Although it is hard to guess what might be preferred, a
+            # "positional" priority for selection is observed here, where the
+            # indices of selected item views is maintained. In contrast, we
+            # could call check_for_empty_selection() if there no selection
+            # remains after the op.
 
-                i = 0
-                for k, v in self.cached_views.iteritems():
-                    if not k in deleted_indices:
-                        new_cached_views[i] = self.cached_views[k]
-                        if k >= start_index:
-                            new_cached_views[i].index = i
-                        i += 1
+            changed_indices = range(start_index, end_index + 1)
 
-                self.cached_views = new_cached_views
+            is_selected_indices = []
+            for i in changed_indices:
+                item_view = self.cached_views[i]
+                if hasattr(item_view, 'is_selected'):
+                    if item_view.is_selected:
+                        is_selected_indices.append(i)
 
-                # Removed deleted_indices from the sorting-related dict in
-                # self.data, a ChangeRecordingObservableList.
-                #for i in deleted_indices:
-                    #del self.data.cached_view_indices_and_data[i]
+            for i in changed_indices:
+                del self.cached_views[i]
 
-                # Remove deleted views from selection.
-                #for selected_index in [item.index for item in self.selection]:
-                for sel in self.selection:
-                    if sel.index in deleted_indices:
-                        self.selection.remove(sel)
-                        selection_was_affected = True
+            for i in changed_indices:
+                item_view = self.get_view(i)
+                if item_view.index in is_selected_indices:
+                    self.handle_selection(item_view)
 
-                # Do a check_for_empty_selection type step, if data remains.
-                if (len(self.data) > 0
-                        and not self.selection
-                        and not self.allow_empty_selection):
-                    # Find a good index to select, if the deletion results in
-                    # no selection, which is common, as the selected item is
-                    # often the one deleted.
-                    if start_index > 0:
-                        new_sel_index = start_index - 1
-                    elif end_index < len_cache_before - 1:
-                        # Don't forget that the deletion has occurred by now.
-                        new_sel_index = start_index
-                    else:
-                        new_sel_index = 0
+        elif data_op in ['crol_insert']:
 
-                    v = self.get_view(new_sel_index)
-                    if v is not None:
-                        self.handle_selection(v)
+            new_cached_views = {}
 
-            elif data_op == 'crol_insert':
+            for k, v in self.cached_views.iteritems():
 
-                inserted_indices = range(start_index, end_index + 1)
+                if k < start_index:
+                    new_cached_views[k] = self.cached_views[k]
+                else:
+                    new_cached_views[k+1] = self.cached_views[k]
+                    new_cached_views[k+1].index += 1
 
-                new_cached_views = {}
+            self.cached_views = new_cached_views
 
-                i = 0
-                for k, v in self.cached_views.iteritems():
+        elif data_op in ['crol_delitem',
+                         'crol_delslice',
+                         'crol_remove',
+                         'crol_pop']:
+
+            selection_was_affected = False
+
+            deleted_indices = range(start_index, end_index + 1)
+
+            # Delete views from cache.
+            new_cached_views = {}
+
+            i = 0
+            for k, v in self.cached_views.iteritems():
+                if not k in deleted_indices:
                     new_cached_views[i] = self.cached_views[k]
-                    i += 1
                     if k >= start_index:
                         new_cached_views[i].index = i
+                    i += 1
 
-                self.cached_views = new_cached_views
+            self.cached_views = new_cached_views
 
-            elif data_op == 'crol_sort':
+            # Removed deleted_indices from the sorting-related dict in
+            # self.data, a ChangeRecordingObservableList.
+            #for i in deleted_indices:
+                #del self.data.cached_view_indices_and_data[i]
 
-                for item_view in self.cached_views:
-                    item_view.index = self.data.index(
-                            self.data.cached_view_indices_and_data[item_view])
+            # Remove deleted views from selection.
+            #for selected_index in [item.index for item in self.selection]:
+            for sel in self.selection:
+                if sel.index in deleted_indices:
+                    self.selection.remove(sel)
+                    selection_was_affected = True
 
-                self.data.cached_view_indices_and_data = {}
+            # Do a check_for_empty_selection type step, if data remains.
+            if (len(self.data) > 0
+                    and not self.selection
+                    and not self.allow_empty_selection):
+                # Find a good index to select, if the deletion results in
+                # no selection, which is common, as the selected item is
+                # often the one deleted.
+                if start_index < len(self.data):
+                    new_sel_index = start_index
+                else:
+                    new_sel_index = start_index - 1
+                v = self.get_view(new_sel_index)
+                if v is not None:
+                    self.handle_selection(v)
+
+        elif data_op in ['crol_sort',
+                         'crol_reverse']:
+            pass
+#                for item_view in self.cached_views:
+#                    item_view.index = self.data.index(
+#                            self.data.cached_view_indices_and_data[item_view])
+#
+#                self.data.cached_view_indices_and_data = {}
+
+# This was mistakenly added to handle inserting a list into data, which is not
+# part of the list API:
+#
+#            elif data_op == 'crol_?':
+#
+#                inserted_indices = range(start_index, end_index + 1)
+#
+#                new_cached_views = {}
+#
+#                i = 0
+#                for k, v in self.cached_views.iteritems():
+#                    new_cached_views[i] = self.cached_views[k]
+#                    i += 1
+#                    if k >= start_index:
+#                        new_cached_views[i].index = i
+#
+#                self.cached_views = new_cached_views
+#
 
     def delete_cache(self, *args):
         self.cached_views = {}
