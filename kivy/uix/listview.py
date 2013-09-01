@@ -64,8 +64,10 @@ simple to advanced:
     * kivy/examples/widgets/lists/list_kv.py
     * kivy/examples/widgets/lists/list_composite.py
     * kivy/examples/widgets/lists/list_cascade.py
+    * kivy/examples/widgets/lists/list_cascade_controllers.py
     * kivy/examples/widgets/lists/list_cascade_dict.py
     * kivy/examples/widgets/lists/list_cascade_images.py
+    * kivy/examples/widgets/lists/list_cascade_properties.py
     * kivy/examples/widgets/lists/list_scroll.py
     * kivy/examples/widgets/lists/list_ops.py
     * kivy/examples/widgets/lists/list_reset_data.py
@@ -189,8 +191,8 @@ given to the way longer python blocks are indented::
     # level of indentation.
 
     Builder.load_string("""
-    #:import label kivy.uix.label
-    #:import sla kivy.adapters.simplelistadapter
+    #:import Label kivy.uix.label.Label
+    #:import ListAdapter kivy.adapters.listadapter.ListAdapter
 
     <ListViewModal>:
         size_hint: None, None
@@ -198,9 +200,9 @@ given to the way longer python blocks are indented::
         ListView:
             size_hint: .8, .8
             adapter:
-                sla.SimpleListAdapter(
+                ListAdapter(
                 data=["Item #{0}".format(i) for i in range(100)],
-                cls=label.Label)
+                cls=Label)
     """)
 
 
@@ -239,8 +241,9 @@ needs.
 See the :class:`~kivy.adapters.listadapter.ListAdapter` docs for details, but
 here are synopses of its arguments:
 
-* *data*: strings, class instances, dicts, etc. that form the basis data
-  for instantiating views.
+* *data*: class instances, dicts, etc. that form the basis data
+  for instantiating views. Items must be subclasses of SelectableDataItem, or
+  mix it in, or provide equivalent attributes.
 
 * *cls*: a Kivy view that is to be instantiated for each list item. There
   are several built-in types available, including ListItemLabel and
@@ -322,12 +325,6 @@ the cls or template.
     ListItemLabel and ListItemButton, or custom classes like them, and not the
     bare Label nor Button classes, are to be used.
 
-.. warning::
-
-    ListItemButton inherits the `background_normal` and `background_down`
-    properties from the Button widget, so the `selected_color` and
-    `deselected_color` are not represented faithfully by default.
-
 Here is an args_converter for ListAdapter, for use with the built-in
 :class:`~kivy.uix.listview.ListItemButton`, specified as a normal Python
 function::
@@ -358,8 +355,8 @@ So, it is the responsibility of the developer to code the args_converter
 according to the data at hand. The index argument can be useful in some
 cases, such as when custom labels are needed.
 
-An Example ListView
--------------------
+An Example ListView Coded with a ListAdapter
+--------------------------------------------
 
 Now, to some example code::
 
@@ -603,27 +600,35 @@ demonstrate the use of kv templates and composite list views.
 
 '''
 
-__all__ = ('SelectableView', 'ListItemButton',
-           'CompositeListItem', 'ListView', )
+__all__ = ('SelectableView', 'SelectableStringItem', 'ListItemLabel',
+           'ListItemButton', 'CompositeListItem', 'ListView', )
 
 from math import ceil, floor
 
-from kivy.selection import SelectionTool
-
-from kivy.adapters.simplelistadapter import SimpleListAdapter
+from kivy.adapters.args_converters import list_item_args_converter
+from kivy.adapters.listadapter import ListAdapter
 
 from kivy.clock import Clock
+
+from kivy.enums import selection_schemes
+from kivy.enums import selection_update_methods
+
 from kivy.event import EventDispatcher
 from kivy.lang import Builder
+
+from kivy.models import SelectableStringItem
 
 from kivy.properties import BooleanProperty
 from kivy.properties import DictProperty
 from kivy.properties import ListProperty
 from kivy.properties import NumericProperty
 from kivy.properties import ObjectProperty
+from kivy.properties import StringProperty
 
 from kivy.properties import DictOpInfo
 from kivy.properties import ListOpInfo
+
+from kivy.selection import SelectionTool
 
 from kivy.uix.abstractview import AbstractView
 from kivy.uix.behaviors import ButtonBehavior
@@ -667,7 +672,7 @@ class SelectableView(ButtonBehavior):
     '''
 
     index = NumericProperty(-1)
-    '''The index into the underlying data listm, to the data item this view
+    '''The index into the underlying data list item, to the data item this view
     represents.
 
     :data:`index` is a :class:`~kivy.properties.NumericProperty`, default
@@ -684,9 +689,19 @@ class SelectableView(ButtonBehavior):
     :class:`~kivy.properties.BooleanProperty`, default to True.
     '''
 
+    ksel = ObjectProperty(None)
+    '''The selection tool for the view item.
+
+    .. versionadded:: 1.8
+
+    :data:`ksel` is a SelectionTool instance, set either from kwargs or to
+    False after the super() call in __init__().
+    '''
+
     def __init__(self, **kwargs):
         super(SelectableView, self).__init__(**kwargs)
-        self.ksel = SelectionTool(False)
+        if 'ksel' not in kwargs:
+            self.ksel = SelectionTool(False)
         self.ksel.bind_to(self.selection_changed)
 
     def selection_changed(self, *args):
@@ -845,6 +860,17 @@ class CompositeListItem(SelectableView, BoxLayout):
         self.background_color = self.deselected_color
 
 
+class ListItemLabel(SelectableView, Label):
+    text = StringProperty('')
+
+    def __init__(self, **kwargs):
+        super(ListItemLabel, self).__init__(**kwargs)
+
+
+selectable_string_args_converter = lambda row_index, x: {'text': x.text,
+                                                        'size_hint_y': None,
+                                                        'height': 25}
+
 Builder.load_string('''
 <ListView>:
     container: container
@@ -912,7 +938,7 @@ class ListView(AbstractView, EventDispatcher):
     default to None.
     '''
 
-    row_height = NumericProperty(None)
+    row_height = NumericProperty(25)
     '''The row_height property is calculated on the basis of the height of the
     container and the count of items.
 
@@ -971,22 +997,67 @@ class ListView(AbstractView, EventDispatcher):
     def __init__(self, **kwargs):
 
         # Check for an adapter argument. If it doesn't exist, we check for
-        # item_strings in use with SimpleListAdapter to make a simple list.
+        # item_strings, for which we build data items.
         if 'adapter' not in kwargs:
 
             if 'item_strings' not in kwargs:
-                # Could be missing, or it could be that the ListView is
-                # declared in a kv file. If kv is in use, and item_strings is
-                # declared there, then item_strings will not be set until after
-                # __init__(). So, the data=[] set will temporarily serve for
-                # SimpleListAdapter instantiation, with the binding to
-                # item_strings_changed() handling the eventual set of the
-                # item_strings property from the application of kv rules.
-                list_adapter = SimpleListAdapter(data=[],
-                                                 cls=Label)
+                if '__no_builder' in kwargs:
+                    # TODO: Why does this happen, from kv?
+                    list_adapter = ListAdapter(data=[],
+                                               cls=ListItemLabel)
+                else:
+                    if 'data' not in kwargs:
+                        raise Exception(('ListView: without adapter, '
+                                         'must provide data arg.'))
+
+                    # TODO: Get these defaults from calls? for some, enums?
+                    selection = kwargs.pop('selection', [])
+                    selection_scheme = \
+                            kwargs.pop('selection_scheme',
+                                       selection_schemes.VIEW_ON_DATA)
+                    selection_update_method = kwargs.pop(
+                            'selection_update_method',
+                            selection_update_methods.SET)
+                    cls = kwargs.pop('cls', ListItemLabel)
+                    args_converter = \
+                            kwargs.pop('args_converter',
+                                       list_item_args_converter)
+                    allow_empty_selection = \
+                            kwargs.pop('allow_empty_selection',
+                                       False)
+
+                    list_adapter = ListAdapter(
+                            data=kwargs['data'],
+                            args_converter=args_converter,
+                            selection=selection,
+                            selection_scheme=selection_scheme,
+                            selection_update_method=selection_update_method,
+                            allow_empty_selection=allow_empty_selection,
+                            cls=cls)
             else:
-                list_adapter = SimpleListAdapter(data=kwargs['item_strings'],
-                                                 cls=Label)
+
+                data_items = [SelectableStringItem(text=item_string)
+                              for item_string in kwargs['item_strings']]
+
+                selection = kwargs.pop('selection', [])
+                selection_scheme = kwargs.pop('selection_scheme',
+                                              selection_schemes.VIEW_ON_DATA)
+                selection_update_method = kwargs.pop(
+                        'selection_update_method',
+                        selection_update_methods.SET)
+                cls = kwargs.pop('cls', ListItemLabel)
+                allow_empty_selection = kwargs.pop('allow_empty_selection',
+                                                   False)
+
+                list_adapter = ListAdapter(
+                        data=data_items,
+                        selection=selection,
+                        selection_scheme=selection_scheme,
+                        selection_update_method=selection_update_method,
+                        allow_empty_selection=allow_empty_selection,
+                        args_converter=selectable_string_args_converter,
+                        cls=ListItemLabel)
+
             kwargs['adapter'] = list_adapter
 
         super(ListView, self).__init__(**kwargs)
@@ -1420,9 +1491,9 @@ class ListView(AbstractView, EventDispatcher):
 
         if self.adapter.selection:
             indices = [v.index for v in self.adapter.selection]
-            first_sel_index = min(indices)
+            last_sel_index = max(indices)
 
-            self.scroll_to(first_sel_index)
+            self.scroll_to(last_sel_index)
 
     def on_scroll_complete(self, *args):
         self.scrolling = False
@@ -1542,15 +1613,22 @@ class ListView(AbstractView, EventDispatcher):
                     if len(widget_indices) == len(slice_indices):
                         break
 
-            for widget_index in reversed(sorted(widget_indices)):
-                widget = self.container.children[widget_index]
-                self.container.remove_widget(widget)
+            if widget_indices:
+                for widget_index in reversed(sorted(widget_indices)):
+                    widget = self.container.children[widget_index]
+                    self.container.remove_widget(widget)
 
-            add_index = min(widget_indices)
+                add_index = min(widget_indices)
 
-            for slice_index in slice_indices:
-                item_view = self.adapter.get_view(slice_index)
-                self.container.add_widget(item_view, add_index)
+                for slice_index in slice_indices:
+                    item_view = self.adapter.get_view(slice_index)
+                    self.container.add_widget(item_view, add_index)
+            else:
+
+                self._index = min(slice_indices)
+                self.scrolling = True
+                self.populate()
+                self.dispatch('on_scroll_complete')
 
         elif op in ['OOL_append',
                     'OOL_extend',
