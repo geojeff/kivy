@@ -1442,6 +1442,7 @@ class BuilderBase(object):
 
             # register all the dynamic classes
             for name, baseclasses in iteritems(parser.dynamic_classes):
+                print 'registering', name, baseclasses, fn
                 Factory.register(name, baseclasses=baseclasses, filename=fn)
 
             # create root object is exist
@@ -1458,8 +1459,10 @@ class BuilderBase(object):
 
             if parser.root:
                 widget = Factory.get(parser.root.name)()
+                print 'widget from parser', widget
                 bindings = []
                 self._apply_rule(widget, parser.root, parser.root, bindings)
+                print 'widget, after rules applied', widget
                 return widget
         finally:
             self._current_filename = None
