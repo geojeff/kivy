@@ -49,7 +49,8 @@ Builder.load_string('''
 
 class ObjectView(Adapter, AbstractView, EventDispatcher):
     ''':class:`~kivy.uix.listview.ObjectView` is a primary high-level widget,
-    handling the common task of presenting an item in a scrolling list.
+    handling the common task of presenting a view associated with an object.
+    The view is held in a scroll view.
 
     The adapter property comes via the mixed in
     :class:`~kivy.uix.abstractview.AbstractView` class.
@@ -61,7 +62,7 @@ class ObjectView(Adapter, AbstractView, EventDispatcher):
     container = ObjectProperty(None)
     '''The container is a :class:`~kivy.uix.gridlayout.GridLayout` widget held
     within a :class:`~kivy.uix.scrollview.ScrollView` widget.  (See the
-    associated kv block in the Builder.load_string() setup). The item view
+    associated kv block in the Builder.load_string() setup). The object view
     instance is managed and provided by the adapter.  The container is cleared
     with a call to clear_widgets() when the data view is rebuilt by the
     populate() method.
@@ -71,7 +72,40 @@ class ObjectView(Adapter, AbstractView, EventDispatcher):
     '''
 
     data_binding = ObjectProperty(None, allownone=True)
+    '''Just as ListView needs a ListController or ListProperty bound to it for
+    its data source, ObjectView needs an ObjectController or ObjectProperty for
+    its data object source.
+
+    In kv put the DataBinding at the end of arguments, indented like this::
+
+        ObjectView:
+            other properties: ...
+            DataBinding:
+                source: app.my_object_controller
+                prop: 'data' <-- you don't have to provide this for controllers
+
+    or, in python, the equivalent would be::
+
+        app = App.app()
+        my_object_view = ObjectView(other=something,
+                                    data_binding=DataBinding(
+                                        source=app.my_object_controller,
+                                        prop='data'))
+
+    :data:`data_binding` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
     object_class = ObjectProperty(None, allownone=True)
+    '''The object_class property, holding the view class to be constructed for
+    the basis object, is the equivalent of the list_item_class in ListView,
+    except that here we only have one data object for which a view is to
+    be built. Still it can be useful to have the view class as a configurable
+    property.
+
+    :data:`object` is an :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
 
     def __init__(self, **kwargs):
 

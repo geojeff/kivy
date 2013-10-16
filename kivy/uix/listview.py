@@ -805,13 +805,10 @@ class SelectableView(ButtonBehavior, Widget):
 
         if 'item_args' in kwargs:
             item_args = kwargs['item_args']
-            #import pdb; pdb.set_trace()
-            print kwargs
             kwargs = self.args_converter(
                         item_args['index'],
                         item_args['data_item'])
             for arg in kwargs:
-                print 'setting', arg, kwargs[arg]
                 setattr(self, arg, kwargs[arg])
 
     def args_converter(self, index, data_item):
@@ -846,8 +843,6 @@ class SelectableView(ButtonBehavior, Widget):
                     args[property_name] = getattr(data_item, property_name)
 
         return args
-
-
 
     def selection_changed(self, *args):
         if args[1]:
@@ -934,6 +929,7 @@ class ListItemButton(SelectableView, Button):
         return {'text': data_item.text,
                 'size_hint_y': None,
                 'height': 25}
+
 
 class CompositeListItem(SelectableView, BoxLayout):
     ''':class:`~kivy.uix.listview.CompositeListItem` mixes
@@ -1028,6 +1024,7 @@ class CompositeListItem(SelectableView, BoxLayout):
 
     def args_converter(self, index, data_item):
         pass
+
 
 class ListItemLabel(SelectableView, Label):
     text = StringProperty('')
@@ -1575,9 +1572,51 @@ class ListView(Adapter, AbstractView, EventDispatcher):
 
     __events__ = ('on_scroll_complete', )
 
-    empty_data = ListProperty([])
     data_binding = ObjectProperty(None, allownone=True)
+    '''ListView needs a source for its data, from which it (via superclass
+    Adapter) builds views for each data item. The data source is provided as a
+    binding to either a ListController (built-in data property) or a
+    ListProperty held somewhere. In kv, you can just use DataBinding: as the
+    last item in your ListView definition, with source:, prop: and other
+    arguments indented::
+
+        ListView:
+            other properties: ...
+            DataBinding:
+                source: app.my_list_controller
+                prop: 'data' <-- you don't have to provide this for controllers
+
+    or, in python, the equivalent would be::
+
+        app = App.app()
+        my_list_view = ListView(other=something,
+                                data_binding=DataBinding(
+                                    source=app.my_list_controller,
+                                    prop='data'))
+
+    See :class:`DataBinding` for other arguments and documentation.
+
+    .. versionadded:: 1.8
+
+    :data:`data_binding` is a :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
+
     selection_binding = ObjectProperty(None, allownone=True)
+    '''Selection is normally maintained (very carefully) by the controller
+    system. However, for some needs, it is useful to control selection from an
+    external source, either some programmatic way, or by a direct binding to a
+    list controller or property.
+
+    This should be done with care, because selection can be a tricky thing to
+    keep in sync throughout an app. Search the examples for use of the
+    selection_binding property.
+
+    .. versionadded:: 1.8
+
+    :data:`selection_binding` is a :class:`~kivy.properties.ObjectProperty`,
+    default to None.
+    '''
 
     def __init__(self, **kwargs):
 

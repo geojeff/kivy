@@ -45,10 +45,8 @@ __all__ = ('Adapter', )
 import collections
 from inspect import isclass
 
-from kivy.app import App
 from kivy.event import EventDispatcher
 from kivy.factory import Factory
-from kivy.lang import Builder
 from kivy.properties import DictProperty
 from kivy.properties import ObjectProperty
 
@@ -226,7 +224,6 @@ class Adapter(EventDispatcher):
 
         if hasattr(self.list_item_class, 'args_converter'):
             view_instance = self.list_item_class(item_args=item_args)
-            print 'view_instance', view_instance
         else:
             raise Exception('An args_converter method is required.')
 
