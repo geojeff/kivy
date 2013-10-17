@@ -88,6 +88,9 @@ class Binding(Widget):
 
 
 class DataBinding(Binding):
+    '''The DataBinding class is a convenience class used to make a binding to
+    a data property of an EventDispatcher, usually a controller.
+    '''
 
     def __init__(self, **kwargs):
         kwargs['target_prop'] = 'data'
@@ -95,6 +98,9 @@ class DataBinding(Binding):
 
 
 class SelectionBinding(Binding):
+    '''The SelectionBinding class is a convenience class used to make a binding to
+    a selection property of an EventDispatcher, usually a controller.
+    '''
 
     def __init__(self, **kwargs):
         kwargs['target_prop'] = 'selection'
