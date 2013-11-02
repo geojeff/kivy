@@ -30,6 +30,10 @@ class CustomDataItem(SelectableDataItem):
         super(CustomDataItem, self).__init__(**kwargs)
         self.text = kwargs.get('text', '')
 
+    def __repr__(self):
+        return '<%s text=%s>' % (self.__class__.__name__, self.text)
+
+
 # Quote from ListView docs about data items: "They MUST be subclasses of
 # SelectableDataItem, or the equivalent, because each data item needs an all
 # important "Kivy selection" object, abbreviated **ksel** in internal coding.

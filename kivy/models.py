@@ -69,3 +69,6 @@ class SelectableStringItem(SelectableDataItem):
 
     def __init__(self, **kwargs):
         super(SelectableStringItem, self).__init__(**kwargs)
+
+    def __repr__(self):
+        return '<%s text=%s>' % (self.__class__.__name__, self.text)

@@ -217,11 +217,15 @@ class ListController(Selection, EventDispatcher):
             if not op_info:
                 op_info = ListOpInfo('OOL_set', 0, 0)
 
+        op = op_info.op_name
+
+        if op == 'batch_delete':
+            return
+
         # Make a copy in the controller for more convenient access by
         # observers.
         self.data_op_info = op_info
 
-        op = op_info.op_name
         start_index = op_info.start_index
         end_index = op_info.end_index
 
@@ -348,13 +352,21 @@ class ListController(Selection, EventDispatcher):
         if not self.selection_binding:
             #deleted_indices = range(start_index, end_index + 1)
 
+            print 1, self.selection
             sel_indices_for_removal = []
             for index, sel in enumerate(self.selection):
                 if sel not in self.data:
                     sel_indices_for_removal.append(index)
+
+            print 2, self.selection
+            self._is_handling_selection = True
             self.selection.batch_delete(reversed(sel_indices_for_removal))
+            self._is_handling_selection = False
+            print 3, self.selection
 
             self.check_for_empty_selection()
+            print 4, self.selection
+
 #            # Do a check_for_empty_selection type step, if data remains.
 #            if (len(self.data) > 0
 #                    and not self.selection

@@ -141,7 +141,7 @@ class Adapter(EventDispatcher):
     instances keyed to the indices in the data.
 
     This dictionary works as a cache. get_view() only asks for a view from
-    the adapter if one is not already stored for the requested index.
+    the adapter if one is not already stored for the requested data_index.
 
     :data:`cached_views` is a :class:`~kivy.properties.DictProperty` and
     defaults to {}.
@@ -166,28 +166,28 @@ class Adapter(EventDispatcher):
             return self.get_view(data.index(item))
         return None
 
-    def get_view(self, index):
+    def get_view(self, data_index):
 
-        if index in self.cached_views:
-            return self.cached_views[index]
-        item_view = self.create_view(index)
+        if data_index in self.cached_views:
+            return self.cached_views[data_index]
+        item_view = self.create_view(data_index)
         if item_view:
-            self.cached_views[index] = item_view
+            self.cached_views[data_index] = item_view
 
         return item_view
 
     def get_count(self):
         pass
 
-    def get_data_item(self, index):
+    def get_data_item(self, data_index):
         '''This method is responsible for returning a single data item,
         whatever that means, for a given adapter. The result is used in view
         creation, where it is passed as the argument to the args_converter.
         '''
         pass
 
-    def create_view(self, index):
-        '''This method fetches the data_item at the index, and a builds a view
+    def create_view(self, data_index):
+        '''This method fetches the data_item at the data_index, and a builds a view
         from it. The view is is an instance of self.list_item_class, made from
         arguments parpared by self.args_converter(). This method is used by
         :class:`kivy.adapters.listadapter.ListAdapter` and
@@ -197,13 +197,13 @@ class Adapter(EventDispatcher):
         data = getattr(self.data_binding.source, self.data_binding.prop)
 
         if not isinstance(data, collections.Iterable):
-            if index != 0:
+            if data_index != 0:
                 return None
 
-        elif index < 0 or index > len(data) - 1:
+        elif data_index < 0 or data_index > len(data) - 1:
             return None
 
-        data_item = self.get_data_item(index)
+        data_item = self.get_data_item(data_index)
 
         if data_item is None:
             return None
@@ -220,7 +220,7 @@ class Adapter(EventDispatcher):
 
         item_args['data_item'] = data_item
 
-        item_args['index'] = index
+        item_args['data_index'] = data_index
 
         if hasattr(self.list_item_class, 'args_converter'):
             view_instance = self.list_item_class(item_args=item_args)
@@ -234,6 +234,8 @@ class Adapter(EventDispatcher):
             else:
                 view_instance.bind(
                         on_release=self.data_binding.source.handle_selection)
+
+        view_instance.data_item = data_item
 
         data_item_ksel = self.get_data_item_ksel(data_item)
 
@@ -280,3 +282,20 @@ class Adapter(EventDispatcher):
             data_item_ksel = data_item['ksel']
 
         return data_item_ksel
+
+    def remove_data_item_binding(self, data_index, view_instance):
+        data_item = view_instance.data_item
+        data_item_ksel = self.get_data_item_ksel(data_item)
+        # TODO: Remove use of hasattr, and is check needed anyway?
+        if hasattr(view_instance, 'ksel'):
+            data_item_ksel.unbind_to_ksel(view_instance.ksel)
+            print '    remove', data_item_ksel.get_property_observers('selected')
+
+    def add_data_item_binding(self, data_index, view_instance):
+        data_item = view_instance.data_item
+        data_item_ksel = self.get_data_item_ksel(data_item)
+
+        # TODO: Remove use of hasattr, and is check needed anyway?
+        if hasattr(view_instance, 'ksel'):
+            data_item_ksel.bind_to_ksel(view_instance.ksel)
+            print '    add', data_item_ksel.get_property_observers('selected')

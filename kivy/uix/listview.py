@@ -336,16 +336,16 @@ Here is an args_converter for ListAdapter, for use with the built-in
 :class:`~kivy.uix.listview.ListItemButton`, specified as a normal Python
 function::
 
-    def args_converter(index, an_obj):
+    def args_converter(data_index, an_obj):
         return {'text': an_obj.some_prop,
                 'size_hint_y': None,
                 'height': 25}
 
 and as a lambda:
 
-    args_converter = lambda index, an_obj: {'text': an_obj.some_prop,
-                                            'size_hint_y': None,
-                                            'height': 25}
+    args_converter = lambda data_index, an_obj: {'text': an_obj.some_prop,
+                                                 'size_hint_y': None,
+                                                 'height': 25}
 
 In the args converter example above, the data item is assumed to be an object
 (class instance), hence the reference an_obj.some_prop.
@@ -354,12 +354,12 @@ Here is an example of an args converter that works with list data items that
 are dicts::
 
     args_converter = \
-            lambda index, obj, key: {'text': key + '-' + obj.some_prop,
+            lambda data_index, obj, key: {'text': key + '-' + obj.some_prop,
                                      'size_hint_y': None,
                                      'height': 25}
 
 So, it is the responsibility of the developer to code the args_converter
-according to the data at hand. The index argument can be useful in some
+according to the data at hand. The data_index argument can be useful in some
 cases, such as when custom labels are needed.
 
 An Example ListView Coded with a ListAdapter
@@ -372,9 +372,9 @@ Now, to some example code::
 
     data = [{'text': str(i), 'is_selected': False} for i in range(100)]
 
-    args_converter = lambda index, rec: {'text': rec['text'],
-                                         'size_hint_y': None,
-                                         'height': 25}
+    args_converter = lambda data_index, rec: {'text': rec['text'],
+                                              'size_hint_y': None,
+                                              'height': 25}
 
     list_adapter = ListAdapter(data=data,
                                args_converter=args_converter,
@@ -416,9 +416,9 @@ Here we make a simple DataItem class:
     data_items.append(DataItem(text='dog'))
     data_items.append(DataItem(text='frog'))
 
-    list_item_args_converter = lambda index, obj: {'text': obj.text,
-                                                   'size_hint_y': None,
-                                                   'height': 25}
+    list_item_args_converter = lambda data_index, obj: {'text': obj.text,
+                                                        'size_hint_y': None,
+                                                        'height': 25}
 
     list_adapter = ListAdapter(data=data_items,
                                args_converter=list_item_args_converter,
@@ -777,11 +777,19 @@ class SelectableView(ButtonBehavior, Widget):
 
     '''
 
-    index = NumericProperty(-1)
+    data_item = ObjectProperty(None)
+    '''The data item this view represents.
+
+    .. versionadded:: 1.8
+
+    :data:`data_item` is a reference to a SelectableDataItem.
+    '''
+
+    data_index = NumericProperty(-1)
     '''The index into the underlying data list item, to the data item this
     view represents.
 
-    :data:`index` is a :class:`~kivy.properties.NumericProperty`, default
+    :data:`data_index` is a :class:`~kivy.properties.NumericProperty`, default
     to -1.
     '''
 
@@ -796,7 +804,7 @@ class SelectableView(ButtonBehavior, Widget):
 
     def __init__(self, **kwargs):
         if 'item_args' in kwargs:
-            kwargs['index'] = kwargs['item_args']['index']
+            kwargs['data_index'] = kwargs['item_args']['data_index']
         super(SelectableView, self).__init__(**kwargs)
 
         if 'ksel' not in kwargs:
@@ -806,18 +814,18 @@ class SelectableView(ButtonBehavior, Widget):
         if 'item_args' in kwargs:
             item_args = kwargs['item_args']
             kwargs = self.args_converter(
-                        item_args['index'],
+                        item_args['data_index'],
                         item_args['data_item'])
             for arg in kwargs:
                 setattr(self, arg, kwargs[arg])
 
-    def args_converter(self, index, data_item):
+    def args_converter(self, data_index, data_item):
         '''Override this method to convert a data_item and its data into args
         for the list item class.
 
         Overriding is simple enough, with something like this::
 
-            def args_converter(self, index, data_item):
+            def args_converter(self, data_index, data_item):
                 return {'this_arg': this_value,
                         'that_arg': that_value}
 
@@ -925,7 +933,7 @@ class ListItemButton(SelectableView, Button):
     def __repr__(self):
         return '<%s text=%s>' % (self.__class__.__name__, self.text)
 
-    def args_converter(self, index, data_item):
+    def args_converter(self, data_index, data_item):
         return {'text': data_item.text,
                 'size_hint_y': None,
                 'height': 25}
@@ -988,13 +996,13 @@ class CompositeListItem(SelectableView, BoxLayout):
                     component_args_dict.get('component_kwargs', None)
 
             if component_kwargs:
-                component_kwargs['index'] = self.index
+                component_kwargs['data_index'] = self.data_index
 
                 if 'text' not in component_kwargs:
                     component_kwargs['text'] = kwargs['text']
             else:
                 component_kwargs = {}
-                component_kwargs['index'] = self.index
+                component_kwargs['data_index'] = self.data_index
                 if 'text' in kwargs:
                     component_kwargs['text'] = kwargs['text']
 
@@ -1022,7 +1030,7 @@ class CompositeListItem(SelectableView, BoxLayout):
         super(CompositeListItem, self).do_deselect_effects(args)
         self.background_color = self.deselected_color
 
-    def args_converter(self, index, data_item):
+    def args_converter(self, data_index, data_item):
         pass
 
 
@@ -1032,7 +1040,7 @@ class ListItemLabel(SelectableView, Label):
     def __init__(self, **kwargs):
         super(ListItemLabel, self).__init__(**kwargs)
 
-    def args_converter(self, index, data_item):
+    def args_converter(self, data_index, data_item):
         return {'text': data_item.text,
                 'size_hint_y': None,
                 'height': 25}
@@ -1146,6 +1154,7 @@ class DataOpHandler(ListOpHandler):
         start_index = op_info.start_index
         end_index = op_info.end_index
 
+        print 'DataOpHandler', op, start_index, end_index
         if op == 'OOL_sort_start':
             self.sort_started(*args)
             return
@@ -1218,8 +1227,8 @@ class DataOpHandler(ListOpHandler):
         '''
         self.listview.update_ui_for_data_changes()
 
-    def handle_insert_op(self, index):
-        '''An item was added at index. Adjust the indices of any cached_view
+    def handle_insert_op(self, data_index):
+        '''An item was added at data_index. Adjust the indices of any cached_view
         items affected.
         '''
 
@@ -1227,23 +1236,23 @@ class DataOpHandler(ListOpHandler):
 
         for k, v in self.listview.cached_views.iteritems():
 
-            if k < index:
+            if k < data_index:
                 new_cached_views[k] = self.listview.cached_views[k]
             else:
                 new_cached_views[k + 1] = self.listview.cached_views[k]
-                new_cached_views[k + 1].index += 1
+                new_cached_views[k + 1].data_index += 1
 
         self.listview.cached_views = new_cached_views
         self.listview.update_ui_for_data_changes()
 
-    def handle_setitem_op(self, index):
+    def handle_setitem_op(self, data_index):
         '''Force a rebuild of the item view for which the associated data item
         has changed.  If the item view was selected before, maintain the
         selection.
         '''
 
-        del self.listview.cached_views[index]
-        #item_view = self.listview.get_view(index)
+        del self.listview.cached_views[data_index]
+        #item_view = self.listview.get_view(data_index)
         #if item_view and is_selected:
             #self.listview.handle_selection(item_view)
         self.listview.update_ui_for_data_changes()
@@ -1302,19 +1311,24 @@ class DataOpHandler(ListOpHandler):
 
         deleted_indices = range(start_index, end_index + 1)
 
-#        for index in reversed(deleted_indices):
-#            del self.listview.cached_views[index]
+        for data_index in reversed(deleted_indices):
+            del self.listview.cached_views[data_index]
 
         # Delete views from cache.
         new_cached_views = {}
 
-        i = 0
+        num_deleted = (end_index - start_index) + 1
+
+        # k here is cached_views is a data integer index, which will now be
+        # incorrect for affected items, those that are beyond the interval of
+        # deleted_indices.
         for k, v in self.listview.cached_views.iteritems():
             if k not in deleted_indices:
-                new_cached_views[i] = self.listview.cached_views[k]
-                if k >= start_index:
-                    new_cached_views[i].index = i
-                i += 1
+                if k > end_index:
+                    new_k = k - num_deleted
+                else:
+                    new_k = k
+                new_cached_views[new_k] = self.listview.cached_views[k]
 
         self.listview.cached_views = new_cached_views
 
@@ -1396,7 +1410,7 @@ class DataOpHandler(ListOpHandler):
         if self.duplicates_allowed:
             for i in self.listview.cached_views:
                 item_view = self.listview.cached_views[i]
-                old_i = item_view.index
+                old_i = item_view.data_index
                 data_item = presort_indices_and_items[old_i]['data_item']
                 if isinstance(data_item, str):
                     duplicates = sorted(
@@ -1412,10 +1426,10 @@ class DataOpHandler(ListOpHandler):
         else:
             for i in self.listview.cached_views:
                 item_view = self.listview.cached_views[i]
-                old_i = item_view.index
+                old_i = item_view.data_index
                 data_item = presort_indices_and_items[old_i]['data_item']
                 postsort_index = data.index(data_item)
-                item_view.index = postsort_index
+                item_view.data_index = postsort_index
                 new_cached_views[postsort_index] = item_view
 
         self.listview.cached_views = new_cached_views
@@ -1670,13 +1684,13 @@ class ListView(Adapter, AbstractView, EventDispatcher):
     def get_count(self):
         return len(self.data_binding.source.data)
 
-    def get_data_item(self, index):
+    def get_data_item(self, data_index):
         data = self.data_binding.source.data
 
         if not data:
             return None
 
-        return data[index]
+        return data[data_index]
 
     def trim_left_of_sel(self, *args):
         '''Cut list items with indices in sorted_keys that are less than the
@@ -1688,7 +1702,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
         '''
         selection = self.selection_binding.source.selection
         if len(selection) > 0:
-            first_sel_index = min([sel.index for sel in selection])
+            first_sel_index = min([sel.data_index for sel in selection])
             data = self.data_binding.source.data
             data = data[first_sel_index:]
 
@@ -1702,7 +1716,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
         '''
         selection = self.selection_binding.source.selection
         if len(selection) > 0:
-            last_sel_index = max([sel.index for sel in selection])
+            last_sel_index = max([sel.data_index for sel in selection])
             data = self.data_binding.source.data
             data = data[:last_sel_index + 1]
 
@@ -1718,7 +1732,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
         '''
         selection = self.selection_binding.source.selection
         if len(selection) > 0:
-            sel_indices = [sel.index for sel in selection]
+            sel_indices = [sel.data_index for sel in selection]
             first_sel_index = min(sel_indices)
             last_sel_index = max(sel_indices)
             data = self.data_binding.source.data
@@ -1832,6 +1846,8 @@ class ListView(Adapter, AbstractView, EventDispatcher):
         # Handle scroll up.
         if istart < self._wstart:
 
+            print 'handle scroll up'
+
             # Populate backward, for view instances needed, to the istart
             # position, and a bit farther back, as configured by
             # scroll_advance.  The max() call keeps the value from going
@@ -1897,28 +1913,26 @@ class ListView(Adapter, AbstractView, EventDispatcher):
                 size_hint_y=None, height=fh, background_color=(0, 1, 0)))
 
             # Now fill with real item view instances.
-            index = istart
-            while index <= iend:
-                item_view = self.get_view(index)
+            for data_index in range(istart, iend + 1):
+                item_view = self.get_view(data_index)
                 if item_view is None:
                     continue
-                index += 1
-                sizes[index] = item_view.height
+                sizes[data_index] = item_view.height
                 container.add_widget(item_view)
 
         else:
 
             available_height = self.height
             real_height = 0
-            index = self._index
+            data_index = self._index
             count = 0
 
             while available_height > 0:
-                item_view = self.get_view(index)
+                item_view = self.get_view(data_index)
                 if item_view is None:
                     break
-                sizes[index] = item_view.height
-                index += 1
+                sizes[data_index] = item_view.height
+                data_index += 1
                 count += 1
                 container.add_widget(item_view)
                 available_height -= item_view.height
@@ -1937,9 +1951,9 @@ class ListView(Adapter, AbstractView, EventDispatcher):
                 if self.row_height is None:
                     self.row_height = real_height / count
 
-    def scroll_to(self, index, position=None, position_as_percent=None):
-        '''Call the scroll_to(i) method with a valid index for the data. If the
-        index is out of bounds, nothing happens.
+    def scroll_to(self, data_index, position=None, position_as_percent=None):
+        '''Call the scroll_to(i) method with a valid data_index for the data. If the
+        data_index is out of bounds, nothing happens.
 
         If scroll_to() is called with scroll_to(99), then the view instance for
         the 100th data item will appear in the middle of the scrollview.
@@ -1952,7 +1966,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
         window-on-the-data along within the data.
 
         The position and position_as_percent args are available as conveniences
-        for placing the view instance for the index at a desired position
+        for placing the view instance for the data_index at a desired position
         within the range of view instances currently shown, as measured down
         from the default top position.
 
@@ -1991,7 +2005,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
 
         data = self.data_binding.source.data
 
-        if index < 0 or index > len(data) - 1:
+        if data_index < 0 or data_index > len(data) - 1:
             return
 
         # If this method is called while scrolling operations are happening, a
@@ -2008,14 +2022,14 @@ class ListView(Adapter, AbstractView, EventDispatcher):
 
             n_window = int(ceil(self.height / self.row_height))
 
-            if index == 0:
+            if data_index == 0:
                 self._index = 0
                 self.scrollview.scroll_y = 1.0
                 self.scrollview.update_from_scroll()
 
-            elif index == len(data) - 1:
+            elif data_index == len(data) - 1:
 
-                self._index = max(0, index - n_window)
+                self._index = max(0, data_index - n_window)
 
                 # TODO: Hack to keep scrolling to end from locking up. This
                 #       scrolls to near the end, but not quite far enough. This
@@ -2028,30 +2042,30 @@ class ListView(Adapter, AbstractView, EventDispatcher):
 
                 if position and position <= n_window:
 
-                    # Adjust so that the item at index is at top.
-                    index += (int(ceil(float(n_window) * 0.5)))
+                    # Adjust so that the item at data_index is at top.
+                    data_index += (int(ceil(float(n_window) * 0.5)))
 
                     # Apply the add.
-                    index = index - position
+                    data_index = data_index - position
 
                 if (position_as_percent
                         and not position
                         and 0.0 < position_as_percent <= 1.0):
 
-                    # Adjust so that the item at index is at top.
-                    index += (int(ceil(float(n_window) * 0.5)))
+                    # Adjust so that the item at data_index is at top.
+                    data_index += (int(ceil(float(n_window) * 0.5)))
 
                     # Apply the percent.
-                    index = index - int(ceil(
+                    data_index = data_index - int(ceil(
                         position_as_percent * float(n_window)))
 
-                # Don't let index go out of bounds.
-                index = max(0, index)
+                # Don't let data_index go out of bounds.
+                data_index = max(0, data_index)
 
-                self._index = index
+                self._index = data_index
 
                 self.scrollview.scroll_y = \
-                        1.0 - (float(index) / float(len_data))
+                        1.0 - (float(data_index) / float(len_data))
                 self.scrollview.update_from_scroll()
 
             self.dispatch('on_scroll_complete')
@@ -2271,7 +2285,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
             widget_index = -1
 
             for i, item_view in enumerate(self.container.children):
-                if item_view.index == start_index:
+                if item_view.data_index == start_index:
                     widget_index = i
                     break
 
@@ -2292,7 +2306,7 @@ class ListView(Adapter, AbstractView, EventDispatcher):
             widget_indices = []
 
             for i, item_view in enumerate(self.container.children):
-                if item_view.index in slice_indices:
+                if item_view.data_index in slice_indices:
                     widget_indices.append(i)
                     if len(widget_indices) == len(slice_indices):
                         break
@@ -2341,16 +2355,21 @@ class ListView(Adapter, AbstractView, EventDispatcher):
             # NOTE: There is no OOD_popitem here, because it is performed as
             #       a OOD_delitem.
 
-#            deleted_indices = range(start_index, end_index + 1)
-#
-#            print 'deleted_indices', deleted_indices
-#
-#            for item_view in self.container.children:
-#                if (hasattr(item_view, 'index')
-#                        and item_view.index in deleted_indices):
-#                    print 'removing', item_view
-#                    self.container.remove_widget(item_view)
-#
+            deleted_indices = range(start_index, end_index + 1)
+
+            num_deleted = len(deleted_indices)
+
+            # TODO: Look for other places to use a slice like this.
+            for item_view in self.container.children[start_index:]:
+                if hasattr(item_view, 'data_index'):
+                    if item_view.data_index in deleted_indices:
+                        former_data_index = item_view.data_index - num_deleted
+                        self.remove_data_item_binding(former_data_index,
+                                                      item_view)
+                        self.container.remove_widget(item_view)
+                    elif item_view.data_index >= start_index + num_deleted:
+                        item_view.data_index -= num_deleted
+
             self.scrolling = True
             self.populate()
             self.dispatch('on_scroll_complete')

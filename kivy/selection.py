@@ -91,6 +91,7 @@ from kivy.properties import NumericProperty
 from kivy.properties import ObjectProperty
 from kivy.properties import OpObservableList
 from kivy.properties import OptionProperty
+#from kivy.uix.listview import SelectableView
 from kivy.uix.widget import Widget
 
 
@@ -127,6 +128,19 @@ class SelectionTool(EventDispatcher):
 
     def bind_from_ksel(self, ksel):
         ksel.bind(selected=self.setter('selected'))
+
+    def unbind_all(self):
+        print 'unbind_all', self.get_property_observers('selected')
+        for po in self.get_property_observers('selected'):
+            self.unbind(selected=po)
+        print '    unbind_all', self.get_property_observers('selected')
+
+    def unbind_to_ksel(self, ksel):
+        print 'unbind', self.get_property_observers('selected'), ksel.setter('selected')
+        self.unbind(selected=ksel.setter('selected'))
+
+    def unbind_from_ksel(self, ksel):
+        ksel.unbind(selected=self.setter('selected'))
 
 
 class Selection(EventDispatcher):
@@ -266,11 +280,14 @@ class Selection(EventDispatcher):
             self, item, process_for_batch=False, initialize_selection=False):
         op_for_batch = None
 
-        additions = []
+        add_item = False
         removals = []
 
-        if isinstance(item, Widget) and hasattr(item, 'index'):
-            item = self.data[item.index]
+        print 'handle_selection', item
+        if isinstance(item, Widget) and hasattr(item, 'data_index'):
+        #if isinstance(item, SelectableView):
+            item = item.data_item
+        print '    handle_selection', item
 
         if item not in self.selection:
             if (self.selection_mode in ['none', 'single']
@@ -297,7 +314,7 @@ class Selection(EventDispatcher):
                             else:
                                 self.select_item(item,
                                                  add_to_selection=False)
-                                additions.append(item)
+                                add_item = True
                         else:
                             if len_selection < self.selection_limit:
                                 if process_for_batch:
@@ -305,20 +322,20 @@ class Selection(EventDispatcher):
                                 else:
                                     self.select_item(item,
                                                      add_to_selection=False)
-                                    additions.append(item)
+                                    add_item = True
                     else:
                         if process_for_batch:
                             op_for_batch = _selection_ops.SELECT
                         else:
                             self.select_item(item,
                                              add_to_selection=False)
-                            additions.append(item)
+                            add_item = True
                 else:
                     if process_for_batch:
                         op_for_batch = _selection_ops.SELECT
                     else:
                         self.select_item(item, add_to_selection=False)
-                        additions.append(item)
+                        add_item = True
         else:
 
             if process_for_batch:
@@ -337,10 +354,12 @@ class Selection(EventDispatcher):
             selection_copy = list(self.selection)
 
             for r in removals:
+                print 'removing item from selection', r
                 selection_copy.remove(r)
 
-        for a in additions:
-            selection_copy.append(a)
+        if add_item:
+            print 'adding item to selection', item
+            selection_copy.append(item)
 
         self._is_handling_selection = True
         self.selection = selection_copy
@@ -352,12 +371,13 @@ class Selection(EventDispatcher):
         if self.selection_mode != 'none':
             self.check_for_empty_selection()
 
+        # TODO: This is only for non-Widget data, but has nothing to indicate.
         if self.remove_on_deselect:
             indices_for_deletion = []
-            for item in removals:
-                indices_for_deletion.append(self.data.index(item))
-            for index in reversed(indices_for_deletion):
-                del self.data[index]
+            for r in removals:
+                indices_for_deletion.append(self.data.index(r))
+            for data_index in reversed(indices_for_deletion):
+                del self.data[data_index]
 
     def select_item(self, item, add_to_selection=True):
 
@@ -483,6 +503,7 @@ class Selection(EventDispatcher):
 
         if not self.allow_empty_selection:
             if len(self.selection) == 0 or initialize_selection:
+                print 'initialize_selection', initialize_selection
                 # Select the first item if we have it.
                 if hasattr(self, 'get_data_item'):
                     item = self.get_data_item(0)
@@ -555,6 +576,11 @@ class Selection(EventDispatcher):
         else:
             op_info = ListOpInfo('OOL_set', 0, 0)
 
+        op = op_info.op_name
+
+        if op == 'batch_delete':
+            return
+
         # Make a copy in the controller for more convenient access by
         # observers.
         self.selection_op_info = op_info
@@ -578,7 +604,6 @@ class Selection(EventDispatcher):
         #        change in the normal expected user interface change for
         #        selection, whatever that is for the items.
 
-        op = op_info.op_name
         start_index = op_info.start_index
         end_index = op_info.end_index
 
@@ -683,12 +708,12 @@ class Selection(EventDispatcher):
 
         self.handle_add_op()
 
-    def handle_setitem_op(self, index):
+    def handle_setitem_op(self, data_index):
 
-        # Find the item formerly at that index in selection and deselect it.
+        # Find the item formerly at that data_index in selection and deselect it.
         self.do_ksel_op('deselect', self.selection)
 
-        sel = self.selection[index]
+        sel = self.selection[data_index]
         if isinstance(sel, dict):
             ksel = sel['ksel']
         else:
@@ -705,7 +730,7 @@ class Selection(EventDispatcher):
 
         self.do_ksel_op(
             'select',
-            [sel for sel in self.selection if sel.index in changed_indices])
+            [sel for sel in self.selection if sel.data_index in changed_indices])
 
     def handle_delete_op(self, start_index, end_index):
 
